@@ -12,6 +12,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js'
+import { SankeyController, Flow } from 'chartjs-chart-sankey'
 
 ChartJS.register(
   CategoryScale,
@@ -24,6 +25,8 @@ ChartJS.register(
   Tooltip,
   Legend,
   Filler,
+  SankeyController,
+  Flow,
 )
 
 export { ChartJS }

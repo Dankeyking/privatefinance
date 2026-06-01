@@ -68,3 +68,24 @@ export function expensesByCategory(transactions, overrides = {}, onlyMonth = nul
 export function totalBalance(accounts) {
   return accounts.reduce((s, a) => s + (a.balance || 0), 0)
 }
+
+// Anstehende Daueraufträge: nächste Ausführung innerhalb der nächsten `days` Tage.
+// Liefert sortierte Liste mit daysUntil + Kontoname.
+export function upcomingPayments(data, days = 30, today = new Date()) {
+  const { standingOrders = [], accounts = [] } = data
+  const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const horizon = new Date(start)
+  horizon.setDate(horizon.getDate() + days)
+
+  return standingOrders
+    .filter((so) => so.nextExecution)
+    .map((so) => {
+      const due = new Date(so.nextExecution)
+      const daysUntil = Math.round((due - start) / 86400000)
+      const acc = accById[so.accountId]
+      return { ...so, due, daysUntil, account: acc, runsOnJoint: acc?.type === 'joint' }
+    })
+    .filter((x) => x.due >= start && x.due <= horizon)
+    .sort((a, b) => a.due - b.due)
+}

@@ -1,18 +1,24 @@
+import { useMemo } from 'react'
 import KpiCard from '../components/KpiCard.jsx'
 import AccountCard from '../components/AccountCard.jsx'
-import FlowDiagram from '../components/FlowDiagram.jsx'
+import SankeyFlow from '../components/charts/SankeyFlow.jsx'
+import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import {
   totalBalance,
   sortedMonths,
   incomeExpenseForMonth,
-  effectiveCategoryOf,
+  upcomingPayments,
 } from '../lib/selectors.js'
+import { buildSankeyData } from '../lib/flows.js'
 
 export default function Overview({ data, overrides }) {
-  const { accounts, transactions, standingOrders } = data
+  const { accounts, transactions } = data
   const months = sortedMonths(transactions)
   const latest = months[months.length - 1]
   const { income, expenses, surplus } = incomeExpenseForMonth(transactions, latest || '')
+
+  const sankey = useMemo(() => buildSankeyData(data, overrides), [data, overrides])
+  const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
 
   return (
     <div>
@@ -34,13 +40,35 @@ export default function Overview({ data, overrides }) {
         ))}
       </div>
 
-      <div className="card mt">
-        <h2>Geldfluss – wer zahlt was von welchem Konto</h2>
-        <FlowDiagram
-          accounts={accounts}
-          standingOrders={standingOrders}
-          getCategory={(so) => effectiveCategoryOf(so, overrides)}
-        />
+      <div className="grid flow-row mt">
+        <div className="card">
+          <h2>Geldfluss – Einkommen → Konten → Kategorien</h2>
+          <SankeyFlow flows={sankey.flows} nodeColors={sankey.nodeColors} columns={sankey.columns} />
+        </div>
+
+        <div className="card">
+          <h2>Anstehende Zahlungen <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(30 Tage)</span></h2>
+          {upcoming.length === 0 ? (
+            <p className="muted">Keine Daueraufträge in den nächsten 30 Tagen.</p>
+          ) : (
+            <ul className="upcoming">
+              {upcoming.map((u) => (
+                <li key={u.id} className={u.runsOnJoint ? '' : 'not-joint'}>
+                  <div className="up-main">
+                    <span className="up-recipient">{u.recipient}</span>
+                    <span className="up-amount">{formatEUR(u.amount)}</span>
+                  </div>
+                  <div className="up-sub muted">
+                    {u.daysUntil === 0 ? 'heute' : u.daysUntil === 1 ? 'morgen' : `in ${u.daysUntil} Tagen`}
+                    {' · '}{formatDate(u.nextExecution)}
+                    {' · '}{RHYTHM_LABELS[u.rhythm] || u.rhythm}
+                    {!u.runsOnJoint && <span className="flag">⚠ Privatkonto</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   )

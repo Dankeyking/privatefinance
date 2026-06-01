@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
 import Analytics from './pages/Analytics.jsx'
+import Budget from './pages/Budget.jsx'
 import Categories from './pages/Categories.jsx'
 import { loadData } from './data/dataSource.js'
 import { downloadClaudeExport } from './lib/claudeExport.js'
@@ -18,6 +19,7 @@ export default function App() {
   const [data, setData] = useState(null)
   const [source, setSource] = useState('mock')
   const [overrides, setOverrides] = useState({})
+  const [navOpen, setNavOpen] = useState(false) // mobile sidebar
 
   useEffect(() => {
     setOverrides(getOverrides())
@@ -39,6 +41,10 @@ export default function App() {
   function handleExport() {
     if (data) downloadClaudeExport(data, overrides)
   }
+  function navigate(p) {
+    setPage(p)
+    setNavOpen(false)
+  }
 
   if (!data) {
     return (
@@ -50,13 +56,30 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar page={page} onNavigate={setPage} source={source} onExport={handleExport} />
+      {/* Mobile-Topbar mit Hamburger */}
+      <header className="topbar">
+        <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Menü öffnen">☰</button>
+        <span className="topbar-brand">Private<span>Finance</span></span>
+      </header>
+
+      {navOpen && <div className="nav-overlay" onClick={() => setNavOpen(false)} />}
+
+      <Sidebar
+        page={page}
+        onNavigate={navigate}
+        source={source}
+        onExport={handleExport}
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
+      />
+
       <main className="content">
         {page === 'overview' && <Overview data={data} overrides={overrides} />}
         {page === 'standing' && (
           <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
         )}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
+        {page === 'budget' && <Budget data={data} overrides={overrides} />}
         {page === 'categories' && (
           <Categories
             data={data}

@@ -2,13 +2,17 @@ const NAV = [
   { id: 'overview', label: 'Übersicht', ico: '📊' },
   { id: 'standing', label: 'Daueraufträge', ico: '🔁' },
   { id: 'analytics', label: 'Analyse', ico: '📈' },
+  { id: 'budget', label: 'Budget', ico: '🎯' },
   { id: 'categories', label: 'Kategorien', ico: '🏷️' },
 ]
 
-export default function Sidebar({ page, onNavigate, source, onExport }) {
+export default function Sidebar({ page, onNavigate, source, onExport, open, onClose }) {
   return (
-    <aside className="sidebar">
-      <div className="brand">Private<span>Finance</span></div>
+    <aside className={`sidebar ${open ? 'open' : ''}`}>
+      <div className="brand">
+        Private<span>Finance</span>
+        <button className="sidebar-close" onClick={onClose} aria-label="Menü schließen">✕</button>
+      </div>
       <nav className="nav">
         {NAV.map((item) => (
           <button
