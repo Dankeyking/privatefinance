@@ -1,18 +1,17 @@
 // =============================================================================
-//  flows.js — balancierter Cashflow-Sankey
-//  Einkommen → Privatkonten → Gemeinschaftskonto → Kategorien + Überschuss
+//  flows.js — balancierter Cashflow-Sankey (3 Spalten, ein zusammenhängender Fluss)
+//  Privatkonten → Gemeinschaftskonto → Kategorien + Überschuss/Rücklage
 // =============================================================================
-//  Jeder Euro wird verfolgt: was nicht an Fixkosten/Kategorien geht, fließt in
-//  den Knoten "Überschuss / Rücklage". Dadurch sind alle Konten-Knoten
-//  balanciert (Zufluss = Abfluss) und das Diagramm liest als EIN Fluss.
-//  Basis: durchschnittliche Monatswerte aus den echten Transaktionen.
+//  Die Gehälter zählen zum Zufluss der Privatkonten (für die Knotengröße und den
+//  Überschuss), werden aber NICHT als eigene Spalte gezeichnet – das hielt das
+//  Diagramm gedrängt und ließ Labels überlappen. Jeder Euro wird verfolgt: was
+//  nicht ausgegeben/überwiesen wird, fließt sichtbar in „Überschuss / Rücklage".
 // =============================================================================
 
 import { formatEUR } from './normalize.js'
 import { categoryColor } from './categories.js'
 import { effectiveCategoryOf, sortedMonths } from './selectors.js'
 
-const INCOME_COLOR = '#16a34a'
 const JOINT_COLOR = '#3b82f6'
 const PERSONAL_COLOR = '#94a3b8'
 const SURPLUS_COLOR = '#0d9488'
@@ -21,46 +20,44 @@ const SURPLUS_NODE = 'Überschuss / Rücklage'
 export function buildSankeyData(data, overrides = {}) {
   const { accounts = [], transactions = [] } = data
   const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
+  const accById2 = Object.fromEntries(accounts.map((a) => [a.name, a]))
   const nMonths = Math.max(1, sortedMonths(transactions).length)
 
   const nodeColors = {}
   const columns = {}
 
-  // Summen über alle Monate sammeln (danach auf Monatsdurchschnitt teilen)
-  const incomeSum = {}
-  const transferSum = {}
-  const expenseSum = {}
+  const transferSum = {} // "von||nach" Konto->Konto
+  const expenseSum = {} // "konto||kategorie"
+  const inflowAcc = {} // gesamter Zufluss je Konto (inkl. Gehalt) – für Überschuss
+  const outflowAcc = {} // gesamter Abfluss je Konto
 
   transactions.forEach((t) => {
     const acc = accById[t.accountId]
     if (!acc) return
     if (!t.internal && t.amount > 0) {
-      // Einkommen (extern) -> Konto
-      const k = `${t.recipient}||${acc.name}`
-      incomeSum[k] = (incomeSum[k] || 0) + t.amount
-      nodeColors[t.recipient] = INCOME_COLOR
-      columns[t.recipient] = 0
+      // Gehalt/Einkommen: zählt als Zufluss, wird aber nicht als Spalte gezeichnet
+      inflowAcc[acc.name] = (inflowAcc[acc.name] || 0) + t.amount
     } else if (t.internal && t.amount > 0 && t.fromAccountId) {
-      // interner Übertrag Quelle -> Ziel
       const src = accById[t.fromAccountId]
       if (!src) return
       const k = `${src.name}||${acc.name}`
       transferSum[k] = (transferSum[k] || 0) + t.amount
+      inflowAcc[acc.name] = (inflowAcc[acc.name] || 0) + t.amount
+      outflowAcc[src.name] = (outflowAcc[src.name] || 0) + t.amount
     } else if (!t.internal && t.amount < 0) {
-      // Ausgabe -> Kategorie
       const cat = effectiveCategoryOf(t, overrides)
       const k = `${acc.name}||${cat}`
       expenseSum[k] = (expenseSum[k] || 0) + -t.amount
+      outflowAcc[acc.name] = (outflowAcc[acc.name] || 0) + -t.amount
       nodeColors[cat] = categoryColor(cat)
-      columns[cat] = 3
+      columns[cat] = 2
     }
   })
 
   const flowMap = {}
   const add = (from, to, value) => {
     if (!value || value <= 0 || from === to) return
-    const k = `${from}||${to}`
-    flowMap[k] = (flowMap[k] || 0) + value
+    flowMap[`${from}||${to}`] = (flowMap[`${from}||${to}`] || 0) + value
   }
   const addAveraged = (sums) =>
     Object.entries(sums).forEach(([k, v]) => {
@@ -68,31 +65,22 @@ export function buildSankeyData(data, overrides = {}) {
       add(from, to, v / nMonths)
     })
 
-  addAveraged(incomeSum)
   addAveraged(transferSum)
   addAveraged(expenseSum)
 
-  // Konten-Knoten einfärben + Spalten (Privat = 1, Gemeinschaft = 2)
+  // Konten: Privat = Spalte 0, Gemeinschaft = Spalte 1
   accounts.forEach((a) => {
     nodeColors[a.name] = a.type === 'joint' ? JOINT_COLOR : PERSONAL_COLOR
-    columns[a.name] = a.type === 'joint' ? 2 : 1
+    columns[a.name] = a.type === 'joint' ? 1 : 0
   })
 
-  // Balance: pro Konto verbleibenden Überschuss als Fluss -> Rücklage-Knoten.
-  // Zuerst alle Salden berechnen, dann hinzufügen (sonst verfälscht es sich).
-  const surpluses = accounts.map((a) => {
-    let inflow = 0
-    let outflow = 0
-    for (const [k, v] of Object.entries(flowMap)) {
-      const [from, to] = k.split('||')
-      if (to === a.name) inflow += v
-      if (from === a.name) outflow += v
-    }
-    return [a.name, inflow - outflow]
+  // Überschuss je Konto = Zufluss − Abfluss (inkl. Gehalt), als Fluss zur Rücklage
+  accounts.forEach((a) => {
+    const surplus = ((inflowAcc[a.name] || 0) - (outflowAcc[a.name] || 0)) / nMonths
+    add(a.name, SURPLUS_NODE, surplus)
   })
-  surpluses.forEach(([name, s]) => add(name, SURPLUS_NODE, s))
   nodeColors[SURPLUS_NODE] = SURPLUS_COLOR
-  columns[SURPLUS_NODE] = 3
+  columns[SURPLUS_NODE] = 2
 
   const flows = Object.entries(flowMap).map(([k, flow]) => {
     const [from, to] = k.split('||')
@@ -106,10 +94,17 @@ export function buildSankeyData(data, overrides = {}) {
     outSum[f.from] = (outSum[f.from] || 0) + f.flow
     inSum[f.to] = (inSum[f.to] || 0) + f.flow
   })
+  // Kurze Anzeigenamen, damit die Labels benachbarter Spalten nicht überlappen.
+  const displayName = (name) => {
+    const a = accById2[name]
+    if (a) return a.type === 'joint' ? 'Gemeinschaft' : `${a.owner || a.name} (privat)`
+    if (name === SURPLUS_NODE) return 'Rücklage'
+    return name
+  }
   const labels = {}
   Object.keys(nodeColors).forEach((name) => {
     const through = Math.max(inSum[name] || 0, outSum[name] || 0)
-    labels[name] = `${name}  ·  ${formatEUR(through)}`
+    labels[name] = `${displayName(name)}  ·  ${formatEUR(through)}`
   })
 
   return { flows, nodeColors, columns, labels }

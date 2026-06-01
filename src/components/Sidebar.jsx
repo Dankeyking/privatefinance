@@ -1,10 +1,12 @@
+import Icon from './Icon.jsx'
+
 const NAV = [
-  { id: 'overview', label: 'Übersicht', ico: '📊' },
-  { id: 'standing', label: 'Daueraufträge', ico: '🔁' },
-  { id: 'timing', label: 'Zahlungslauf', ico: '⏱️' },
-  { id: 'analytics', label: 'Analyse', ico: '📈' },
-  { id: 'budget', label: 'Budget', ico: '🎯' },
-  { id: 'categories', label: 'Kategorien', ico: '🏷️' },
+  { id: 'overview', label: 'Übersicht', icon: 'overview' },
+  { id: 'standing', label: 'Daueraufträge', icon: 'standing' },
+  { id: 'timing', label: 'Zahlungslauf', icon: 'timing' },
+  { id: 'analytics', label: 'Analyse', icon: 'analytics' },
+  { id: 'budget', label: 'Budget', icon: 'budget' },
+  { id: 'categories', label: 'Kategorien', icon: 'categories' },
 ]
 
 export default function Sidebar({ page, onNavigate, source, onExport, open, onClose }) {
@@ -21,7 +23,7 @@ export default function Sidebar({ page, onNavigate, source, onExport, open, onCl
             className={page === item.id ? 'active' : ''}
             onClick={() => onNavigate(item.id)}
           >
-            <span className="ico">{item.ico}</span>
+            <span className="ico"><Icon name={item.icon} /></span>
             {item.label}
           </button>
         ))}
@@ -32,7 +34,7 @@ export default function Sidebar({ page, onNavigate, source, onExport, open, onCl
       </span>
 
       <button className="export-btn" onClick={onExport}>
-        ⬇︎ Export für Claude
+        <Icon name="export" size={16} /> Export für Claude
       </button>
       <div className="export-hint">
         Lädt eine JSON mit allen Daueraufträgen – inkl. Markierung, welche noch übers
