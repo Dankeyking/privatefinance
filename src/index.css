@@ -367,6 +367,47 @@ select, .btn {
 .pill.ok { background: #dcfce7; color: var(--pos); }
 .pill.risk { background: #fee2e2; color: var(--neg); }
 
+/* --- Meine Daten / Editor -------------------------------------------------- */
+.privacy-note {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.card table input,
+.card table select {
+  width: 100%;
+  min-width: 70px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 13.5px;
+  background: #fff;
+}
+.card td.num input { text-align: right; min-width: 60px; }
+.btn-del {
+  border: none; background: transparent; color: var(--text-muted);
+  cursor: pointer; font-size: 14px; padding: 4px 6px; border-radius: 6px;
+}
+.btn-del:hover { background: #fee2e2; color: var(--neg); }
+.btn.add {
+  margin-top: 12px; background: #fff; border: 1px dashed var(--border);
+  color: var(--accent); font-weight: 600;
+}
+.btn.add:hover { border-color: var(--accent); background: var(--accent-soft); }
+.settings-actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
+.btn-primary {
+  background: var(--accent); color: #fff; border: none;
+  padding: 11px 22px; border-radius: 8px; font-weight: 600; font-size: 14px;
+  font-family: inherit; cursor: pointer;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.saved-hint { color: var(--pos); font-weight: 600; font-size: 13.5px; }
+
 /* --- Mobile-Topbar / Drawer ----------------------------------------------- */
 .topbar { display: none; }
 .sidebar-close { display: none; }

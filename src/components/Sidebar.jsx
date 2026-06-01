@@ -7,9 +7,10 @@ const NAV = [
   { id: 'analytics', label: 'Analyse', icon: 'analytics' },
   { id: 'budget', label: 'Budget', icon: 'budget' },
   { id: 'categories', label: 'Kategorien', icon: 'categories' },
+  { id: 'settings', label: 'Meine Daten', icon: 'settings' },
 ]
 
-export default function Sidebar({ page, onNavigate, source, onExport, open, onClose }) {
+export default function Sidebar({ page, onNavigate, source, hasManual, onExport, open, onClose }) {
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
@@ -29,8 +30,8 @@ export default function Sidebar({ page, onNavigate, source, onExport, open, onCl
         ))}
       </nav>
 
-      <span className={`source-badge ${source}`}>
-        {source === 'live' ? '● Echte Daten' : '● Demo-/Mock-Daten'}
+      <span className={`source-badge ${hasManual ? 'live' : source}`}>
+        {hasManual ? '● Eigene Daten' : source === 'live' ? '● Echte Daten' : '● Demo-/Mock-Daten'}
       </span>
 
       <button className="export-btn" onClick={onExport}>

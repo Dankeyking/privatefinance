@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
@@ -6,29 +6,39 @@ import Timing from './pages/Timing.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Budget from './pages/Budget.jsx'
 import Categories from './pages/Categories.jsx'
+import Settings from './pages/Settings.jsx'
 import { loadData } from './data/dataSource.js'
+import { mergeData } from './lib/merge.js'
 import { downloadClaudeExport } from './lib/claudeExport.js'
 import {
   getOverrides,
   setOverride,
   clearOverride,
   clearAllOverrides,
+  getManualData,
+  saveManualData,
+  clearManualData,
 } from './lib/storage.js'
 
 export default function App() {
   const [page, setPage] = useState('overview')
-  const [data, setData] = useState(null)
+  const [baseData, setBaseData] = useState(null)
   const [source, setSource] = useState('mock')
   const [overrides, setOverrides] = useState({})
-  const [navOpen, setNavOpen] = useState(false) // mobile sidebar
+  const [manual, setManual] = useState({})
+  const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     setOverrides(getOverrides())
+    setManual(getManualData())
     loadData().then(({ data, source }) => {
-      setData(data)
+      setBaseData(data)
       setSource(source)
     })
   }, [])
+
+  const data = useMemo(() => mergeData(baseData, manual), [baseData, manual])
+  const hasManual = Boolean(manual && (manual.standingOrders || manual.transfers || manual.accounts))
 
   function handleSetCategory(itemId, categoryId) {
     setOverrides(setOverride(itemId, categoryId))
@@ -41,6 +51,12 @@ export default function App() {
   }
   function handleExport() {
     if (data) downloadClaudeExport(data, overrides)
+  }
+  function handleSaveManual(next) {
+    setManual(saveManualData(next))
+  }
+  function handleResetManual() {
+    setManual(clearManualData())
   }
   function navigate(p) {
     setPage(p)
@@ -57,7 +73,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Mobile-Topbar mit Hamburger */}
       <header className="topbar">
         <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Menü öffnen">☰</button>
         <span className="topbar-brand">Private<span>Finance</span></span>
@@ -69,6 +84,7 @@ export default function App() {
         page={page}
         onNavigate={navigate}
         source={source}
+        hasManual={hasManual}
         onExport={handleExport}
         open={navOpen}
         onClose={() => setNavOpen(false)}
@@ -88,6 +104,14 @@ export default function App() {
             overrides={overrides}
             onResetAll={handleResetAll}
             onClearOne={handleClearOne}
+          />
+        )}
+        {page === 'settings' && (
+          <Settings
+            data={data}
+            manual={manual}
+            onSave={handleSaveManual}
+            onReset={handleResetManual}
           />
         )}
       </main>

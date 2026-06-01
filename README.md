@@ -24,6 +24,10 @@ Daten holst du später über die [GoCardless / Nordigen Bank Account Data API](h
   Donut (Ausgaben je Kategorie, mit Klick-Drilldown) und Saldoverlauf-Linie inkl. Prognose.
 - **Kategorien:** vordefinierte Kategorien, Auto-Zuordnung per Schlüsselwort,
   manuelle Overrides (in `localStorage` gespeichert).
+- **Meine Daten:** Konten, Daueraufträge und Beiträge (inkl. Ausführungstage) direkt
+  in der App pflegen. Wird **nur im Browser** gespeichert (localStorage) und über die
+  GoCardless-/Mock-Daten gelegt – nichts wird hochgeladen. So nutzt du auch die
+  öffentliche Seite mit echten Zahlen, ohne dass jemand sie sieht.
 - **Export für Claude:** ein Klick erzeugt eine analyse-fertige JSON – inkl.
   Markierung, welche Daueraufträge noch übers Privatkonto laufen. Diese Datei
   kannst du Claude geben, um eine Empfehlung zur Umstellung aufs
@@ -82,8 +86,19 @@ Seitenleiste).
 npm run fetch-data   # holt Salden + Transaktionen -> public/data.json
 npm run dev
 ```
-Die Seitenleiste zeigt jetzt „Echte Daten“. Aktualisieren: einfach
+Die Seitenleiste zeigt jetzt „Echte Daten”. Aktualisieren: einfach
 `npm run fetch-data` erneut ausführen.
+
+### Schritt 5 – Daueraufträge & Beiträge ergänzen (wichtig)
+GoCardless liefert **Salden + Umsätze, aber keine Daueraufträge und keine
+Ausführungstage**. Diese – und die Haushaltsbeiträge (Privat → Gemeinschaft) – trägst
+du unter **„Meine Daten”** in der App selbst ein. Erst damit funktionieren die Seiten
+**Daueraufträge** und **Zahlungslauf** mit deinen echten Zahlen. Die Eingaben bleiben
+nur in deinem Browser.
+
+> **Datenschutz:** Die öffentliche GitHub-Pages-Seite enthält nie echte Daten –
+> `public/data.json` ist in `.gitignore` und deine „Meine Daten”-Eingaben liegen nur
+> im localStorage deines Browsers. Andere Besucher sehen weiterhin nur Demo-Daten.
 
 ## Export für Claude nutzen
 

@@ -57,6 +57,38 @@ export function effectiveCategory(item, overrides) {
   return ovr[item.id] || item.category
 }
 
+// --- Manuelle Daten (Konten / Daueraufträge / Beiträge) ----------------------
+// Bleiben nur im Browser (localStorage) und werden über die Basis-Daten
+// (GoCardless data.json bzw. Mock) gelegt.
+const MANUAL_KEY = 'pf_manual'
+
+export function getManualData() {
+  try {
+    const raw = localStorage.getItem(MANUAL_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveManualData(obj) {
+  try {
+    localStorage.setItem(MANUAL_KEY, JSON.stringify(obj))
+  } catch {
+    /* ignore */
+  }
+  return obj
+}
+
+export function clearManualData() {
+  try {
+    localStorage.removeItem(MANUAL_KEY)
+  } catch {
+    /* ignore */
+  }
+  return {}
+}
+
 // --- Budgets je Kategorie ----------------------------------------------------
 const BUDGET_KEY = 'pf_budgets'
 
