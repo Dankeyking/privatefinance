@@ -1,21 +1,13 @@
 import { useMemo } from 'react'
 import TimingChart from '../components/charts/TimingChart.jsx'
+import Icon from '../components/Icon.jsx'
 import { buildPaymentSchedule } from '../lib/timing.js'
 import { formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
 
 export default function Timing({ data }) {
   const sched = useMemo(() => buildPaymentSchedule(data), [data])
 
-  if (!sched) {
-    return (
-      <div>
-        <div className="page-header"><h1>Zahlungslauf</h1></div>
-        <p className="muted">Kein Gemeinschaftskonto gefunden.</p>
-      </div>
-    )
-  }
-
-  if (sched.events.length === 0) {
+  if (!sched || sched.events.length === 0) {
     return (
       <div>
         <div className="page-header">
@@ -32,6 +24,9 @@ export default function Timing({ data }) {
     )
   }
 
+  const ok = sched.requiredBuffer === 0
+  const status = ok ? 'ok' : sched.covered ? 'warn' : 'risk'
+
   return (
     <div>
       <div className="page-header">
@@ -42,7 +37,42 @@ export default function Timing({ data }) {
         </p>
       </div>
 
-      <div className="grid kpis">
+      {/* Verdikt-Banner */}
+      <div className={`verdict ${status}`}>
+        <div className="verdict-icon">
+          <Icon name={status === 'ok' ? 'check' : 'alert'} size={26} />
+        </div>
+        <div>
+          <div className="verdict-title">
+            {status === 'ok' && 'Alles im grünen Bereich'}
+            {status === 'warn' && 'Gedeckt – aber knapp getaktet'}
+            {status === 'risk' && 'Achtung: Deckung reicht nicht'}
+          </div>
+          <div className="verdict-text">
+            {status === 'ok' &&
+              'Die Beiträge kommen rechtzeitig an, bevor die Buchungen abgehen – kein Puffer nötig.'}
+            {status === 'warn' && (
+              <>
+                Einige Buchungen (z. B. <strong>{sched.firstRisk?.label}</strong> am{' '}
+                {sched.firstRisk?.day}.) gehen ab, <em>bevor</em> die Beiträge da sind. Dafür
+                braucht das Gemeinschaftskonto <strong>{formatEUR(sched.requiredBuffer)}</strong>{' '}
+                Puffer – vorhanden sind {formatEUR(sched.jointBalance)}. Tipp: Beitrag früher
+                überweisen, dann reicht weniger.
+              </>
+            )}
+            {status === 'risk' && (
+              <>
+                Buchungen wie <strong>{sched.firstRisk?.label}</strong> am {sched.firstRisk?.day}.
+                gehen ab, bevor genug Geld da ist. Nötiger Puffer{' '}
+                <strong>{formatEUR(sched.requiredBuffer)}</strong>, vorhanden nur{' '}
+                {formatEUR(sched.jointBalance)}.
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid kpis mt">
         <div className="card kpi">
           <div className="kpi-label">Beiträge / Monat</div>
           <div className="kpi-value pos">{formatEUR(sched.totalIn)}</div>
@@ -58,87 +88,52 @@ export default function Timing({ data }) {
         <div className="card kpi">
           <div className="kpi-label">Aktueller Saldo</div>
           <div className={`kpi-value ${sched.covered ? 'pos' : 'neg'}`}>{formatEUR(sched.jointBalance)}</div>
-          <div className={`kpi-trend ${sched.covered ? 'pos' : 'neg'}`}>
-            {sched.covered ? '✓ rechtzeitig gedeckt' : '⚠ Puffer reicht nicht'}
-          </div>
         </div>
       </div>
 
-      <div className={`card mt timing-banner ${sched.covered ? 'ok' : 'risk'}`}>
-        {sched.requiredBuffer === 0 ? (
-          <span>
-            ✓ Alle Buchungen sind durch die Beiträge gedeckt – die Reihenfolge passt, kein
-            Puffer nötig.
-          </span>
-        ) : sched.covered ? (
-          <span>
-            ✓ Gedeckt. Einige Buchungen (z. B. <strong>{sched.firstRisk?.label}</strong> am{' '}
-            {sched.firstRisk?.day}.) gehen ab, <em>bevor</em> die Beiträge da sind – das
-            Gemeinschaftskonto braucht dafür <strong>{formatEUR(sched.requiredBuffer)}</strong>{' '}
-            Puffer. Aktuell vorhanden: {formatEUR(sched.jointBalance)}. Tipp: Beitrag früher
-            überweisen, dann reicht weniger Puffer.
-          </span>
-        ) : (
-          <span>
-            ⚠ Risiko: Buchungen wie <strong>{sched.firstRisk?.label}</strong> am{' '}
-            {sched.firstRisk?.day}. gehen ab, bevor genug Geld da ist. Nötiger Puffer{' '}
-            <strong>{formatEUR(sched.requiredBuffer)}</strong>, vorhanden nur{' '}
-            {formatEUR(sched.jointBalance)}. Beitrag früher überweisen oder Buchungstermine
-            nach hinten legen.
-          </span>
-        )}
-      </div>
-
       <div className="card mt">
-        <h2>Saldoverlauf im Monat (nach Ausführungstag)</h2>
-        <TimingChart
-          labels={sched.timelineLabels}
-          flowOnly={sched.flowOnly}
-          withBuffer={sched.withBuffer}
-        />
+        <h2>Saldoverlauf im Monat <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(nur Beiträge, ab 0 € – rote Fläche = ohne Puffer ungedeckt)</span></h2>
+        <TimingChart labels={sched.timelineLabels} flowOnly={sched.flowOnly} events={sched.events} />
       </div>
 
       <div className="card mt">
         <h2>Ablauf in Reihenfolge</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Tag</th>
-                <th>Vorgang</th>
-                <th className="num">Betrag</th>
-                <th className="num">Saldo (ab 0 €)</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sched.events.map((e, i) => (
-                <tr key={i} className={e.kind === 'out' && !e.funded ? 'not-joint' : ''}>
-                  <td><strong>{e.day}.</strong></td>
-                  <td>
-                    {e.kind === 'in'
-                      ? `Beitrag von ${e.from}`
-                      : `Lastschrift/DA → ${e.label}`}
-                    <span className="muted" style={{ fontSize: 12 }}>
-                      {' '}· {RHYTHM_LABELS[e.rhythm] || e.rhythm}
+        <ol className="timeline">
+          {sched.events.map((e, i) => {
+            const risk = e.kind === 'out' && !e.funded
+            return (
+              <li key={i} className={`timeline-item ${e.kind} ${risk ? 'risk' : ''}`}>
+                <div className="tl-marker">
+                  <span className="tl-day">{e.day}.</span>
+                </div>
+                <div className="tl-content">
+                  <div className="tl-row">
+                    <span className="tl-label">
+                      <Icon name={e.kind === 'in' ? 'plus' : 'minus'} size={15} />
+                      {e.kind === 'in'
+                        ? `Beitrag von ${e.from}`
+                        : `Lastschrift/DA → ${e.label}`}
                     </span>
-                  </td>
-                  <td className={`num amount ${e.kind === 'in' ? 'pos' : 'neg'}`}>
-                    {e.kind === 'in' ? '+' : '−'}{formatEUR(e.amount)}
-                  </td>
-                  <td className="num">{formatEUR(e.balanceAfter)}</td>
-                  <td>
-                    {e.kind === 'in'
-                      ? '—'
-                      : e.funded
-                        ? '✓ aus Beiträgen gedeckt'
-                        : '⚠ vor Beitrag / nur aus Puffer'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <span className={`tl-amount ${e.kind === 'in' ? 'pos' : 'neg'}`}>
+                      {e.kind === 'in' ? '+' : '−'}{formatEUR(e.amount)}
+                    </span>
+                  </div>
+                  <div className="tl-sub">
+                    <span className="muted">
+                      Saldo danach: {formatEUR(e.balanceAfter)} · {RHYTHM_LABELS[e.rhythm] || e.rhythm}
+                    </span>
+                    {e.kind === 'out' &&
+                      (e.funded ? (
+                        <span className="pill ok">aus Beiträgen gedeckt</span>
+                      ) : (
+                        <span className="pill risk">läuft vor dem Beitrag</span>
+                      ))}
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ol>
       </div>
     </div>
   )

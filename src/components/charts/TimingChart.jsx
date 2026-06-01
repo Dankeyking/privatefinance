@@ -2,45 +2,64 @@ import './setup.js'
 import { Line } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
 
-// Verlauf des Gemeinschaftskonto-Saldos über den Monat (nach Ausführungstag).
-// "Nur Beiträge (ab 0 €)" zeigt, wann es ohne Puffer negativ würde;
-// "mit aktuellem Puffer" zeigt den realen Saldo.
-export default function TimingChart({ labels, flowOnly, withBuffer }) {
+// Cash-Flow-Verlauf des Gemeinschaftskontos über den Monat: laufender Saldo
+// allein aus den Beiträgen (ab 0 €). Fläche unter 0 € = Gefahrenzone (ohne Puffer
+// nicht gedeckt). Punkte markieren die Tage mit Buchungen/Beiträgen.
+export default function TimingChart({ labels, flowOnly, events }) {
+  // Pro Tag: gibt es eine Buchung, und in welche Richtung (netto)?
+  const netByDay = {}
+  events.forEach((e) => {
+    netByDay[e.day] = (netByDay[e.day] || 0) + (e.kind === 'in' ? e.amount : -e.amount)
+  })
+
   const data = {
     labels,
     datasets: [
       {
-        label: 'Nur Beiträge (ab 0 €)',
+        label: 'Saldo aus Beiträgen',
         data: flowOnly,
-        borderColor: '#d97706',
-        backgroundColor: 'rgba(217, 119, 6, 0.12)',
         stepped: true,
-        fill: true,
-        pointRadius: 0,
-      },
-      {
-        label: 'Mit aktuellem Puffer',
-        data: withBuffer,
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.08)',
-        stepped: true,
-        fill: false,
-        pointRadius: 0,
-        borderDash: [5, 4],
+        borderColor: '#0f766e',
+        borderWidth: 2,
+        fill: {
+          target: 'origin',
+          above: 'rgba(16, 185, 129, 0.16)',
+          below: 'rgba(220, 38, 38, 0.20)',
+        },
+        pointRadius: (ctx) => (netByDay[labels[ctx.dataIndex]] !== undefined ? 5 : 0),
+        pointHoverRadius: 7,
+        pointBackgroundColor: (ctx) => {
+          const net = netByDay[labels[ctx.dataIndex]]
+          if (net === undefined) return 'transparent'
+          return net >= 0 ? '#16a34a' : '#dc2626'
+        },
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1.5,
       },
     ],
   }
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 800, easing: 'easeOutQuart' },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { position: 'bottom' },
+      legend: { display: false },
       tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 10,
+        cornerRadius: 8,
         callbacks: {
           title: (items) => `Tag ${items[0].label}`,
-          label: (c) => `${c.dataset.label}: ${formatEUR(c.parsed.y)}`,
+          label: (c) => `Saldo (ab 0 €): ${formatEUR(c.parsed.y)}`,
+          afterBody: (items) => {
+            const day = Number(items[0].label)
+            const todays = events.filter((e) => e.day === day)
+            return todays.map(
+              (e) => `${e.kind === 'in' ? '+' : '−'}${formatEUR(e.amount)}  ${e.label}`,
+            )
+          },
         },
       },
     },
@@ -58,6 +77,7 @@ export default function TimingChart({ labels, flowOnly, withBuffer }) {
       },
     },
   }
+
   return (
     <div className="chart-box">
       <Line data={data} options={options} />
