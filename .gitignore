@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+config.js
+
+# Echte Bankdaten – nie committen
+public/data.json
+
+# Logs / Editor
+*.log
+.DS_Store
+.vscode/
+.idea/

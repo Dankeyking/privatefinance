@@ -1,0 +1,22 @@
+{
+  "_comment": "Beispiel für die Datenstruktur, die scripts/fetch-data.js nach public/data.json schreibt. Die App selbst nutzt als Mock-Fallback den Generator in src/data/mockData.js – diese Datei dient nur als Referenz/Schema.",
+  "accounts": [
+    { "id": "joint", "name": "Gemeinschaftskonto", "type": "joint", "owner": "Duncan & Partner", "balance": 4200.5, "currency": "EUR" },
+    { "id": "p1", "name": "Privatkonto Duncan", "type": "personal", "owner": "Duncan", "balance": 1850.0, "currency": "EUR" },
+    { "id": "p2", "name": "Privatkonto Partner", "type": "personal", "owner": "Partner", "balance": 1620.0, "currency": "EUR" }
+  ],
+  "standingOrders": [
+    { "id": "so1", "recipient": "Vermieter Müller", "amount": 1450, "rhythm": "monthly", "accountId": "joint", "category": "Wohnen", "nextExecution": "2026-07-05" },
+    { "id": "so6", "recipient": "Telekom Internet", "amount": 49.99, "rhythm": "monthly", "accountId": "p1", "category": "Wohnen", "nextExecution": "2026-07-05" },
+    { "id": "so8", "recipient": "Allianz KFZ-Versicherung", "amount": 720, "rhythm": "yearly", "accountId": "p1", "category": "Versicherung", "nextExecution": "2026-09-05" }
+  ],
+  "transactions": [
+    { "id": "t1", "accountId": "joint", "date": "2026-05-01", "amount": 3200, "recipient": "Arbeitgeber Duncan", "description": "Gehalt", "category": null, "internal": false },
+    { "id": "t2", "accountId": "joint", "date": "2026-05-03", "amount": -1450, "recipient": "Vermieter Müller", "description": "Dauerauftrag", "category": "Wohnen", "internal": false },
+    { "id": "t3", "accountId": "p1", "date": "2026-05-03", "amount": -49.99, "recipient": "Telekom Internet", "description": "Dauerauftrag", "category": "Wohnen", "internal": false }
+  ],
+  "balanceHistory": [
+    { "date": "2026-04-01", "joint": 3850.0, "p1": 1700.0, "p2": 1500.0 },
+    { "date": "2026-05-01", "joint": 4200.5, "p1": 1850.0, "p2": 1620.0 }
+  ]
+}
