@@ -2,9 +2,9 @@ import './setup.js'
 import { Chart } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
 
-// Animiertes Sankey-Diagramm: Einkommen → Konten → Kategorien.
+// Animiertes Sankey-Diagramm: Einkommen → Privatkonten → Gemeinschaftskonto → Kategorien.
 // Flussbreite ∝ monatlicher Betrag.
-export default function SankeyFlow({ flows, nodeColors, columns }) {
+export default function SankeyFlow({ flows, nodeColors, columns, labels }) {
   if (!flows || flows.length === 0) {
     return <p className="muted">Keine Flussdaten vorhanden.</p>
   }
@@ -15,13 +15,17 @@ export default function SankeyFlow({ flows, nodeColors, columns }) {
     datasets: [
       {
         data: flows,
+        labels,
         colorFrom: (c) => colorOf(c.dataset.data[c.dataIndex]?.from),
         colorTo: (c) => colorOf(c.dataset.data[c.dataIndex]?.to),
         colorMode: 'gradient',
         column: columns,
-        alpha: 0.6,
+        alpha: 0.55,
         size: 'max',
         borderWidth: 0,
+        nodeWidth: 14,
+        padding: 26,
+        font: { family: "-apple-system, 'Segoe UI', Roboto, sans-serif", size: 12, weight: '600' },
       },
     ],
   }
@@ -29,14 +33,18 @@ export default function SankeyFlow({ flows, nodeColors, columns }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 800, easing: 'easeOutQuart' },
+    layout: { padding: { left: 4, right: 8, top: 6, bottom: 6 } },
+    animation: { duration: 900, easing: 'easeOutQuart' },
     plugins: {
       legend: { display: false },
       tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 10,
+        cornerRadius: 8,
         callbacks: {
           label: (c) => {
             const f = c.dataset.data[c.dataIndex]
-            return `${f.from} → ${f.to}: ${formatEUR(f.flow)}`
+            return `${f.from} → ${f.to}: ${formatEUR(f.flow)}/Mt`
           },
         },
       },

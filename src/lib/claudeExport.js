@@ -10,13 +10,15 @@ import { toMonthly } from './normalize.js'
 import { effectiveCategory } from './storage.js'
 
 const TASK_PROMPT =
-  'Analysiere diesen Haushalts-Cashflow. Das Modell: Geld soll vom Gemeinschaftskonto ' +
-  'auf die Privatkonten und an gemeinsame Fixkosten fließen. Aktuell laufen aber noch ' +
-  'einige Daueraufträge über ein Privatkonto statt über das Gemeinschaftskonto. ' +
-  'Sage mir konkret: (1) Welche Daueraufträge sollten vom Privatkonto auf das ' +
+  'Analysiere diesen Haushalts-Cashflow. Das Modell: Die Gehälter gehen auf die ' +
+  'Privatkonten; von dort überweist jede Person einen Beitrag aufs Gemeinschaftskonto, ' +
+  'das die gemeinsamen Fixkosten zahlt. Einige gemeinsame Kosten laufen aber noch direkt ' +
+  'über ein Privatkonto statt über das Gemeinschaftskonto. ' +
+  'Sage mir konkret: (1) Welche dieser Daueraufträge sollten vom Privatkonto auf das ' +
   'Gemeinschaftskonto umgestellt werden und warum? (2) In welcher Reihenfolge ist die ' +
   'Umstellung am sinnvollsten (z. B. nach monatlicher Höhe oder nächstem Ausführungsdatum)? ' +
-  '(3) Gibt es Aufträge, die bewusst privat bleiben sollten? Berücksichtige die ' +
+  '(3) Gibt es Aufträge, die bewusst privat bleiben sollten? (4) Passt die Höhe der ' +
+  'Haushaltsbeiträge zu den Fixkosten auf dem Gemeinschaftskonto? Berücksichtige die ' +
   'normalisierten Monatskosten (monthlyCost). Die Liste "summary.ordersNotOnJoint" enthält ' +
   'die Umstell-Kandidaten – nutze das Feld "empfehlung" für deine Einschätzung.'
 
@@ -83,7 +85,8 @@ export function buildClaudeExport(data, overrides = {}) {
     task: TASK_PROMPT,
     householdModel: {
       description:
-        'Geld fließt vom Gemeinschaftskonto auf die Privatkonten und an gemeinsame Fixkosten.',
+        'Gehälter -> Privatkonten -> Haushaltsbeitrag aufs Gemeinschaftskonto -> gemeinsame Fixkosten. ' +
+        'Einzelne Kosten werden noch direkt vom Privatkonto gezahlt.',
       accounts: accounts.map((a) => ({
         id: a.id,
         name: a.name,

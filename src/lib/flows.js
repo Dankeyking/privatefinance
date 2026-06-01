@@ -1,16 +1,17 @@
 // =============================================================================
-//  flows.js — baut Sankey-Flüsse aus den Daten: Einkommen → Konten → Kategorien
+//  flows.js — baut Sankey-Flüsse: Einkommen → Privatkonten → Gemeinschaftskonto
+//             → Kategorien (plus direkte Zahlungen vom Privatkonto)
 // =============================================================================
 
-import { toMonthly } from './normalize.js'
+import { toMonthly, formatEUR } from './normalize.js'
 import { categoryColor } from './categories.js'
 import { effectiveCategoryOf, sortedMonths, monthKey } from './selectors.js'
 
 const INCOME_COLOR = '#16a34a'
 const JOINT_COLOR = '#3b82f6'
-const PERSONAL_COLOR = '#64748b'
+const PERSONAL_COLOR = '#94a3b8'
 
-// Liefert { data, labels, colors, columns } für chartjs-chart-sankey.
+// Liefert { flows, nodeColors, columns, labels } für chartjs-chart-sankey.
 export function buildSankeyData(data, overrides = {}) {
   const { accounts = [], standingOrders = [], transactions = [] } = data
   const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
@@ -27,7 +28,7 @@ export function buildSankeyData(data, overrides = {}) {
   const nodeColors = {}
   const columns = {}
 
-  // 1) Einkommen (extern) -> Konto  (letzter Monat, ohne interne Umbuchungen)
+  // 1) Einkommen (extern) -> Privatkonto (letzter Monat, ohne interne Umbuchungen)
   transactions.forEach((t) => {
     if (t.internal || t.amount <= 0) return
     if (latest && monthKey(t.date) !== latest) return
@@ -38,20 +39,21 @@ export function buildSankeyData(data, overrides = {}) {
     columns[t.recipient] = 0
   })
 
-  // 2) Interne Überträge Gemeinschaftskonto -> Privatkonto (letzter Monat)
-  const joint = accounts.find((a) => a.type === 'joint')
+  // 2) Interne Überträge Privatkonto -> Gemeinschaftskonto (letzter Monat).
+  //    Quelle steht als fromAccountId auf der Gutschrift-Buchung.
   transactions.forEach((t) => {
-    if (!t.internal || t.amount <= 0) return
+    if (!t.internal || t.amount <= 0 || !t.fromAccountId) return
     if (latest && monthKey(t.date) !== latest) return
-    const acc = accById[t.accountId]
-    if (!acc || acc.type !== 'personal' || !joint) return
-    addFlow(joint.name, acc.name, t.amount)
+    const target = accById[t.accountId]
+    const source = accById[t.fromAccountId]
+    if (!target || !source) return
+    addFlow(source.name, target.name, t.amount)
   })
 
-  // Konten-Knoten einfärben + Spalten setzen
+  // Konten-Knoten einfärben + Spalten (Privat = 1, Gemeinschaft = 2)
   accounts.forEach((a) => {
     nodeColors[a.name] = a.type === 'joint' ? JOINT_COLOR : PERSONAL_COLOR
-    columns[a.name] = a.type === 'joint' ? 1 : 2
+    columns[a.name] = a.type === 'joint' ? 2 : 1
   })
 
   // 3) Konto -> Kategorie (Daueraufträge, auf Monat normalisiert)
@@ -69,5 +71,18 @@ export function buildSankeyData(data, overrides = {}) {
     return { from, to, flow: Number(flow.toFixed(2)) }
   })
 
-  return { flows, nodeColors, columns }
+  // Knoten-Beschriftung inkl. Durchsatz (max aus Zu-/Abfluss)
+  const inSum = {}
+  const outSum = {}
+  flows.forEach((f) => {
+    outSum[f.from] = (outSum[f.from] || 0) + f.flow
+    inSum[f.to] = (inSum[f.to] || 0) + f.flow
+  })
+  const labels = {}
+  Object.keys(nodeColors).forEach((name) => {
+    const through = Math.max(inSum[name] || 0, outSum[name] || 0)
+    labels[name] = `${name}  ·  ${formatEUR(through)}`
+  })
+
+  return { flows, nodeColors, columns, labels }
 }

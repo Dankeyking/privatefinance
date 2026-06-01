@@ -1,8 +1,10 @@
 # PrivateFinance – Haushalts-Cashflow-Dashboard
 
 Ein schlankes Dashboard zur Verwaltung des Haushalts-Cashflows über mehrere
-**C24-Bank-Konten** (ein Gemeinschaftskonto + zwei Privatkonten). Geld fließt vom
-Gemeinschaftskonto auf die Privatkonten und an gemeinsame Fixkosten.
+**C24-Bank-Konten** (ein Gemeinschaftskonto + zwei Privatkonten). Die Gehälter gehen
+auf die Privatkonten; von dort wird ein Beitrag aufs Gemeinschaftskonto überwiesen,
+das die gemeinsamen Fixkosten zahlt. Einzelne Kosten werden teils noch direkt vom
+Privatkonto gezahlt – die App hilft, diese aufs Gemeinschaftskonto umzustellen.
 
 Die App läuft **sofort mit Demo-/Mock-Daten** – ganz ohne API-Schlüssel. Echte
 Daten holst du später über die [GoCardless / Nordigen Bank Account Data API](https://gocardless.com/bank-account-data/).
@@ -89,6 +91,43 @@ Die Seitenleiste zeigt jetzt „Echte Daten“. Aktualisieren: einfach
    - einen eingebetteten `task`-Text (die Frage an Claude).
 3. Lade die JSON in einen Claude-Chat hoch und frage nach der sinnvollsten
    Umstellungs-Reihenfolge aufs Gemeinschaftskonto.
+
+## MCP – Claude direkten Zugriff geben (statt JSON-Export)
+
+Statt jedes Mal die JSON zu exportieren, kann Claude die Daten über einen
+**MCP-Server** direkt abfragen. Der Server liest dieselbe Datenquelle wie die App
+(`public/data.json`, sonst Mock-Daten) und stellt Tools bereit:
+
+- `list_accounts` – Konten + Salden
+- `list_standing_orders` – Daueraufträge inkl. Monatskosten; `onlyPersonal: true`
+  liefert nur die, die noch übers Privatkonto laufen (Umstell-Kandidaten)
+- `analyze_cashflow` – komplette analyse-fertige Struktur (wie der JSON-Export)
+- `expenses_by_category` – Ausgaben je Kategorie
+
+**In Claude Code einbinden:** Das Repo enthält bereits eine `.mcp.json`. Beim Öffnen
+des Projekts in Claude Code wird der Server `privatefinance` automatisch angeboten –
+einmal bestätigen, fertig. Manuell testen:
+
+```bash
+npm run mcp
+```
+
+**In Claude Desktop einbinden:** in der Konfigurationsdatei
+(`claude_desktop_config.json`) ergänzen und Pfad anpassen:
+
+```json
+{
+  "mcpServers": {
+    "privatefinance": {
+      "command": "node",
+      "args": ["/voller/pfad/zu/privatefinance/mcp/finance-server.js"]
+    }
+  }
+}
+```
+
+Danach kannst du Claude einfach fragen: *„Welche Daueraufträge sollte ich aufs
+Gemeinschaftskonto umstellen?"* – Claude ruft `analyze_cashflow` selbst auf.
 
 ## Kategorien erweitern
 

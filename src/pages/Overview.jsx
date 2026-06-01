@@ -42,8 +42,13 @@ export default function Overview({ data, overrides }) {
 
       <div className="grid flow-row mt">
         <div className="card">
-          <h2>Geldfluss – Einkommen → Konten → Kategorien</h2>
-          <SankeyFlow flows={sankey.flows} nodeColors={sankey.nodeColors} columns={sankey.columns} />
+          <h2>Geldfluss – Einkommen → Privatkonten → Gemeinschaftskonto → Fixkosten</h2>
+          <SankeyFlow
+            flows={sankey.flows}
+            nodeColors={sankey.nodeColors}
+            columns={sankey.columns}
+            labels={sankey.labels}
+          />
         </div>
 
         <div className="card">

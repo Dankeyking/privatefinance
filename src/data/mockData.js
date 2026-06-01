@@ -82,15 +82,15 @@ function generate() {
     const mon = m.getMonth()
     const day = (n) => isoDate(new Date(y, mon, n))
 
-    // Einnahmen (extern) -> aufs Gemeinschaftskonto
-    transactions.push({ id: txId(), accountId: 'joint', date: day(1), amount: 3200, recipient: 'Arbeitgeber Duncan', description: 'Gehalt', category: null, internal: false })
-    transactions.push({ id: txId(), accountId: 'joint', date: day(1), amount: 2800, recipient: 'Arbeitgeber Partner', description: 'Gehalt', category: null, internal: false })
+    // Einnahmen (Gehälter) -> Privatkonten
+    transactions.push({ id: txId(), accountId: 'p1', date: day(1), amount: 3200, recipient: 'Arbeitgeber Duncan', description: 'Gehalt', category: null, internal: false })
+    transactions.push({ id: txId(), accountId: 'p2', date: day(1), amount: 2800, recipient: 'Arbeitgeber Partner', description: 'Gehalt', category: null, internal: false })
 
-    // Interne Überträge Gemeinschaftskonto -> Privat (Taschengeld)
-    transactions.push({ id: txId(), accountId: 'joint', date: day(2), amount: -500, recipient: 'Übertrag Duncan', description: 'Taschengeld', category: null, internal: true })
-    transactions.push({ id: txId(), accountId: 'p1', date: day(2), amount: 500, recipient: 'Übertrag vom Gemeinschaftskonto', description: 'Taschengeld', category: null, internal: true })
-    transactions.push({ id: txId(), accountId: 'joint', date: day(2), amount: -450, recipient: 'Übertrag Partner', description: 'Taschengeld', category: null, internal: true })
-    transactions.push({ id: txId(), accountId: 'p2', date: day(2), amount: 450, recipient: 'Übertrag vom Gemeinschaftskonto', description: 'Taschengeld', category: null, internal: true })
+    // Interne Überträge Privatkonto -> Gemeinschaftskonto (Beitrag zu den Fixkosten)
+    transactions.push({ id: txId(), accountId: 'p1', date: day(2), amount: -1800, recipient: 'Übertrag ans Gemeinschaftskonto', description: 'Haushaltsbeitrag', category: null, internal: true, toAccountId: 'joint' })
+    transactions.push({ id: txId(), accountId: 'joint', date: day(2), amount: 1800, recipient: 'Beitrag Duncan', description: 'Haushaltsbeitrag', category: null, internal: true, fromAccountId: 'p1' })
+    transactions.push({ id: txId(), accountId: 'p2', date: day(2), amount: -1600, recipient: 'Übertrag ans Gemeinschaftskonto', description: 'Haushaltsbeitrag', category: null, internal: true, toAccountId: 'joint' })
+    transactions.push({ id: txId(), accountId: 'joint', date: day(2), amount: 1600, recipient: 'Beitrag Partner', description: 'Haushaltsbeitrag', category: null, internal: true, fromAccountId: 'p2' })
 
     // Daueraufträge als Buchung, sofern in diesem Monat fällig.
     // Der jüngste Monat ist immer fällig; quartals-/jährliche entsprechend gestaffelt.
