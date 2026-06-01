@@ -135,6 +135,10 @@ function generate() {
         internal: false,
       })
     })
+
+    // Bargeldabhebungen (zum Aufteilen / Zuordnen auf der Bargeld-Seite)
+    transactions.push({ id: txId(), accountId: 'p1', date: day(7), amount: -200, recipient: 'Bargeldabhebung', description: 'Geldautomat', category: 'Bargeld', internal: false, cashWithdrawal: true })
+    transactions.push({ id: txId(), accountId: 'joint', date: day(22), amount: -150, recipient: 'Bargeldabhebung', description: 'Geldautomat', category: 'Bargeld', internal: false, cashWithdrawal: true })
   })
 
   // Saldoverlauf: plausibler, leicht steigender Trend, der im jüngsten Monat

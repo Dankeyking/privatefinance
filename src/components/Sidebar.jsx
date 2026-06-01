@@ -5,6 +5,7 @@ const NAV = [
   { id: 'standing', label: 'Daueraufträge', icon: 'standing' },
   { id: 'timing', label: 'Zahlungslauf', icon: 'timing' },
   { id: 'analytics', label: 'Analyse', icon: 'analytics' },
+  { id: 'cash', label: 'Bargeld', icon: 'cash' },
   { id: 'budget', label: 'Budget', icon: 'budget' },
   { id: 'categories', label: 'Kategorien', icon: 'categories' },
   { id: 'settings', label: 'Meine Daten', icon: 'settings' },

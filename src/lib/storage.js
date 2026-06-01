@@ -89,6 +89,28 @@ export function clearManualData() {
   return {}
 }
 
+// --- Bargeld-Aufteilungen ----------------------------------------------------
+// { withdrawalTxId: [ { id, label, category, amount } ] } – nur im Browser.
+const CASH_KEY = 'pf_cash_allocations'
+
+export function getCashAllocations() {
+  try {
+    const raw = localStorage.getItem(CASH_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveCashAllocations(map) {
+  try {
+    localStorage.setItem(CASH_KEY, JSON.stringify(map))
+  } catch {
+    /* ignore */
+  }
+  return map
+}
+
 // --- Budgets je Kategorie ----------------------------------------------------
 const BUDGET_KEY = 'pf_budgets'
 

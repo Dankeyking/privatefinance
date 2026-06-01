@@ -4,7 +4,7 @@ import { formatEUR } from '../lib/normalize.js'
 import { getBudgets, setBudget } from '../lib/storage.js'
 import { expensesByCategory, sortedMonths } from '../lib/selectors.js'
 
-export default function Budget({ data, overrides }) {
+export default function Budget({ data, overrides, allocations = {} }) {
   const { transactions } = data
   const [budgets, setBudgets] = useState(() => getBudgets())
 
@@ -14,8 +14,8 @@ export default function Budget({ data, overrides }) {
   }, [transactions])
 
   const spentByCat = useMemo(
-    () => expensesByCategory(transactions, overrides, latest),
-    [transactions, overrides, latest],
+    () => expensesByCategory(transactions, overrides, latest, allocations),
+    [transactions, overrides, latest, allocations],
   )
 
   function handleChange(catId, value) {

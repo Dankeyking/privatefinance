@@ -367,6 +367,14 @@ select, .btn {
 .pill.ok { background: #dcfce7; color: var(--pos); }
 .pill.risk { background: #fee2e2; color: var(--neg); }
 
+/* --- Bargeld --------------------------------------------------------------- */
+.cash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.cash-title { font-weight: 700; font-size: 16px; }
+.cash-remaining { font-size: 13px; font-weight: 600; color: var(--warn); white-space: nowrap; }
+.cash-remaining.done { color: var(--pos); }
+.cash-bar { height: 8px; background: #eef2f7; border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
+.cash-fill { height: 100%; background: #ca8a04; border-radius: 999px; transition: width 0.3s ease; }
+
 /* --- Meine Daten / Editor -------------------------------------------------- */
 .privacy-note {
   background: #eff6ff;

@@ -60,14 +60,28 @@ export function last6MonthBuckets(transactions, n = 6) {
 }
 
 // Ausgaben je Kategorie (interne Umbuchungen + Einnahmen ausgenommen).
-// Optional auf einen Monat begrenzen.
-export function expensesByCategory(transactions, overrides = {}, onlyMonth = null) {
+// Optional auf einen Monat begrenzen. Bargeld-Abhebungen mit Aufteilung werden
+// auf ihre Kategorien verteilt; der nicht zugeordnete Rest bleibt „Bargeld".
+export function expensesByCategory(transactions, overrides = {}, onlyMonth = null, allocations = {}) {
   const totals = {}
+  const add = (cat, amt) => {
+    if (amt > 0) totals[cat] = (totals[cat] || 0) + amt
+  }
   transactions.forEach((t) => {
     if (t.internal || t.amount >= 0) return
     if (onlyMonth && monthKey(t.date) !== onlyMonth) return
-    const cat = effectiveCategoryOf(t, overrides)
-    totals[cat] = (totals[cat] || 0) + -t.amount
+    const allocs = allocations[t.id]
+    if (allocs && allocs.length) {
+      let allocated = 0
+      allocs.forEach((a) => {
+        const amt = Number(a.amount) || 0
+        add(a.category, amt)
+        allocated += amt
+      })
+      add(effectiveCategoryOf(t, overrides), -t.amount - allocated) // Rest
+    } else {
+      add(effectiveCategoryOf(t, overrides), -t.amount)
+    }
   })
   return totals
 }

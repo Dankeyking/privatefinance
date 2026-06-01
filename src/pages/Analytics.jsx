@@ -11,13 +11,16 @@ import {
   forecastBalances,
 } from '../lib/selectors.js'
 
-export default function Analytics({ data, overrides }) {
+export default function Analytics({ data, overrides, allocations = {} }) {
   const { transactions } = data
   const [drill, setDrill] = useState(null)
 
   const bars = useMemo(() => last6MonthBuckets(transactions), [transactions])
 
-  const catTotals = useMemo(() => expensesByCategory(transactions, overrides), [transactions, overrides])
+  const catTotals = useMemo(
+    () => expensesByCategory(transactions, overrides, null, allocations),
+    [transactions, overrides, allocations],
+  )
   const donut = useMemo(() => {
     const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
     return {

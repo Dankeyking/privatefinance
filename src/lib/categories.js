@@ -12,6 +12,7 @@ export const CATEGORIES = [
   { id: 'Versicherung', label: 'Versicherung', color: '#7c3aed' },
   { id: 'Freizeit', label: 'Freizeit', color: '#db2777' },
   { id: 'Sparen', label: 'Sparen', color: '#16a34a' },
+  { id: 'Bargeld', label: 'Bargeld', color: '#ca8a04' },
   { id: 'Sonstiges', label: 'Sonstiges', color: '#64748b' },
 ]
 
@@ -52,6 +53,19 @@ export const KEYWORD_RULES = {
     'tagesgeld', 'festgeld', 'sparkonto', 'rücklage', 'ruecklage', 'invest',
     'comdirect', 'ing depot',
   ],
+  Bargeld: [
+    'bargeld', 'bargeldabhebung', 'geldautomat', 'auszahlung', 'atm',
+    'abhebung', 'cash',
+  ],
+}
+
+// Erkennt Bargeld-Abhebungen (für die Bargeld-Aufteilung).
+export function isCashWithdrawal(tx) {
+  if (!tx) return false
+  if (tx.cashWithdrawal) return true
+  return /bargeld|geldautomat|auszahlung|abhebung|\batm\b/i.test(
+    `${tx.recipient || ''} ${tx.description || ''}`,
+  )
 }
 
 // Ordnet einen Empfänger (+ optionale Beschreibung) automatisch einer Kategorie zu.
