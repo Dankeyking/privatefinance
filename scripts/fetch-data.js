@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 // =============================================================================
 //  scripts/fetch-data.js
-//  Holt echte C24-Daten über die GoCardless (Nordigen) Bank Account Data API
+//  Holt echte C24-Daten über die Enable-Banking Account Information API
 //  und schreibt sie nach public/data.json. Wird im Browser wegen CORS NICHT
 //  direkt aufgerufen – deshalb dieses kleine Node-Skript.
 //
 //  Voraussetzungen:
-//    1. .env        mit GOCARDLESS_SECRET_ID / GOCARDLESS_SECRET_KEY (siehe .env.example)
-//    2. config.js   mit den Account-IDs deiner Konten (siehe config.example.js)
-//    3. C24-Konten via Requisition verknüpft (siehe README.md, Schritt 3)
+//    1. .env        mit ENABLEBANKING_APP_ID / ENABLEBANKING_KEY_PATH (siehe .env.example)
+//    2. config.js   mit den Konto-UIDs deiner Konten (siehe config.example.js)
+//    3. C24-Konten via Session verknüpft (siehe README.md, Schritt 3)
 //
 //  Aufruf:  npm run fetch-data
 // =============================================================================
 
 import { writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { api, getToken, ROOT } from './gc-lib.js'
+import { api, ROOT } from './eb-lib.js'
 
 // Erkennt Daueraufträge heuristisch: ausgehende Buchungen, deren Empfänger in
-// mehreren Monaten mit ähnlichem Betrag auftaucht. (GoCardless v2 liefert keine
+// mehreren Monaten mit ähnlichem Betrag auftaucht. (Die API liefert keine
 // expliziten Standing Orders.) Du kannst die Liste danach manuell verfeinern.
 function detectStandingOrders(transactions) {
   const groups = {}
@@ -31,7 +31,7 @@ function detectStandingOrders(transactions) {
   }
   const orders = []
   let i = 0
-  for (const [key, list] of Object.entries(groups)) {
+  for (const [, list] of Object.entries(groups)) {
     const months = new Set(list.map((t) => t.date.slice(0, 7)))
     if (months.size < 2) continue // nur wiederkehrende
     const amount = Math.abs(list[0].amount)
@@ -48,24 +48,31 @@ function detectStandingOrders(transactions) {
   return orders
 }
 
-function pickBalance(balances) {
-  // bevorzugt verfügbares/erwartetes Guthaben
-  const arr = balances?.balances || []
-  const pref = arr.find((b) => /interimAvailable|expected|closingBooked/i.test(b.balanceType)) || arr[0]
-  return pref ? Number(pref.balanceAmount.amount) : 0
+function pickBalance(payload) {
+  // bevorzugt verfügbares/erwartetes Guthaben (Enable-Banking balance_type-Codes)
+  const arr = payload?.balances || []
+  const pref =
+    arr.find((b) => /ITAV|CLBD|XPCD|interimAvailable|closingBooked/i.test(b.balance_type)) || arr[0]
+  return pref ? Number(pref.balance_amount.amount) : 0
 }
 
-function normalizeTx(raw, accountId) {
+function normalizeTx(list, accountId) {
   const out = []
-  const booked = raw?.transactions?.booked || []
-  for (const t of booked) {
+  for (const t of list || []) {
+    // Enable Banking liefert immer positive Beträge; Vorzeichen aus dem Indikator.
+    const sign = t.credit_debit_indicator === 'DBIT' ? -1 : 1
+    const amount = Number(t.transaction_amount.amount) * sign
+    const counter = sign < 0 ? t.creditor?.name : t.debtor?.name
+    const remit = Array.isArray(t.remittance_information)
+      ? t.remittance_information.join(' ')
+      : t.remittance_information || ''
     out.push({
-      id: t.transactionId || t.internalTransactionId || `${accountId}-${t.bookingDate}-${Math.random()}`,
+      id: t.entry_reference || t.transaction_id || `${accountId}-${t.booking_date}-${Math.random()}`,
       accountId,
-      date: t.bookingDate || t.valueDate,
-      amount: Number(t.transactionAmount.amount),
-      recipient: t.creditorName || t.debtorName || t.remittanceInformationUnstructured || 'Unbekannt',
-      description: (t.remittanceInformationUnstructured || '').slice(0, 120),
+      date: t.booking_date || t.value_date,
+      amount,
+      recipient: counter || remit || 'Unbekannt',
+      description: remit.slice(0, 120),
       category: null,
       internal: false,
     })
@@ -73,37 +80,51 @@ function normalizeTx(raw, accountId) {
   return out
 }
 
+// Holt alle Transaktionen eines Kontos (paginiert über continuation_key).
+async function fetchTransactions(uid, dateFrom) {
+  let all = []
+  let cont = null
+  do {
+    const q = new URLSearchParams({ date_from: dateFrom })
+    if (cont) q.set('continuation_key', cont)
+    const page = await api(`/accounts/${uid}/transactions?${q}`)
+    all = all.concat(page.transactions || [])
+    cont = page.continuation_key || null
+  } while (cont)
+  return all
+}
+
 async function main() {
-  // config.js laden (Account-Zuordnung)
+  // config.js laden (Konto-Zuordnung)
   const configPath = join(ROOT, 'config.js')
   if (!existsSync(configPath)) {
-    console.error('❌ config.js fehlt. Kopiere config.example.js -> config.js und trage die Account-IDs ein.')
+    console.error('❌ config.js fehlt. Kopiere config.example.js -> config.js und trage die Konto-UIDs ein.')
     process.exit(1)
   }
   const { ACCOUNTS } = await import(`file://${configPath}`)
 
-  console.log('→ Token anfordern …')
-  const token = await getToken()
+  // Transaktionen ab 90 Tage rückwärts (PSD2-typisches Maximum ohne Re-Login).
+  const dateFrom = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   const accounts = []
   let allTx = []
 
   for (const acc of ACCOUNTS) {
-    const gcId = acc.gocardlessAccountId
-    if (!gcId || gcId.startsWith('REPLACE_ME')) {
-      console.warn(`⚠ ${acc.name}: keine gocardlessAccountId gesetzt – übersprungen.`)
+    const uid = acc.enableBankingAccountUid
+    if (!uid || uid.startsWith('REPLACE_ME')) {
+      console.warn(`⚠ ${acc.name}: keine enableBankingAccountUid gesetzt – übersprungen.`)
       continue
     }
     console.log(`→ ${acc.name}: Salden + Transaktionen …`)
-    const balances = await api(`/accounts/${gcId}/balances/`, token)
-    const txRaw = await api(`/accounts/${gcId}/transactions/`, token)
+    const balances = await api(`/accounts/${uid}/balances`)
+    const txRaw = await fetchTransactions(uid, dateFrom)
     const balance = pickBalance(balances)
     accounts.push({ id: acc.id, name: acc.name, type: acc.type, owner: acc.owner, balance, currency: 'EUR' })
     allTx = allTx.concat(normalizeTx(txRaw, acc.id))
   }
 
   if (!accounts.length) {
-    console.error('❌ Keine Konten abgerufen. Prüfe config.js und die Requisition (README Schritt 3).')
+    console.error('❌ Keine Konten abgerufen. Prüfe config.js und die Session (README Schritt 3).')
     process.exit(1)
   }
 

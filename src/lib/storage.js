@@ -59,7 +59,7 @@ export function effectiveCategory(item, overrides) {
 
 // --- Manuelle Daten (Konten / Daueraufträge / Beiträge) ----------------------
 // Bleiben nur im Browser (localStorage) und werden über die Basis-Daten
-// (GoCardless data.json bzw. Mock) gelegt.
+// (Enable Banking data.json bzw. Mock) gelegt.
 const MANUAL_KEY = 'pf_manual'
 
 export function getManualData() {

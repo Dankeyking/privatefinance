@@ -1,23 +1,23 @@
 // =============================================================================
-//  config.example.js  —  Vorlage für deine GoCardless-/Konto-Konfiguration
+//  config.example.js  —  Vorlage für deine Enable-Banking-/Konto-Konfiguration
 // =============================================================================
 //
 //  ANLEITUNG (Deutsch):
 //
 //  1. Kopiere diese Datei zu  config.js   (config.js ist in .gitignore und
-//     wird NICHT committet – deine IBANs/IDs bleiben privat).
+//     wird NICHT committet – deine IBANs/UIDs bleiben privat).
 //
 //        cp config.example.js config.js
 //
 //  2. Lege die Zugangsdaten in  .env  an (siehe .env.example):
-//        GOCARDLESS_SECRET_ID  und  GOCARDLESS_SECRET_KEY
-//     Diese bekommst du nach Registrierung unter
-//     https://bankaccountdata.gocardless.com/  ->  "User Secrets".
+//        ENABLEBANKING_APP_ID  und  ENABLEBANKING_KEY_PATH
+//     Diese bekommst du nach Registrierung einer Anwendung unter
+//     https://enablebanking.com/  ->  "Applications" (inkl. .pem-Schlüssel).
 //
-//  3. Verbinde deine C24-Konten (Requisition) – siehe README.md, Schritt 3.
-//     Danach liefert  GET /requisitions/  die Account-IDs deiner Konten.
+//  3. Verbinde deine C24-Konten (Session) – siehe README.md, Schritt 3.
+//     Danach liefert  POST /sessions  die Konto-UIDs deiner Konten.
 //
-//  4. Trage unten je Konto die GoCardless-"account id" ein und ordne sie
+//  4. Trage unten je Konto die Enable-Banking-"account uid" ein und ordne sie
 //     der Rolle im Haushalt zu:
 //        type: "joint"     -> Gemeinschaftskonto
 //        type: "personal"  -> Privatkonto
@@ -32,29 +32,29 @@ export const ACCOUNTS = [
     name: 'Gemeinschaftskonto',
     type: 'joint',
     owner: 'Duncan & Partner',
-    // GoCardless account id (UUID aus GET /accounts/ bzw. /requisitions/)
-    gocardlessAccountId: 'REPLACE_ME_JOINT_ACCOUNT_ID',
+    // Enable-Banking account uid (aus POST /sessions bzw. setup-enablebanking.js)
+    enableBankingAccountUid: 'REPLACE_ME_JOINT_ACCOUNT_UID',
   },
   {
     id: 'p1',
     name: 'Privatkonto Duncan',
     type: 'personal',
     owner: 'Duncan',
-    gocardlessAccountId: 'REPLACE_ME_PERSONAL_1_ACCOUNT_ID',
+    enableBankingAccountUid: 'REPLACE_ME_PERSONAL_1_ACCOUNT_UID',
   },
   {
     id: 'p2',
     name: 'Privatkonto Partner',
     type: 'personal',
     owner: 'Partner',
-    gocardlessAccountId: 'REPLACE_ME_PERSONAL_2_ACCOUNT_ID',
+    enableBankingAccountUid: 'REPLACE_ME_PERSONAL_2_ACCOUNT_UID',
   },
 ]
 
-// Land + Institution für die Bank-Verknüpfung (Requisition).
-// C24 Bank: Institution-ID über GET /institutions/?country=de ermitteln.
-export const INSTITUTION = {
+// Land + Bank (ASPSP) für die Verknüpfung (Session).
+// C24: exakten Namen über  node scripts/setup-enablebanking.js aspsps  ermitteln.
+export const ASPSP = {
   country: 'DE',
-  // Beispiel-Platzhalter – echte ID via /institutions/?country=de suchen:
-  institutionId: 'C24_XXXXXXXX',
+  // Beispiel-Platzhalter – echten Namen via "aspsps"-Befehl suchen:
+  name: 'C24',
 }

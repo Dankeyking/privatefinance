@@ -1,5 +1,5 @@
 // =============================================================================
-//  merge.js — legt manuelle Browser-Daten über die Basis (GoCardless/Mock)
+//  merge.js — legt manuelle Browser-Daten über die Basis (Enable Banking/Mock)
 // =============================================================================
 
 export function mergeData(base, manual = {}) {

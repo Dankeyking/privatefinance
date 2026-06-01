@@ -83,7 +83,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <h1>Meine Daten</h1>
         <p>
           Konten, Daueraufträge und Beiträge selbst pflegen. Alles bleibt <strong>nur in deinem
-          Browser</strong> (localStorage) – nichts wird hochgeladen. GoCardless-Umsätze (aus
+          Browser</strong> (localStorage) – nichts wird hochgeladen. Bank-Umsätze (aus
           <code> public/data.json</code>) bleiben erhalten; hier ergänzt du die Struktur.
         </p>
       </div>

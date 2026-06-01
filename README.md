@@ -7,7 +7,8 @@ das die gemeinsamen Fixkosten zahlt. Einzelne Kosten werden teils noch direkt vo
 Privatkonto gezahlt – die App hilft, diese aufs Gemeinschaftskonto umzustellen.
 
 Die App läuft **sofort mit Demo-/Mock-Daten** – ganz ohne API-Schlüssel. Echte
-Daten holst du später über die [GoCardless / Nordigen Bank Account Data API](https://gocardless.com/bank-account-data/).
+Daten holst du später über die [Enable Banking Account Information API](https://enablebanking.com/accounts-api/)
+(kostenlos für die private Nutzung).
 
 ## Features
 
@@ -26,7 +27,7 @@ Daten holst du später über die [GoCardless / Nordigen Bank Account Data API](h
   manuelle Overrides (in `localStorage` gespeichert).
 - **Meine Daten:** Konten, Daueraufträge und Beiträge (inkl. Ausführungstage) direkt
   in der App pflegen. Wird **nur im Browser** gespeichert (localStorage) und über die
-  GoCardless-/Mock-Daten gelegt – nichts wird hochgeladen. So nutzt du auch die
+  Bank-/Mock-Daten gelegt – nichts wird hochgeladen. So nutzt du auch die
   öffentliche Seite mit echten Zahlen, ohne dass jemand sie sieht.
 - **Export für Claude:** ein Klick erzeugt eine analyse-fertige JSON – inkl.
   Markierung, welche Daueraufträge noch übers Privatkonto laufen. Diese Datei
@@ -46,20 +47,30 @@ Seitenleiste).
 
 ## Echte C24-Konten verbinden (Schritt für Schritt)
 
-> **Hinweis zu CORS:** Die GoCardless-API erlaubt **keine** direkten Aufrufe aus dem
-> Browser. Deshalb holt das kleine Node-Skript `scripts/fetch-data.js` die Daten und
-> legt sie als `public/data.json` ab – die App lädt diese Datei dann automatisch.
+> **Warum Enable Banking?** GoCardless / Nordigen hat die kostenlose Neuregistrierung
+> für „Bank Account Data" eingestellt. [Enable Banking](https://enablebanking.com/)
+> bietet denselben PSD2-Zugang (Salden + Umsätze lesen) **kostenlos für die private
+> Nutzung** und unterstützt deutsche Banken inkl. C24.
 
-### Schritt 1 – GoCardless-Zugang anlegen
-1. Registriere dich unter <https://bankaccountdata.gocardless.com/>.
-2. Erzeuge unter **User Secrets** ein Paar aus `secret_id` und `secret_key`.
-3. Kopiere `.env.example` → `.env` und trage die Werte ein:
+> **Hinweis zu CORS:** Die Enable-Banking-API erlaubt **keine** direkten Aufrufe aus
+> dem Browser. Deshalb holt das kleine Node-Skript `scripts/fetch-data.js` die Daten
+> und legt sie als `public/data.json` ab – die App lädt diese Datei dann automatisch.
+
+### Schritt 1 – Enable-Banking-Anwendung anlegen
+1. Registriere dich unter <https://enablebanking.com/> und lege im Control Panel eine
+   **Application** an (Typ „personal" genügt).
+2. Hinterlege als **Redirect-URL** exakt
+   `https://dankeyking.github.io/privatefinance/` (oder eine eigene, die du dann auch
+   in `.env` setzt).
+3. Beim Anlegen lädt dein Browser einen **privaten Schlüssel (.pem)** herunter – der
+   Dateiname ist deine App-ID. Lege die Datei in den Projektordner.
+4. Kopiere `.env.example` → `.env` und trage App-ID und Schlüsselpfad ein:
    ```bash
    cp .env.example .env
    ```
    ```ini
-   GOCARDLESS_SECRET_ID=...
-   GOCARDLESS_SECRET_KEY=...
+   ENABLEBANKING_APP_ID=...
+   ENABLEBANKING_KEY_PATH=./aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.pem
    ```
 
 ### Schritt 2 – Konto-Konfiguration
@@ -67,18 +78,26 @@ Seitenleiste).
    ```bash
    cp config.example.js config.js
    ```
-2. Die `gocardlessAccountId` je Konto trägst du nach Schritt 3 ein.
+2. Die `enableBankingAccountUid` je Konto trägst du nach Schritt 3 ein.
 
-### Schritt 3 – C24 verknüpfen (Requisition)
-1. **Institution-ID finden** (C24, Land DE):
-   `GET /institutions/?country=de` → ID von „C24 Bank“ heraussuchen.
-2. **Requisition anlegen** (`POST /requisitions/`) mit der Institution-ID und einer
-   `redirect`-URL. Du bekommst einen `link` zurück.
-3. **Link im Browser öffnen** und dich bei C24 einloggen, um den Zugriff zu
-   bestätigen. (Wiederhole das ggf. pro Konto/Inhaber.)
-4. **Account-IDs abrufen:** `GET /requisitions/{id}/` liefert die Liste der
-   verknüpften `accounts` (UUIDs). Trage diese in `config.js` als
-   `gocardlessAccountId` bei `joint` / `p1` / `p2` ein und setze jeweils den
+### Schritt 3 – C24 verknüpfen (Session)
+1. **Bank finden** (C24, Land DE):
+   ```bash
+   npm run eb-setup aspsps
+   ```
+   → zeigt den exakten Bank-Namen.
+2. **Autorisierung starten** mit diesem Namen:
+   ```bash
+   npm run eb-setup link "C24 Bank"
+   ```
+   → gibt einen Login-Link aus. Im Browser öffnen, bei C24 einloggen und den Zugriff
+   bestätigen. Danach landest du auf der Redirect-URL mit `?code=…` in der Adresszeile.
+3. **Konto-UIDs abrufen** mit dem `code` aus der Adresszeile:
+   ```bash
+   npm run eb-setup session <code>
+   ```
+   → listet die verknüpften Konto-UIDs (+ IBANs). Trage diese in `config.js` als
+   `enableBankingAccountUid` bei `joint` / `p1` / `p2` ein und setze jeweils den
    passenden `type` (`joint` oder `personal`).
 
 ### Schritt 4 – Daten holen & starten
@@ -87,10 +106,11 @@ npm run fetch-data   # holt Salden + Transaktionen -> public/data.json
 npm run dev
 ```
 Die Seitenleiste zeigt jetzt „Echte Daten”. Aktualisieren: einfach
-`npm run fetch-data` erneut ausführen.
+`npm run fetch-data` erneut ausführen. (Der Zugriff gilt ~90 Tage; danach Schritt 3
+wiederholen.)
 
 ### Schritt 5 – Daueraufträge & Beiträge ergänzen (wichtig)
-GoCardless liefert **Salden + Umsätze, aber keine Daueraufträge und keine
+Die Bank-API liefert **Salden + Umsätze, aber keine Daueraufträge und keine
 Ausführungstage**. Diese – und die Haushaltsbeiträge (Privat → Gemeinschaft) – trägst
 du unter **„Meine Daten”** in der App selbst ein. Erst damit funktionieren die Seiten
 **Daueraufträge** und **Zahlungslauf** mit deinen echten Zahlen. Die Eingaben bleiben
@@ -164,7 +184,8 @@ src/
   components/  Sidebar, Karten, Flow-Diagramm, Kategorie-Tag, Charts
   pages/       Übersicht, Daueraufträge, Analyse, Kategorien
 scripts/
-  fetch-data.js  GoCardless -> public/data.json
+  setup-enablebanking.js  Bank finden / verknüpfen / Konten auslesen
+  fetch-data.js           Enable Banking -> public/data.json
 ```
 
 ## Tech Stack
