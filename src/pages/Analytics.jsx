@@ -8,12 +8,11 @@ import {
   last6MonthBuckets,
   expensesByCategory,
   effectiveCategoryOf,
-  monthLabel,
-  monthKey,
+  forecastBalances,
 } from '../lib/selectors.js'
 
 export default function Analytics({ data, overrides }) {
-  const { transactions, accounts, balanceHistory } = data
+  const { transactions } = data
   const [drill, setDrill] = useState(null)
 
   const bars = useMemo(() => last6MonthBuckets(transactions), [transactions])
@@ -28,14 +27,7 @@ export default function Analytics({ data, overrides }) {
     }
   }, [catTotals])
 
-  const line = useMemo(() => {
-    const labels = (balanceHistory || []).map((p) => monthLabel(monthKey(p.date)))
-    const series = accounts.map((a) => ({
-      label: a.name,
-      data: (balanceHistory || []).map((p) => p[a.id] ?? null),
-    }))
-    return { labels, series }
-  }, [balanceHistory, accounts])
+  const line = useMemo(() => forecastBalances(data, 3), [data])
 
   const drillTx = useMemo(() => {
     if (!drill) return []
@@ -63,8 +55,8 @@ export default function Analytics({ data, overrides }) {
       </div>
 
       <div className="card mt">
-        <h2>Saldoverlauf je Konto</h2>
-        <BalanceLine labels={line.labels} series={line.series} />
+        <h2>Saldoverlauf je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(gestrichelt = Prognose, 3 Monate)</span></h2>
+        <BalanceLine labels={line.labels} series={line.series} splitIndex={line.splitIndex} />
       </div>
 
       {drill && (

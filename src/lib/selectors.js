@@ -69,6 +69,49 @@ export function totalBalance(accounts) {
   return accounts.reduce((s, a) => s + (a.balance || 0), 0)
 }
 
+// Vermögens-Trend: Gesamtsaldo aktuell vs. Vormonat (aus balanceHistory).
+export function netWorthTrend(balanceHistory = [], accounts = []) {
+  if (!balanceHistory || balanceHistory.length < 2) return null
+  const sumPoint = (p) => accounts.reduce((s, a) => s + (p[a.id] || 0), 0)
+  const last = sumPoint(balanceHistory[balanceHistory.length - 1])
+  const prev = sumPoint(balanceHistory[balanceHistory.length - 2])
+  const deltaAbs = last - prev
+  const deltaPct = prev ? (deltaAbs / prev) * 100 : 0
+  return { current: last, deltaAbs, deltaPct }
+}
+
+// Saldoverlauf inkl. Prognose: hängt `future` Monate an, fortgeschrieben mit dem
+// durchschnittlichen Monatsdelta je Konto. splitIndex = letzter echter Datenpunkt.
+export function forecastBalances(data, future = 3) {
+  const { balanceHistory = [], accounts = [] } = data
+  if (balanceHistory.length === 0) return { labels: [], series: [], splitIndex: 0 }
+  const n = balanceHistory.length
+  const histLabels = balanceHistory.map((p) => monthLabel(monthKey(p.date)))
+
+  const series = accounts.map((a) => {
+    const hist = balanceHistory.map((p) => p[a.id] ?? null)
+    const first = balanceHistory[0][a.id] || 0
+    const last = balanceHistory[n - 1][a.id] || 0
+    const avgDelta = n > 1 ? (last - first) / (n - 1) : 0
+    const proj = []
+    let v = last
+    for (let i = 1; i <= future; i++) {
+      v += avgDelta
+      proj.push(Number(v.toFixed(2)))
+    }
+    return { label: a.name, data: [...hist, ...proj] }
+  })
+
+  const lastDate = new Date(balanceHistory[n - 1].date)
+  const futureLabels = []
+  for (let i = 1; i <= future; i++) {
+    const d = new Date(lastDate.getFullYear(), lastDate.getMonth() + i, 1)
+    futureLabels.push(monthLabel(monthKey(d.toISOString())))
+  }
+
+  return { labels: [...histLabels, ...futureLabels], series, splitIndex: n - 1 }
+}
+
 // Anstehende Daueraufträge: nächste Ausführung innerhalb der nächsten `days` Tage.
 // Liefert sortierte Liste mit daysUntil + Kontoname.
 export function upcomingPayments(data, days = 30, today = new Date()) {

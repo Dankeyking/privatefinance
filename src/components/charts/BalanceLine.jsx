@@ -5,7 +5,9 @@ import { formatEUR } from '../../lib/normalize.js'
 const LINE_COLORS = ['#3b82f6', '#0891b2', '#db2777', '#16a34a', '#d97706']
 
 // Animiertes Liniendiagramm: Saldoverlauf je Konto über die Zeit.
-export default function BalanceLine({ labels, series }) {
+// splitIndex (optional): ab diesem Punkt wird die Linie gestrichelt (= Prognose).
+export default function BalanceLine({ labels, series, splitIndex }) {
+  const hasForecast = typeof splitIndex === 'number' && splitIndex < labels.length - 1
   const data = {
     labels,
     datasets: series.map((s, i) => ({
@@ -15,8 +17,11 @@ export default function BalanceLine({ labels, series }) {
       backgroundColor: `${LINE_COLORS[i % LINE_COLORS.length]}22`,
       tension: 0.35,
       fill: true,
-      pointRadius: 3,
+      pointRadius: (ctx) => (hasForecast && ctx.dataIndex > splitIndex ? 2 : 3),
       pointHoverRadius: 5,
+      segment: hasForecast
+        ? { borderDash: (ctx) => (ctx.p0DataIndex >= splitIndex ? [6, 5] : undefined) }
+        : undefined,
     })),
   }
   const options = {

@@ -8,17 +8,26 @@ import {
   sortedMonths,
   incomeExpenseForMonth,
   upcomingPayments,
+  netWorthTrend,
 } from '../lib/selectors.js'
+import { formatEUR as eur } from '../lib/normalize.js'
 import { buildSankeyData } from '../lib/flows.js'
 
 export default function Overview({ data, overrides }) {
-  const { accounts, transactions } = data
+  const { accounts, transactions, balanceHistory } = data
   const months = sortedMonths(transactions)
   const latest = months[months.length - 1]
   const { income, expenses, surplus } = incomeExpenseForMonth(transactions, latest || '')
 
   const sankey = useMemo(() => buildSankeyData(data, overrides), [data, overrides])
   const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
+  const trend = useMemo(() => netWorthTrend(balanceHistory, accounts), [balanceHistory, accounts])
+  const trendProp = trend
+    ? {
+        dir: trend.deltaAbs >= 0 ? 'up' : 'down',
+        text: `${trend.deltaAbs >= 0 ? '+' : ''}${eur(trend.deltaAbs)} ggü. Vormonat`,
+      }
+    : undefined
 
   return (
     <div>
@@ -28,7 +37,7 @@ export default function Overview({ data, overrides }) {
       </div>
 
       <div className="grid kpis">
-        <KpiCard label="Gesamtsaldo" value={totalBalance(accounts)} />
+        <KpiCard label="Gesamtsaldo" value={totalBalance(accounts)} trend={trendProp} />
         <KpiCard label="Einnahmen (Monat)" value={income} tone="pos" />
         <KpiCard label="Ausgaben (Monat)" value={expenses} tone="neg" />
         <KpiCard label="Überschuss" value={surplus} tone={surplus >= 0 ? 'pos' : 'neg'} />
