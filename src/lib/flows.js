@@ -1,54 +1,76 @@
 // =============================================================================
-//  flows.js — baut Sankey-Flüsse: Einkommen → Privatkonten → Gemeinschaftskonto
-//             → Kategorien (plus direkte Zahlungen vom Privatkonto)
+//  flows.js — balancierter Cashflow-Sankey
+//  Einkommen → Privatkonten → Gemeinschaftskonto → Kategorien + Überschuss
+// =============================================================================
+//  Jeder Euro wird verfolgt: was nicht an Fixkosten/Kategorien geht, fließt in
+//  den Knoten "Überschuss / Rücklage". Dadurch sind alle Konten-Knoten
+//  balanciert (Zufluss = Abfluss) und das Diagramm liest als EIN Fluss.
+//  Basis: durchschnittliche Monatswerte aus den echten Transaktionen.
 // =============================================================================
 
-import { toMonthly, formatEUR } from './normalize.js'
+import { formatEUR } from './normalize.js'
 import { categoryColor } from './categories.js'
-import { effectiveCategoryOf, sortedMonths, monthKey } from './selectors.js'
+import { effectiveCategoryOf, sortedMonths } from './selectors.js'
 
 const INCOME_COLOR = '#16a34a'
 const JOINT_COLOR = '#3b82f6'
 const PERSONAL_COLOR = '#94a3b8'
+const SURPLUS_COLOR = '#0d9488'
+const SURPLUS_NODE = 'Überschuss / Rücklage'
 
-// Liefert { flows, nodeColors, columns, labels } für chartjs-chart-sankey.
 export function buildSankeyData(data, overrides = {}) {
-  const { accounts = [], standingOrders = [], transactions = [] } = data
+  const { accounts = [], transactions = [] } = data
   const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
-  const months = sortedMonths(transactions)
-  const latest = months[months.length - 1]
-
-  const flowMap = {} // "from||to" -> flow
-  const addFlow = (from, to, value) => {
-    if (!value || from === to) return
-    const k = `${from}||${to}`
-    flowMap[k] = (flowMap[k] || 0) + value
-  }
+  const nMonths = Math.max(1, sortedMonths(transactions).length)
 
   const nodeColors = {}
   const columns = {}
 
-  // 1) Einkommen (extern) -> Privatkonto (letzter Monat, ohne interne Umbuchungen)
+  // Summen über alle Monate sammeln (danach auf Monatsdurchschnitt teilen)
+  const incomeSum = {}
+  const transferSum = {}
+  const expenseSum = {}
+
   transactions.forEach((t) => {
-    if (t.internal || t.amount <= 0) return
-    if (latest && monthKey(t.date) !== latest) return
     const acc = accById[t.accountId]
     if (!acc) return
-    addFlow(t.recipient, acc.name, t.amount)
-    nodeColors[t.recipient] = INCOME_COLOR
-    columns[t.recipient] = 0
+    if (!t.internal && t.amount > 0) {
+      // Einkommen (extern) -> Konto
+      const k = `${t.recipient}||${acc.name}`
+      incomeSum[k] = (incomeSum[k] || 0) + t.amount
+      nodeColors[t.recipient] = INCOME_COLOR
+      columns[t.recipient] = 0
+    } else if (t.internal && t.amount > 0 && t.fromAccountId) {
+      // interner Übertrag Quelle -> Ziel
+      const src = accById[t.fromAccountId]
+      if (!src) return
+      const k = `${src.name}||${acc.name}`
+      transferSum[k] = (transferSum[k] || 0) + t.amount
+    } else if (!t.internal && t.amount < 0) {
+      // Ausgabe -> Kategorie
+      const cat = effectiveCategoryOf(t, overrides)
+      const k = `${acc.name}||${cat}`
+      expenseSum[k] = (expenseSum[k] || 0) + -t.amount
+      nodeColors[cat] = categoryColor(cat)
+      columns[cat] = 3
+    }
   })
 
-  // 2) Interne Überträge Privatkonto -> Gemeinschaftskonto (letzter Monat).
-  //    Quelle steht als fromAccountId auf der Gutschrift-Buchung.
-  transactions.forEach((t) => {
-    if (!t.internal || t.amount <= 0 || !t.fromAccountId) return
-    if (latest && monthKey(t.date) !== latest) return
-    const target = accById[t.accountId]
-    const source = accById[t.fromAccountId]
-    if (!target || !source) return
-    addFlow(source.name, target.name, t.amount)
-  })
+  const flowMap = {}
+  const add = (from, to, value) => {
+    if (!value || value <= 0 || from === to) return
+    const k = `${from}||${to}`
+    flowMap[k] = (flowMap[k] || 0) + value
+  }
+  const addAveraged = (sums) =>
+    Object.entries(sums).forEach(([k, v]) => {
+      const [from, to] = k.split('||')
+      add(from, to, v / nMonths)
+    })
+
+  addAveraged(incomeSum)
+  addAveraged(transferSum)
+  addAveraged(expenseSum)
 
   // Konten-Knoten einfärben + Spalten (Privat = 1, Gemeinschaft = 2)
   accounts.forEach((a) => {
@@ -56,15 +78,21 @@ export function buildSankeyData(data, overrides = {}) {
     columns[a.name] = a.type === 'joint' ? 2 : 1
   })
 
-  // 3) Konto -> Kategorie (Daueraufträge, auf Monat normalisiert)
-  standingOrders.forEach((so) => {
-    const acc = accById[so.accountId]
-    if (!acc) return
-    const cat = effectiveCategoryOf(so, overrides)
-    addFlow(acc.name, cat, toMonthly(so.amount, so.rhythm))
-    nodeColors[cat] = categoryColor(cat)
-    columns[cat] = 3
+  // Balance: pro Konto verbleibenden Überschuss als Fluss -> Rücklage-Knoten.
+  // Zuerst alle Salden berechnen, dann hinzufügen (sonst verfälscht es sich).
+  const surpluses = accounts.map((a) => {
+    let inflow = 0
+    let outflow = 0
+    for (const [k, v] of Object.entries(flowMap)) {
+      const [from, to] = k.split('||')
+      if (to === a.name) inflow += v
+      if (from === a.name) outflow += v
+    }
+    return [a.name, inflow - outflow]
   })
+  surpluses.forEach(([name, s]) => add(name, SURPLUS_NODE, s))
+  nodeColors[SURPLUS_NODE] = SURPLUS_COLOR
+  columns[SURPLUS_NODE] = 3
 
   const flows = Object.entries(flowMap).map(([k, flow]) => {
     const [from, to] = k.split('||')

@@ -1,6 +1,7 @@
 const NAV = [
   { id: 'overview', label: 'Übersicht', ico: '📊' },
   { id: 'standing', label: 'Daueraufträge', ico: '🔁' },
+  { id: 'timing', label: 'Zahlungslauf', ico: '⏱️' },
   { id: 'analytics', label: 'Analyse', ico: '📈' },
   { id: 'budget', label: 'Budget', ico: '🎯' },
   { id: 'categories', label: 'Kategorien', ico: '🏷️' },

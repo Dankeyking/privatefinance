@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
+import Timing from './pages/Timing.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Budget from './pages/Budget.jsx'
 import Categories from './pages/Categories.jsx'
@@ -78,6 +79,7 @@ export default function App() {
         {page === 'standing' && (
           <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
         )}
+        {page === 'timing' && <Timing data={data} />}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
         {page === 'budget' && <Budget data={data} overrides={overrides} />}
         {page === 'categories' && (

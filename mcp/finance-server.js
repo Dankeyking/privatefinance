@@ -23,6 +23,7 @@ import { mockData } from '../src/data/mockData.js'
 import { buildClaudeExport } from '../src/lib/claudeExport.js'
 import { toMonthly } from '../src/lib/normalize.js'
 import { effectiveCategoryOf, expensesByCategory } from '../src/lib/selectors.js'
+import { buildPaymentSchedule } from '../src/lib/timing.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_PATH = join(__dirname, '..', 'public', 'data.json')
@@ -120,6 +121,24 @@ server.registerTool(
       Object.entries(totals).map(([k, v]) => [k, Number(v.toFixed(2))]),
     )
     return ok({ source, expensesByCategory: rounded })
+  },
+)
+
+// --- Tool: Zahlungslauf / Timing --------------------------------------------
+server.registerTool(
+  'payment_schedule',
+  {
+    title: 'Zahlungslauf / Timing prüfen',
+    description:
+      'Prüft die Kette Privatkonto → Beitrag → Gemeinschaftskonto → Lastschrift: ' +
+      'chronologischer Monatslauf, nötiger Mindest-Puffer und ob alles rechtzeitig gedeckt ist.',
+  },
+  async () => {
+    const { data, source } = loadData()
+    const sched = buildPaymentSchedule(data)
+    if (!sched) return ok({ source, error: 'Kein Gemeinschaftskonto gefunden.' })
+    const { joint, timelineLabels, flowOnly, withBuffer, ...rest } = sched
+    return ok({ source, jointAccount: joint.name, ...rest })
   },
 )
 

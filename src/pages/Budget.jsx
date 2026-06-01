@@ -23,7 +23,7 @@ export default function Budget({ data, overrides }) {
   }
 
   const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0)
-  const totalSpent = CATEGORIES.reduce((s, c) => s + (spentByCat[c.id] || 0), 0)
+  const totalSpent = Object.values(spentByCat).reduce((s, v) => s + v, 0)
 
   return (
     <div>

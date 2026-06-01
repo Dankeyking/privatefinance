@@ -298,6 +298,11 @@ select, .btn {
 .budget-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
 .budget-sub { font-size: 12px; margin-top: 5px; }
 
+/* --- Zahlungslauf / Timing ------------------------------------------------- */
+.timing-banner { font-size: 14px; line-height: 1.5; border-left: 5px solid; }
+.timing-banner.ok { border-left-color: var(--pos); background: #f0fdf4; }
+.timing-banner.risk { border-left-color: var(--neg); background: #fef2f2; }
+
 /* --- Mobile-Topbar / Drawer ----------------------------------------------- */
 .topbar { display: none; }
 .sidebar-close { display: none; }

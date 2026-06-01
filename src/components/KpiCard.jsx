@@ -8,8 +8,8 @@ export default function KpiCard({ label, value, tone, hint, trend }) {
       <div className="kpi-label">{label}</div>
       <div className={`kpi-value ${tone || ''}`}>{formatEUR(value)}</div>
       {trend && (
-        <div className={`kpi-trend ${trend.dir === 'down' ? 'neg' : 'pos'}`}>
-          {trend.dir === 'down' ? '▼' : '▲'} {trend.text}
+        <div className={`kpi-trend ${trend.dir === 'down' ? 'neg' : trend.dir === 'up' ? 'pos' : ''}`}>
+          {trend.dir === 'down' ? '▼' : trend.dir === 'up' ? '▲' : '▬'} {trend.text}
         </div>
       )}
       {hint && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{hint}</div>}

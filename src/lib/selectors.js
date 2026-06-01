@@ -9,6 +9,14 @@ export function monthKey(dateLike) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Parst "YYYY-MM-DD" als LOKALES Datum (Mitternacht), nicht als UTC –
+// sonst verschiebt sich der Tag in westlichen Zeitzonen um einen Tag.
+export function parseLocalDate(iso) {
+  if (!iso) return null
+  const [y, m, d] = String(iso).split('-').map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
+}
+
 export function monthLabel(key) {
   const [y, m] = key.split('-')
   const names = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
@@ -124,7 +132,7 @@ export function upcomingPayments(data, days = 30, today = new Date()) {
   return standingOrders
     .filter((so) => so.nextExecution)
     .map((so) => {
-      const due = new Date(so.nextExecution)
+      const due = parseLocalDate(so.nextExecution)
       const daysUntil = Math.round((due - start) / 86400000)
       const acc = accById[so.accountId]
       return { ...so, due, daysUntil, account: acc, runsOnJoint: acc?.type === 'joint' }

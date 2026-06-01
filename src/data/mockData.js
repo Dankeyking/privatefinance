@@ -17,24 +17,34 @@ const accounts = [
 
 // --- Daueraufträge -----------------------------------------------------------
 // Mehrere laufen bewusst noch über Privatkonten (p1/p2) = Umstell-Kandidaten.
+// executionDay = Tag im Monat, an dem die Buchung/Lastschrift läuft (für den
+// Zahlungslauf/Timing-Check wichtig).
 const standingOrders = [
-  { id: 'so1', recipient: 'Vermieter Müller', amount: 1450, rhythm: 'monthly', accountId: 'joint', category: 'Wohnen', monthInterval: 1 },
-  { id: 'so2', recipient: 'Stadtwerke Strom', amount: 95, rhythm: 'monthly', accountId: 'joint', category: 'Wohnen', monthInterval: 1 },
-  { id: 'so3', recipient: 'Trade Republic Sparplan', amount: 300, rhythm: 'monthly', accountId: 'joint', category: 'Sparen', monthInterval: 1 },
-  { id: 'so4', recipient: 'Comdirect ETF Sparplan', amount: 200, rhythm: 'monthly', accountId: 'joint', category: 'Sparen', monthInterval: 1 },
-  { id: 'so5', recipient: 'HUK Hausratversicherung', amount: 180, rhythm: 'yearly', accountId: 'joint', category: 'Versicherung', monthInterval: 12 },
+  { id: 'so1', recipient: 'Vermieter Müller', amount: 1450, rhythm: 'monthly', accountId: 'joint', category: 'Wohnen', monthInterval: 1, executionDay: 1 },
+  { id: 'so2', recipient: 'Stadtwerke Strom', amount: 95, rhythm: 'monthly', accountId: 'joint', category: 'Wohnen', monthInterval: 1, executionDay: 18 },
+  { id: 'so3', recipient: 'Trade Republic Sparplan', amount: 300, rhythm: 'monthly', accountId: 'joint', category: 'Sparen', monthInterval: 1, executionDay: 5 },
+  { id: 'so4', recipient: 'Comdirect ETF Sparplan', amount: 200, rhythm: 'monthly', accountId: 'joint', category: 'Sparen', monthInterval: 1, executionDay: 5 },
+  { id: 'so5', recipient: 'HUK Hausratversicherung', amount: 180, rhythm: 'yearly', accountId: 'joint', category: 'Versicherung', monthInterval: 12, executionDay: 25 },
   // --- noch über Privatkonto (sollten ggf. aufs Gemeinschaftskonto) ---
-  { id: 'so6', recipient: 'Telekom Internet', amount: 49.99, rhythm: 'monthly', accountId: 'p1', category: 'Wohnen', monthInterval: 1 },
-  { id: 'so7', recipient: 'Stadtwerke Wasser', amount: 165, rhythm: 'quarterly', accountId: 'p1', category: 'Wohnen', monthInterval: 3 },
-  { id: 'so8', recipient: 'Allianz KFZ-Versicherung', amount: 720, rhythm: 'yearly', accountId: 'p1', category: 'Versicherung', monthInterval: 12 },
-  { id: 'so9', recipient: 'Netflix', amount: 17.99, rhythm: 'monthly', accountId: 'p1', category: 'Freizeit', monthInterval: 1 },
-  { id: 'so10', recipient: 'McFit Fitnessstudio', amount: 29.99, rhythm: 'monthly', accountId: 'p2', category: 'Freizeit', monthInterval: 1 },
-  { id: 'so11', recipient: 'Spotify', amount: 10.99, rhythm: 'monthly', accountId: 'p2', category: 'Freizeit', monthInterval: 1 },
+  { id: 'so6', recipient: 'Telekom Internet', amount: 49.99, rhythm: 'monthly', accountId: 'p1', category: 'Wohnen', monthInterval: 1, executionDay: 12 },
+  { id: 'so7', recipient: 'Stadtwerke Wasser', amount: 165, rhythm: 'quarterly', accountId: 'p1', category: 'Wohnen', monthInterval: 3, executionDay: 8 },
+  { id: 'so8', recipient: 'Allianz KFZ-Versicherung', amount: 720, rhythm: 'yearly', accountId: 'p1', category: 'Versicherung', monthInterval: 12, executionDay: 15 },
+  { id: 'so9', recipient: 'Netflix', amount: 17.99, rhythm: 'monthly', accountId: 'p1', category: 'Freizeit', monthInterval: 1, executionDay: 20 },
+  { id: 'so10', recipient: 'McFit Fitnessstudio', amount: 29.99, rhythm: 'monthly', accountId: 'p2', category: 'Freizeit', monthInterval: 1, executionDay: 1 },
+  { id: 'so11', recipient: 'Spotify', amount: 10.99, rhythm: 'monthly', accountId: 'p2', category: 'Freizeit', monthInterval: 1, executionDay: 6 },
+]
+
+// --- Wiederkehrende Überträge Privatkonto -> Gemeinschaftskonto (Daueraufträge) -
+// Haushaltsbeiträge, mit denen das Gemeinschaftskonto die Fixkosten deckt.
+const transfers = [
+  { id: 'tr1', recipient: 'Haushaltsbeitrag Duncan', amount: 1800, rhythm: 'monthly', fromAccountId: 'p1', toAccountId: 'joint', executionDay: 5 },
+  { id: 'tr2', recipient: 'Haushaltsbeitrag Partner', amount: 1600, rhythm: 'monthly', fromAccountId: 'p2', toAccountId: 'joint', executionDay: 15 },
 ]
 
 // --- Hilfen ------------------------------------------------------------------
+// Lokales YYYY-MM-DD (kein toISOString, das in nicht-UTC-Zonen den Tag verschiebt).
 function isoDate(d) {
-  return d.toISOString().slice(0, 10)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function monthKey(d) {
@@ -50,9 +60,10 @@ function lastMonths(count, anchor = new Date()) {
   return out
 }
 
-// Nächstes Ausführungsdatum eines Dauerauftrags ab heute (auf Tag 5 des Monats).
-function nextExecutionDate(monthInterval, anchor = new Date()) {
-  const d = new Date(anchor.getFullYear(), anchor.getMonth(), 5)
+// Nächstes Ausführungsdatum eines Dauerauftrags ab heute (auf executionDay).
+function nextExecutionDate(executionDay, monthInterval, anchor = new Date()) {
+  const day = executionDay || 1
+  const d = new Date(anchor.getFullYear(), anchor.getMonth(), day)
   if (d <= anchor) d.setMonth(d.getMonth() + 1)
   // bei quartals-/jährlichen Aufträgen ein paar Monate nach vorne staffeln
   if (monthInterval === 3) d.setMonth(d.getMonth() + 1)
@@ -86,11 +97,12 @@ function generate() {
     transactions.push({ id: txId(), accountId: 'p1', date: day(1), amount: 3200, recipient: 'Arbeitgeber Duncan', description: 'Gehalt', category: null, internal: false })
     transactions.push({ id: txId(), accountId: 'p2', date: day(1), amount: 2800, recipient: 'Arbeitgeber Partner', description: 'Gehalt', category: null, internal: false })
 
-    // Interne Überträge Privatkonto -> Gemeinschaftskonto (Beitrag zu den Fixkosten)
-    transactions.push({ id: txId(), accountId: 'p1', date: day(2), amount: -1800, recipient: 'Übertrag ans Gemeinschaftskonto', description: 'Haushaltsbeitrag', category: null, internal: true, toAccountId: 'joint' })
-    transactions.push({ id: txId(), accountId: 'joint', date: day(2), amount: 1800, recipient: 'Beitrag Duncan', description: 'Haushaltsbeitrag', category: null, internal: true, fromAccountId: 'p1' })
-    transactions.push({ id: txId(), accountId: 'p2', date: day(2), amount: -1600, recipient: 'Übertrag ans Gemeinschaftskonto', description: 'Haushaltsbeitrag', category: null, internal: true, toAccountId: 'joint' })
-    transactions.push({ id: txId(), accountId: 'joint', date: day(2), amount: 1600, recipient: 'Beitrag Partner', description: 'Haushaltsbeitrag', category: null, internal: true, fromAccountId: 'p2' })
+    // Interne Überträge Privatkonto -> Gemeinschaftskonto (Beitrag zu den Fixkosten),
+    // an den Ausführungstagen der Beitrags-Daueraufträge (tr1: 5., tr2: 15.).
+    transactions.push({ id: txId(), accountId: 'p1', date: day(5), amount: -1800, recipient: 'Übertrag ans Gemeinschaftskonto', description: 'Haushaltsbeitrag', category: null, internal: true, toAccountId: 'joint' })
+    transactions.push({ id: txId(), accountId: 'joint', date: day(5), amount: 1800, recipient: 'Beitrag Duncan', description: 'Haushaltsbeitrag', category: null, internal: true, fromAccountId: 'p1' })
+    transactions.push({ id: txId(), accountId: 'p2', date: day(15), amount: -1600, recipient: 'Übertrag ans Gemeinschaftskonto', description: 'Haushaltsbeitrag', category: null, internal: true, toAccountId: 'joint' })
+    transactions.push({ id: txId(), accountId: 'joint', date: day(15), amount: 1600, recipient: 'Beitrag Partner', description: 'Haushaltsbeitrag', category: null, internal: true, fromAccountId: 'p2' })
 
     // Daueraufträge als Buchung, sofern in diesem Monat fällig.
     // Der jüngste Monat ist immer fällig; quartals-/jährliche entsprechend gestaffelt.
@@ -100,7 +112,7 @@ function generate() {
       transactions.push({
         id: txId(),
         accountId: so.accountId,
-        date: day(3),
+        date: day(so.executionDay || 3),
         amount: -Math.abs(so.amount),
         recipient: so.recipient,
         description: 'Dauerauftrag',
@@ -141,17 +153,25 @@ function generate() {
     balanceHistory.push(point)
   })
 
-  const enrichedOrders = standingOrders.map((so) => ({
-    id: so.id,
-    recipient: so.recipient,
-    amount: so.amount,
-    rhythm: so.rhythm,
-    accountId: so.accountId,
-    category: so.category,
-    nextExecution: nextExecutionDate(so.monthInterval, today),
+  // monthInterval ist nur intern für die Generierung; alle anderen Felder
+  // (inkl. executionDay) bleiben erhalten, nextExecution kommt dazu.
+  const enrichedOrders = standingOrders.map(({ monthInterval, ...so }) => ({
+    ...so,
+    nextExecution: nextExecutionDate(so.executionDay, monthInterval, today),
   }))
 
-  return { accounts, standingOrders: enrichedOrders, transactions, balanceHistory }
+  const enrichedTransfers = transfers.map((tr) => ({
+    ...tr,
+    nextExecution: nextExecutionDate(tr.executionDay, 1, today),
+  }))
+
+  return {
+    accounts,
+    standingOrders: enrichedOrders,
+    transfers: enrichedTransfers,
+    transactions,
+    balanceHistory,
+  }
 }
 
 export const mockData = generate()

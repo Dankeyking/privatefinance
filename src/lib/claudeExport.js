@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { toMonthly } from './normalize.js'
-import { effectiveCategory } from './storage.js'
+import { effectiveCategoryOf } from './selectors.js'
 
 const TASK_PROMPT =
   'Analysiere diesen Haushalts-Cashflow. Das Modell: Die Gehälter gehen auf die ' +
@@ -42,7 +42,7 @@ export function buildClaudeExport(data, overrides = {}) {
       accountName: account ? account.name : so.accountId,
       sourceAccountType,
       runsOnJoint,
-      category: effectiveCategory(so, overrides),
+      category: effectiveCategoryOf(so, overrides),
       monthlyCost,
     }
   })

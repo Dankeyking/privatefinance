@@ -17,8 +17,11 @@ Daten holst du später über die [GoCardless / Nordigen Bank Account Data API](h
   Konto und Kategorie. Filter nach Konto/Kategorie, normalisierte Monatskosten
   (jährlich ÷ 12, vierteljährlich ÷ 3) und **inline editierbare Kategorie-Tags**.
   Aufträge, die noch übers Privatkonto laufen, sind farblich markiert.
+- **Zahlungslauf:** Timing-Check der Kette Privatkonto → Beitrag → Gemeinschaftskonto
+  → Lastschrift/Dauerauftrag. Zeigt chronologisch, ob das Geld rechtzeitig da ist,
+  bevor die Buchungen abgehen, und welchen Mindest-Puffer das Gemeinschaftskonto braucht.
 - **Analyse:** animierte Charts (Chart.js) – Balken (Einnahmen vs. Ausgaben),
-  Donut (Ausgaben je Kategorie, mit Klick-Drilldown) und Saldoverlauf-Linie.
+  Donut (Ausgaben je Kategorie, mit Klick-Drilldown) und Saldoverlauf-Linie inkl. Prognose.
 - **Kategorien:** vordefinierte Kategorien, Auto-Zuordnung per Schlüsselwort,
   manuelle Overrides (in `localStorage` gespeichert).
 - **Export für Claude:** ein Klick erzeugt eine analyse-fertige JSON – inkl.
@@ -103,6 +106,8 @@ Statt jedes Mal die JSON zu exportieren, kann Claude die Daten über einen
   liefert nur die, die noch übers Privatkonto laufen (Umstell-Kandidaten)
 - `analyze_cashflow` – komplette analyse-fertige Struktur (wie der JSON-Export)
 - `expenses_by_category` – Ausgaben je Kategorie
+- `payment_schedule` – Zahlungslauf/Timing: nötiger Puffer + ob alle Buchungen
+  rechtzeitig durch die Beiträge gedeckt sind
 
 **In Claude Code einbinden:** Das Repo enthält bereits eine `.mcp.json`. Beim Öffnen
 des Projekts in Claude Code wird der Server `privatefinance` automatisch angeboten –

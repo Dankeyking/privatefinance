@@ -10,7 +10,6 @@ import {
   upcomingPayments,
   netWorthTrend,
 } from '../lib/selectors.js'
-import { formatEUR as eur } from '../lib/normalize.js'
 import { buildSankeyData } from '../lib/flows.js'
 
 export default function Overview({ data, overrides }) {
@@ -24,8 +23,8 @@ export default function Overview({ data, overrides }) {
   const trend = useMemo(() => netWorthTrend(balanceHistory, accounts), [balanceHistory, accounts])
   const trendProp = trend
     ? {
-        dir: trend.deltaAbs >= 0 ? 'up' : 'down',
-        text: `${trend.deltaAbs >= 0 ? '+' : ''}${eur(trend.deltaAbs)} ggü. Vormonat`,
+        dir: trend.deltaAbs > 0 ? 'up' : trend.deltaAbs < 0 ? 'down' : 'flat',
+        text: `${trend.deltaAbs > 0 ? '+' : ''}${formatEUR(trend.deltaAbs)} ggü. Vormonat`,
       }
     : undefined
 
@@ -51,13 +50,18 @@ export default function Overview({ data, overrides }) {
 
       <div className="grid flow-row mt">
         <div className="card">
-          <h2>Geldfluss – Einkommen → Privatkonten → Gemeinschaftskonto → Fixkosten</h2>
+          <h2>Geldfluss – Einkommen → Konten → Ausgaben &amp; Rücklage</h2>
           <SankeyFlow
             flows={sankey.flows}
             nodeColors={sankey.nodeColors}
             columns={sankey.columns}
             labels={sankey.labels}
           />
+          <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+            Monatsdurchschnitt. Gehälter laufen auf die Privatkonten, von dort fließt ein Beitrag
+            aufs Gemeinschaftskonto (zahlt die Fixkosten). Was nicht ausgegeben wird, landet in
+            „Überschuss / Rücklage".
+          </p>
         </div>
 
         <div className="card">
