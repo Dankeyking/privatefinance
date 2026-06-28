@@ -13,10 +13,9 @@ export function mergeData(base, manual = {}) {
     })
     out.accounts = Object.values(byId)
   }
-  // Einnahmen / Fixkosten & Abos / Verteilung: falls manuell gepflegt, ersetzen.
+  // Einnahmen / Fixkosten & Abos: falls manuell gepflegt, ersetzen.
   if (Array.isArray(manual.incomes)) out.incomes = manual.incomes
   if (Array.isArray(manual.standingOrders)) out.standingOrders = manual.standingOrders
-  if (Array.isArray(manual.transfers)) out.transfers = manual.transfers
 
   return out
 }

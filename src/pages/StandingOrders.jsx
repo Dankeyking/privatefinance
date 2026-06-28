@@ -3,12 +3,21 @@ import CategoryTag from '../components/CategoryTag.jsx'
 import { toMonthly, formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import { CATEGORIES } from '../lib/categories.js'
 import { effectiveCategoryOf } from '../lib/selectors.js'
+import { personsFromAccounts, personShareMonthly } from '../lib/recurring.js'
 
 const KIND_LABEL = { fixed: 'Fixkosten', subscription: 'Abo' }
 
 export default function StandingOrders({ data, overrides, onSetCategory }) {
   const { accounts, standingOrders } = data
   const accMap = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a])), [accounts])
+  const persons = useMemo(() => personsFromAccounts(accounts), [accounts])
+
+  const splitText = (o) =>
+    persons
+      .map((p) => ({ p, m: personShareMonthly(o, p, persons) }))
+      .filter((x) => x.m > 0.005)
+      .map((x) => `${x.p} ${formatEUR(x.m)}`)
+      .join(' · ') || '—'
 
   const [accountFilter, setAccountFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -87,7 +96,7 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
                 <th>Rhythmus</th>
                 <th className="num">pro Monat</th>
                 <th>Art</th>
-                <th>Nächste Ausführung</th>
+                <th>Aufteilung / Monat</th>
                 <th>Konto</th>
                 <th>Kategorie</th>
               </tr>
@@ -100,7 +109,7 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
                   <td>{RHYTHM_LABELS[r.rhythm] || r.rhythm}</td>
                   <td className="num">{formatEUR(r.monthly)}</td>
                   <td><span className={`pill ${r.kind === 'subscription' ? 'sub' : 'fix'}`}>{KIND_LABEL[r.kind]}</span></td>
-                  <td>{formatDate(r.nextExecution)}</td>
+                  <td className="muted" style={{ fontSize: 12 }}>{splitText(r)}</td>
                   <td>{r.account?.name || r.accountId}</td>
                   <td>
                     <CategoryTag

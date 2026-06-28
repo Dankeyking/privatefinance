@@ -24,7 +24,6 @@ import {
   monthlyByCategory,
   personSummary,
 } from '../src/lib/recurring.js'
-import { buildPaymentSchedule } from '../src/lib/timing.js'
 
 const data = mockData
 const source = 'mock'
@@ -58,6 +57,7 @@ server.registerTool(
       account: accById[so.accountId]?.name || so.accountId,
       category: effectiveCategoryOf(so, {}),
       monthlyCost: round(toMonthly(so.amount, so.rhythm)),
+      split: so.split || { mode: 'even' },
     }))
     if (kind) rows = rows.filter((r) => r.kind === kind)
     rows.sort((a, b) => b.monthlyCost - a.monthlyCost)
@@ -103,29 +103,12 @@ server.registerTool(
 // --- Kosten je Person -------------------------------------------------------
 server.registerTool(
   'person_summary',
-  { title: 'Kosten je Person', description: 'Pro Person: private Kosten, Verteilung, Gesamtkosten, Einkommen und Überschuss (pro Monat).' },
+  { title: 'Kosten je Person', description: 'Pro Person: Gesamtkosten (Summe der Anteile), Einkommen und Überschuss (pro Monat).' },
   async () => {
     const persons = personSummary(data).map((p) => ({
-      person: p.person, personalCosts: round(p.personalCosts), allocations: round(p.allocations),
-      totalCosts: round(p.costs), income: round(p.income), surplus: round(p.surplus),
+      person: p.person, totalCosts: round(p.costs), income: round(p.income), surplus: round(p.surplus),
     }))
     return ok({ source, persons })
-  },
-)
-
-// --- Zahlungslauf / Timing --------------------------------------------------
-server.registerTool(
-  'payment_schedule',
-  {
-    title: 'Zahlungslauf / Timing prüfen',
-    description: 'Prüft je gemeinsamem Konto die Reihenfolge aus Verteilung und Buchungen: nötiger Mindest-Puffer und ob alles rechtzeitig gedeckt ist.',
-    inputSchema: { accountId: z.string().optional() },
-  },
-  async ({ accountId }) => {
-    const sched = buildPaymentSchedule(data, accountId || null)
-    if (!sched) return ok({ source, error: 'Kein gemeinsames Konto gefunden.' })
-    const { joint, timelineLabels, flowOnly, withBuffer, ...rest } = sched
-    return ok({ source, account: joint.name, ...rest })
   },
 )
 

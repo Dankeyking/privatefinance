@@ -12,6 +12,7 @@ import {
   householdSummary,
   monthlyByAccount,
   personSummary,
+  accountFlows,
 } from './recurring.js'
 
 const TASK_PROMPT =
@@ -35,10 +36,10 @@ export function buildClaudeExport(data, overrides = {}) {
     amount: so.amount,
     rhythm: so.rhythm,
     kind: so.kind || 'fixed',
-    accountId: so.accountId,
     accountName: accountById[so.accountId]?.name || so.accountId,
     category: effectiveCategoryOf(so, overrides),
     monthlyCost: round(toMonthly(so.amount, so.rhythm)),
+    split: so.split || { mode: 'even' },
   }))
 
   const incomes = (data.incomes || []).map((i) => ({
@@ -61,8 +62,6 @@ export function buildClaudeExport(data, overrides = {}) {
 
   const persons = personSummary(data).map((p) => ({
     person: p.person,
-    personalCosts: round(p.personalCosts),
-    allocations: round(p.allocations),
     totalCosts: round(p.costs),
     income: round(p.income),
     surplus: round(p.surplus),
@@ -76,19 +75,13 @@ export function buildClaudeExport(data, overrides = {}) {
     accounts: accounts.map((a) => ({ id: a.id, name: a.name, type: a.type, owner: a.owner, balance: a.balance })),
     incomes,
     standingOrders,
-    transfers: (data.transfers || []).map((t) => ({
-      recipient: t.recipient,
-      amount: t.amount,
-      from: accountById[t.fromAccountId]?.name || t.fromAccountId,
-      to: accountById[t.toAccountId]?.name || t.toAccountId,
-      monthly: round(toMonthly(t.amount, t.rhythm || 'monthly')),
-    })),
     summary: {
       totalIncome: round(household.totalIncome),
       totalCosts: round(household.totalCosts),
       surplus: round(household.surplus),
       byAccount,
       personSummary: persons,
+      flows: accountFlows(data).flows,
     },
   }
 }

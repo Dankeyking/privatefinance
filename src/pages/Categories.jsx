@@ -2,7 +2,7 @@ import { CATEGORIES, KEYWORD_RULES } from '../lib/categories.js'
 
 export default function Categories({ data, overrides, onResetAll, onClearOne }) {
   const itemsById = {}
-  ;[...(data.standingOrders || []), ...(data.transfers || []), ...(data.incomes || [])].forEach((i) => {
+  ;[...(data.standingOrders || []), ...(data.incomes || [])].forEach((i) => {
     itemsById[i.id] = i
   })
   const overrideEntries = Object.entries(overrides)

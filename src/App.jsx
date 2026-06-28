@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
-import Timing from './pages/Timing.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Categories from './pages/Categories.jsx'
 import Settings from './pages/Settings.jsx'
@@ -38,7 +37,7 @@ export default function App() {
 
   const data = useMemo(() => mergeData(baseData, manual), [baseData, manual])
   const hasManual = Boolean(
-    manual && (manual.standingOrders || manual.transfers || manual.accounts || manual.incomes),
+    manual && (manual.standingOrders || manual.accounts || manual.incomes),
   )
 
   function handleSetCategory(itemId, categoryId) {
@@ -96,7 +95,6 @@ export default function App() {
         {page === 'recurring' && (
           <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
         )}
-        {page === 'timing' && <Timing data={data} />}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
         {page === 'categories' && (
           <Categories

@@ -1,8 +1,14 @@
 // =============================================================================
 //  recurring.js — Auswertungen aus den wiederkehrenden Posten (manuelles Modell)
 // =============================================================================
-//  Alle Beträge werden über toMonthly auf eine Monatsbasis normalisiert.
-//  Personen werden aus dem `owner` der Privatkonten abgeleitet (nicht hartkodiert).
+//  Jeder Posten (Fixkosten/Abo) hat eine Aufteilung (split), die festlegt, wer
+//  welchen Anteil trägt:
+//    { mode: 'even' }                       -> gleichmäßig auf alle Personen
+//    { mode: 'single', person: 'Elisa' }    -> nur eine Person
+//    { mode: 'percent', shares: {A:60,B:40}}-> prozentual
+//    { mode: 'amount', shares: {A:720,B:850}}-> feste Beträge (in der Periode)
+//  Daraus werden Kosten je Person und der Geldfluss zwischen den Konten
+//  abgeleitet. Alle Beträge werden über toMonthly auf Monatsbasis normalisiert.
 // =============================================================================
 
 import { toMonthly, formatEUR } from './normalize.js'
@@ -15,7 +21,6 @@ export function accountsById(accounts = []) {
   return Object.fromEntries(accounts.map((a) => [a.id, a]))
 }
 
-// Person eines Kontos: owner eines Privatkontos, sonst null.
 function ownerOf(acc) {
   if (!acc || acc.type !== 'personal') return null
   return acc.owner || acc.name || null
@@ -33,10 +38,25 @@ export function personsFromAccounts(accounts = []) {
   return seen
 }
 
+// Monatlicher Anteil einer Person an einem Posten (gemäß Aufteilung).
+export function personShareMonthly(cost, person, persons) {
+  const split = cost.split || { mode: 'even' }
+  const monthly = toMonthly(cost.amount, cost.rhythm)
+  switch (split.mode) {
+    case 'single':
+      return split.person === person ? monthly : 0
+    case 'percent':
+      return monthly * ((Number(split.shares?.[person]) || 0) / 100)
+    case 'amount':
+      return toMonthly(Number(split.shares?.[person]) || 0, cost.rhythm)
+    default: // even
+      return persons.length ? monthly / persons.length : 0
+  }
+}
+
 // Monatslast je Konto, aufgeteilt nach Fixkosten / Abos.
 // `reserve` = monatlicher Anteil aus nicht-monatlichen Posten (jährlich/12,
-// vierteljährlich/3), also die Rücklage, die monatlich aufs Konto soll.
-// `total` ist der gesamte Betrag, der monatlich aufs Konto gebucht werden sollte.
+// vierteljährlich/3). `total` = Betrag, der monatlich aufs Konto soll.
 export function monthlyByAccount(data) {
   const { accounts = [], standingOrders = [] } = data
   const slot = Object.fromEntries(
@@ -65,26 +85,17 @@ export function monthlyByCategory(data, overrides = {}) {
   return totals
 }
 
-// Kosten je Person: private Fixkosten/Abos + Verteilung auf gemeinsame Konten.
+// Kosten je Person: Summe der Anteile über alle Posten.
 export function monthlyByPerson(data) {
-  const { accounts = [], standingOrders = [], transfers = [] } = data
-  const byId = accountsById(accounts)
+  const { accounts = [], standingOrders = [] } = data
   const persons = personsFromAccounts(accounts)
-  const map = Object.fromEntries(
-    persons.map((p) => [p, { person: p, personalCosts: 0, allocations: 0, total: 0 }]),
-  )
+  const map = Object.fromEntries(persons.map((p) => [p, 0]))
   standingOrders.forEach((o) => {
-    const p = ownerOf(byId[o.accountId])
-    if (p && map[p]) map[p].personalCosts += toMonthly(o.amount, o.rhythm)
+    persons.forEach((p) => {
+      map[p] += personShareMonthly(o, p, persons)
+    })
   })
-  transfers.forEach((t) => {
-    const p = ownerOf(byId[t.fromAccountId])
-    if (p && map[p]) map[p].allocations += toMonthly(t.amount, t.rhythm || 'monthly')
-  })
-  persons.forEach((p) => {
-    map[p].total = map[p].personalCosts + map[p].allocations
-  })
-  return persons.map((p) => map[p])
+  return persons.map((p) => ({ person: p, total: map[p] }))
 }
 
 // Monatseinkommen je Person (aus den Einnahmen auf den Privatkonten).
@@ -100,19 +111,34 @@ export function incomeByPerson(data) {
   return persons.map((p) => ({ person: p, income: map[p] }))
 }
 
-// Geldfluss zwischen den Konten: aggregiert die Verteilung (Privatkonto →
-// gemeinsames Konto) zu monatlichen Flüssen für Diagramm + Tabelle.
+// Geldfluss zwischen den Konten: jede Person finanziert ihren Anteil jedes
+// Postens auf dessen Abbuchungskonto. Läuft der Posten über das eigene
+// Privatkonto, entsteht kein Übertrag.
 export function accountFlows(data) {
-  const { accounts = [], transfers = [] } = data
+  const { accounts = [], standingOrders = [] } = data
   const byId = accountsById(accounts)
+  const persons = personsFromAccounts(accounts)
+  // Heimatkonto je Person (erstes Privatkonto mit diesem Inhaber).
+  const homeByPerson = {}
+  accounts
+    .filter((a) => a.type === 'personal')
+    .forEach((a) => {
+      const p = ownerOf(a)
+      if (p && !(p in homeByPerson)) homeByPerson[p] = a
+    })
 
   const flowMap = {}
-  transfers.forEach((t) => {
-    const from = byId[t.fromAccountId]
-    const to = byId[t.toAccountId]
-    if (!from || !to) return
-    const key = `${from.name}||${to.name}`
-    flowMap[key] = (flowMap[key] || 0) + toMonthly(t.amount, t.rhythm || 'monthly')
+  standingOrders.forEach((o) => {
+    const debit = byId[o.accountId]
+    if (!debit) return
+    persons.forEach((p) => {
+      const share = personShareMonthly(o, p, persons)
+      if (share <= 0) return
+      const home = homeByPerson[p]
+      if (!home || home.id === debit.id) return
+      const key = `${home.name}||${debit.name}`
+      flowMap[key] = (flowMap[key] || 0) + share
+    })
   })
 
   const flows = Object.entries(flowMap)
@@ -144,8 +170,7 @@ export function accountFlows(data) {
   return { flows, nodeColors, columns, labels, total: flows.reduce((s, f) => s + f.flow, 0) }
 }
 
-// Haushalts-Summe: Gesamteinkommen, Gesamtkosten (nur Fixkosten/Abos), Überschuss.
-// Verteilungen sind interne Umbuchungen und zählen NICHT als Kosten.
+// Haushalts-Summe: Gesamteinkommen, Gesamtkosten (Fixkosten/Abos), Überschuss.
 export function householdSummary(data) {
   const { standingOrders = [], incomes = [] } = data
   const totalCosts = standingOrders.reduce((s, o) => s + toMonthly(o.amount, o.rhythm), 0)
@@ -153,15 +178,12 @@ export function householdSummary(data) {
   return { totalIncome, totalCosts, surplus: totalIncome - totalCosts }
 }
 
-// Pro Person: Einkommen, Gesamtkosten, Überschuss (was nach Verteilung + privaten
-// Kosten übrig bleibt).
+// Pro Person: Gesamtkosten (Summe der Anteile), Einkommen, Überschuss.
 export function personSummary(data) {
   const costs = monthlyByPerson(data)
   const incById = Object.fromEntries(incomeByPerson(data).map((i) => [i.person, i.income]))
   return costs.map((c) => ({
     person: c.person,
-    personalCosts: c.personalCosts,
-    allocations: c.allocations,
     costs: c.total,
     income: incById[c.person] || 0,
     surplus: (incById[c.person] || 0) - c.total,

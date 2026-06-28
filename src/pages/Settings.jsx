@@ -20,6 +20,15 @@ function nextExec(day) {
   return localISO(d)
 }
 
+// Aufteilung aus gespeichertem split-Objekt in Formularfelder zerlegen.
+function splitToForm(split = { mode: 'even' }) {
+  return {
+    splitMode: split.mode || 'even',
+    splitPerson: split.person || '',
+    splitShares: { ...(split.shares || {}) },
+  }
+}
+
 export default function Settings({ data, manual, onSave, onReset }) {
   const seed = () => ({
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a) => ({
@@ -32,10 +41,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
     orders: (manual.standingOrders ?? data.standingOrders ?? []).map((o) => ({
       id: o.id || newId(), recipient: o.recipient || '', amount: o.amount ?? 0, rhythm: o.rhythm || 'monthly',
       accountId: o.accountId || '', category: o.category || 'Sonstiges', kind: o.kind || 'fixed', executionDay: o.executionDay || 1,
-    })),
-    transfers: (manual.transfers ?? data.transfers ?? []).map((t) => ({
-      id: t.id || newId(), recipient: t.recipient || '', amount: t.amount ?? 0,
-      fromAccountId: t.fromAccountId || '', toAccountId: t.toAccountId || '', executionDay: t.executionDay || 1,
+      ...splitToForm(o.split),
     })),
   })
 
@@ -44,40 +50,46 @@ export default function Settings({ data, manual, onSave, onReset }) {
 
   const accounts = form.accounts
   const personalAccts = accounts.filter((a) => a.type === 'personal')
-  const jointAccts = accounts.filter((a) => a.type === 'joint')
+  const persons = [...new Set(personalAccts.map((a) => a.owner || a.name).filter(Boolean))]
 
   const up = (patch) => { setForm((f) => ({ ...f, ...patch })); setSaved(false) }
   const setRow = (key, id, field, value) =>
     up({ [key]: form[key].map((r) => (r.id === id ? { ...r, [field]: value } : r)) })
   const delRow = (key, id) => up({ [key]: form[key].filter((r) => r.id !== id) })
+  const setShare = (id, person, value) =>
+    up({ orders: form.orders.map((r) => (r.id === id ? { ...r, splitShares: { ...r.splitShares, [person]: value } } : r)) })
 
   const addIncome = () =>
     up({ incomes: [...form.incomes, { id: newId(), name: 'Gehalt', amount: 0, rhythm: 'monthly', accountId: personalAccts[0]?.id || accounts[0]?.id || '', executionDay: 1 }] })
   const addOrder = (kind) =>
-    up({ orders: [...form.orders, { id: newId(), recipient: '', amount: 0, rhythm: 'monthly', accountId: jointAccts[0]?.id || accounts[0]?.id || '', category: 'Sonstiges', kind, executionDay: 1 }] })
-  const addTransfer = () =>
-    up({ transfers: [...form.transfers, { id: newId(), recipient: 'Anteil', amount: 0, fromAccountId: personalAccts[0]?.id || '', toAccountId: jointAccts[0]?.id || '', executionDay: 1 }] })
+    up({ orders: [...form.orders, { id: newId(), recipient: '', amount: 0, rhythm: 'monthly', accountId: accounts.find((a) => a.type === 'joint')?.id || accounts[0]?.id || '', category: 'Sonstiges', kind, executionDay: 1, splitMode: 'even', splitPerson: persons[0] || '', splitShares: {} }] })
   const addAccount = (type) =>
     up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0 }] })
+
+  function buildSplit(o) {
+    if (o.splitMode === 'single') return { mode: 'single', person: o.splitPerson || persons[0] || '' }
+    if (o.splitMode === 'percent' || o.splitMode === 'amount') {
+      const shares = {}
+      persons.forEach((p) => { shares[p] = Number(o.splitShares?.[p]) || 0 })
+      return { mode: o.splitMode, shares }
+    }
+    return { mode: 'even' }
+  }
 
   function save() {
     const payload = {
       accounts: form.accounts.map((a) => ({
         ...a, balance: Number(a.balance) || 0, currency: 'EUR',
-        // Privatkonten brauchen einen Inhaber (Person); Fallback = Kontoname.
         owner: a.type === 'personal' ? (a.owner || a.name || 'Ich') : (a.owner || 'Gemeinsam'),
       })),
       incomes: form.incomes.map((i) => ({
         ...i, amount: Number(i.amount) || 0, executionDay: Number(i.executionDay) || 1,
       })),
       standingOrders: form.orders.map((o) => ({
-        ...o, amount: Number(o.amount) || 0, executionDay: Number(o.executionDay) || 1,
-        kind: o.kind === 'subscription' ? 'subscription' : 'fixed',
+        id: o.id, recipient: o.recipient, amount: Number(o.amount) || 0, rhythm: o.rhythm,
+        accountId: o.accountId, category: o.category, kind: o.kind === 'subscription' ? 'subscription' : 'fixed',
+        executionDay: Number(o.executionDay) || 1, split: buildSplit(o),
         nextExecution: nextExec(o.executionDay), monthInterval: o.rhythm === 'yearly' ? 12 : o.rhythm === 'quarterly' ? 3 : 1,
-      })),
-      transfers: form.transfers.map((t) => ({
-        ...t, amount: Number(t.amount) || 0, executionDay: Number(t.executionDay) || 1, rhythm: 'monthly',
-        nextExecution: nextExec(t.executionDay),
       })),
     }
     onSave(payload)
@@ -94,14 +106,16 @@ export default function Settings({ data, manual, onSave, onReset }) {
       <div className="page-header">
         <h1>Meine Daten</h1>
         <p>
-          Konten, Einnahmen, Fixkosten/Abos und die Verteilung selbst pflegen. Alles bleibt{' '}
-          <strong>nur in deinem Browser</strong> (localStorage) – nichts wird hochgeladen.
+          Konten, Einnahmen und Fixkosten/Abos selbst pflegen. Pro Posten legst du die
+          <strong> Aufteilung</strong> fest (wer zahlt welchen Anteil) und das Abbuchungskonto –
+          daraus berechnet die App Kosten je Person und den Geldfluss. Alles bleibt
+          <strong> nur in deinem Browser</strong>.
         </p>
       </div>
 
       <div className="privacy-note">
         🔒 Diese Daten verlassen dein Gerät nicht. Die öffentliche Seite zeigt für alle anderen
-        weiterhin nur Demo-Daten.
+        weiterhin nur die Startdaten.
       </div>
 
       {/* Konten */}
@@ -176,7 +190,10 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th><th>Kategorie</th><th>Art</th><th className="num">Tag</th><th></th></tr>
+              <tr>
+                <th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th>
+                <th>Kategorie</th><th>Art</th><th className="num">Tag</th><th>Aufteilung</th><th></th>
+              </tr>
             </thead>
             <tbody>
               {form.orders.map((o) => (
@@ -205,6 +222,29 @@ export default function Settings({ data, manual, onSave, onReset }) {
                     </select>
                   </td>
                   <td className="num"><input type="number" min="1" max="31" value={o.executionDay} onChange={(e) => setRow('orders', o.id, 'executionDay', e.target.value)} /></td>
+                  <td>
+                    <div className="split-cell">
+                      <select value={o.splitMode} onChange={(e) => setRow('orders', o.id, 'splitMode', e.target.value)}>
+                        <option value="even">Gleich (alle)</option>
+                        <option value="single">Eine Person</option>
+                        <option value="percent">Prozent</option>
+                        <option value="amount">Beträge €</option>
+                      </select>
+                      {o.splitMode === 'single' && (
+                        <select value={o.splitPerson} onChange={(e) => setRow('orders', o.id, 'splitPerson', e.target.value)}>
+                          {persons.map((p) => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      )}
+                      {(o.splitMode === 'percent' || o.splitMode === 'amount') &&
+                        persons.map((p) => (
+                          <label key={p} className="split-share">
+                            <span>{p}</span>
+                            <input type="number" value={o.splitShares?.[p] ?? ''} onChange={(e) => setShare(o.id, p, e.target.value)} />
+                            <span>{o.splitMode === 'percent' ? '%' : '€'}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </td>
                   <td className="num"><button className="btn-del" onClick={() => delRow('orders', o.id)}>✕</button></td>
                 </tr>
               ))}
@@ -215,42 +255,9 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <button className="btn add" onClick={() => addOrder('subscription')}>+ Abo</button>
       </div>
 
-      {/* Verteilung */}
-      <div className="card mt">
-        <h2>Verteilung (nach Gehalt → gemeinsame Konten)</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>von (privat)</th><th>nach (gemeinsam)</th><th className="num">Tag</th><th></th></tr>
-            </thead>
-            <tbody>
-              {form.transfers.map((t) => (
-                <tr key={t.id}>
-                  <td><input value={t.recipient} onChange={(e) => setRow('transfers', t.id, 'recipient', e.target.value)} /></td>
-                  <td className="num"><input type="number" value={t.amount} onChange={(e) => setRow('transfers', t.id, 'amount', e.target.value)} /></td>
-                  <td>
-                    <select value={t.fromAccountId} onChange={(e) => setRow('transfers', t.id, 'fromAccountId', e.target.value)}>
-                      {personalAccts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <select value={t.toAccountId} onChange={(e) => setRow('transfers', t.id, 'toAccountId', e.target.value)}>
-                      {jointAccts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </td>
-                  <td className="num"><input type="number" min="1" max="31" value={t.executionDay} onChange={(e) => setRow('transfers', t.id, 'executionDay', e.target.value)} /></td>
-                  <td className="num"><button className="btn-del" onClick={() => delRow('transfers', t.id)}>✕</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <button className="btn add" onClick={addTransfer}>+ Verteilung</button>
-      </div>
-
       <div className="settings-actions">
         <button className="btn-primary" onClick={save}>Speichern</button>
-        <button className="btn" onClick={reset}>Auf Demo-Daten zurücksetzen</button>
+        <button className="btn" onClick={reset}>Auf Startdaten zurücksetzen</button>
         {saved && <span className="saved-hint">✓ Gespeichert (nur in diesem Browser)</span>}
       </div>
     </div>

@@ -106,8 +106,6 @@ export default function Overview({ data }) {
             <thead>
               <tr>
                 <th>Person</th>
-                <th className="num">Private Kosten</th>
-                <th className="num">Verteilung</th>
                 <th className="num">Gesamtkosten</th>
                 <th className="num">Einkommen</th>
                 <th className="num">Überschuss</th>
@@ -117,15 +115,13 @@ export default function Overview({ data }) {
               {persons.map((p) => (
                 <tr key={p.person}>
                   <td><strong>{p.person}</strong></td>
-                  <td className="num">{formatEUR(p.personalCosts)}</td>
-                  <td className="num">{formatEUR(p.allocations)}</td>
                   <td className="num">{formatEUR(p.costs)}</td>
                   <td className="num">{formatEUR(p.income)}</td>
                   <td className={`num amount ${p.surplus >= 0 ? 'pos' : 'neg'}`}>{formatEUR(p.surplus)}</td>
                 </tr>
               ))}
               {persons.length === 0 && (
-                <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                <tr><td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 24 }}>
                   Noch keine Personen – lege unter „Meine Daten" Privatkonten mit Inhaber an.
                 </td></tr>
               )}
@@ -133,7 +129,7 @@ export default function Overview({ data }) {
           </table>
         </div>
         <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-          Gesamtkosten = private Fixkosten/Abos + monatliche Verteilung auf die gemeinsamen Konten.
+          Gesamtkosten = Summe der Anteile jeder Person an allen Fixkosten/Abos (gemäß Aufteilung).
         </p>
       </div>
 
