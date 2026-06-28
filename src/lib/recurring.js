@@ -5,8 +5,11 @@
 //  Personen werden aus dem `owner` der Privatkonten abgeleitet (nicht hartkodiert).
 // =============================================================================
 
-import { toMonthly } from './normalize.js'
+import { toMonthly, formatEUR } from './normalize.js'
 import { effectiveCategoryOf } from './selectors.js'
+
+const FLOW_PERSONAL = '#94a3b8'
+const FLOW_JOINT = '#3b82f6'
 
 export function accountsById(accounts = []) {
   return Object.fromEntries(accounts.map((a) => [a.id, a]))
@@ -95,6 +98,50 @@ export function incomeByPerson(data) {
     if (p && p in map) map[p] += toMonthly(i.amount, i.rhythm)
   })
   return persons.map((p) => ({ person: p, income: map[p] }))
+}
+
+// Geldfluss zwischen den Konten: aggregiert die Verteilung (Privatkonto →
+// gemeinsames Konto) zu monatlichen Flüssen für Diagramm + Tabelle.
+export function accountFlows(data) {
+  const { accounts = [], transfers = [] } = data
+  const byId = accountsById(accounts)
+
+  const flowMap = {}
+  transfers.forEach((t) => {
+    const from = byId[t.fromAccountId]
+    const to = byId[t.toAccountId]
+    if (!from || !to) return
+    const key = `${from.name}||${to.name}`
+    flowMap[key] = (flowMap[key] || 0) + toMonthly(t.amount, t.rhythm || 'monthly')
+  })
+
+  const flows = Object.entries(flowMap)
+    .map(([k, v]) => {
+      const [from, to] = k.split('||')
+      return { from, to, flow: Number(v.toFixed(2)) }
+    })
+    .sort((a, b) => b.flow - a.flow)
+
+  const nodeColors = {}
+  const columns = {}
+  accounts.forEach((a) => {
+    nodeColors[a.name] = a.type === 'joint' ? FLOW_JOINT : FLOW_PERSONAL
+    columns[a.name] = a.type === 'joint' ? 1 : 0
+  })
+
+  const inSum = {}
+  const outSum = {}
+  flows.forEach((f) => {
+    outSum[f.from] = (outSum[f.from] || 0) + f.flow
+    inSum[f.to] = (inSum[f.to] || 0) + f.flow
+  })
+  const labels = {}
+  Object.keys(nodeColors).forEach((name) => {
+    const through = Math.max(inSum[name] || 0, outSum[name] || 0)
+    if (through > 0) labels[name] = `${name} · ${formatEUR(through)}`
+  })
+
+  return { flows, nodeColors, columns, labels, total: flows.reduce((s, f) => s + f.flow, 0) }
 }
 
 // Haushalts-Summe: Gesamteinkommen, Gesamtkosten (nur Fixkosten/Abos), Überschuss.

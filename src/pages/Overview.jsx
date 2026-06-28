@@ -1,17 +1,20 @@
 import { useMemo } from 'react'
 import KpiCard from '../components/KpiCard.jsx'
+import SankeyFlow from '../components/charts/SankeyFlow.jsx'
 import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import { upcomingPayments } from '../lib/selectors.js'
 import {
   householdSummary,
   monthlyByAccount,
   personSummary,
+  accountFlows,
 } from '../lib/recurring.js'
 
 export default function Overview({ data }) {
   const summary = useMemo(() => householdSummary(data), [data])
   const byAccount = useMemo(() => monthlyByAccount(data), [data])
   const persons = useMemo(() => personSummary(data), [data])
+  const flows = useMemo(() => accountFlows(data), [data])
   const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
 
   return (
@@ -25,6 +28,48 @@ export default function Overview({ data }) {
         <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" />
         <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" />
         <KpiCard label="Überschuss / Monat" value={summary.surplus} tone={summary.surplus >= 0 ? 'pos' : 'neg'} />
+      </div>
+
+      {/* Geldfluss zwischen den Konten */}
+      <h2 className="section-title mt">Geldfluss zwischen den Konten <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(pro Monat)</span></h2>
+      <div className="card">
+        {flows.flows.length === 0 ? (
+          <p className="muted">
+            Noch keine Verteilung hinterlegt. Lege unter „Meine Daten" fest, wer nach dem Gehalt
+            wie viel von einem Privatkonto auf ein gemeinsames Konto bucht.
+          </p>
+        ) : (
+          <div className="grid flow-row">
+            <div>
+              <SankeyFlow
+                flows={flows.flows}
+                nodeColors={flows.nodeColors}
+                columns={flows.columns}
+                labels={flows.labels}
+              />
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Von</th><th>Nach</th><th className="num">€ / Monat</th></tr>
+                </thead>
+                <tbody>
+                  {flows.flows.map((f, i) => (
+                    <tr key={i}>
+                      <td>{f.from}</td>
+                      <td>{f.to}</td>
+                      <td className="num">{formatEUR(f.flow)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan={2}><strong>Summe</strong></td>
+                    <td className="num"><strong>{formatEUR(flows.total)}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Abschnitt A — Kosten je Konto */}
