@@ -31,10 +31,13 @@ export function personsFromAccounts(accounts = []) {
 }
 
 // Monatslast je Konto, aufgeteilt nach Fixkosten / Abos.
+// `reserve` = monatlicher Anteil aus nicht-monatlichen Posten (jährlich/12,
+// vierteljährlich/3), also die Rücklage, die monatlich aufs Konto soll.
+// `total` ist der gesamte Betrag, der monatlich aufs Konto gebucht werden sollte.
 export function monthlyByAccount(data) {
   const { accounts = [], standingOrders = [] } = data
   const slot = Object.fromEntries(
-    accounts.map((a) => [a.id, { account: a, fixed: 0, subscription: 0, total: 0 }]),
+    accounts.map((a) => [a.id, { account: a, fixed: 0, subscription: 0, reserve: 0, total: 0 }]),
   )
   standingOrders.forEach((o) => {
     const s = slot[o.accountId]
@@ -42,6 +45,7 @@ export function monthlyByAccount(data) {
     const m = toMonthly(o.amount, o.rhythm)
     if (o.kind === 'subscription') s.subscription += m
     else s.fixed += m
+    if (o.rhythm !== 'monthly') s.reserve += m
     s.total += m
   })
   return accounts.map((a) => slot[a.id])
@@ -91,23 +95,6 @@ export function incomeByPerson(data) {
     if (p && p in map) map[p] += toMonthly(i.amount, i.rhythm)
   })
   return persons.map((p) => ({ person: p, income: map[p] }))
-}
-
-// Deckung je gemeinsamem Konto: Bedarf (Kosten) vs. eingeplante Verteilung.
-export function jointCoverage(data) {
-  const { accounts = [], standingOrders = [], transfers = [] } = data
-  return accounts
-    .filter((a) => a.type === 'joint')
-    .map((acc) => {
-      const needed = standingOrders
-        .filter((o) => o.accountId === acc.id)
-        .reduce((s, o) => s + toMonthly(o.amount, o.rhythm), 0)
-      const funded = transfers
-        .filter((t) => t.toAccountId === acc.id)
-        .reduce((s, t) => s + toMonthly(t.amount, t.rhythm || 'monthly'), 0)
-      const delta = funded - needed
-      return { account: acc, needed, funded, delta, covered: delta >= -0.005 }
-    })
 }
 
 // Haushalts-Summe: Gesamteinkommen, Gesamtkosten (nur Fixkosten/Abos), Überschuss.

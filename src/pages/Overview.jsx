@@ -5,24 +5,20 @@ import { upcomingPayments } from '../lib/selectors.js'
 import {
   householdSummary,
   monthlyByAccount,
-  jointCoverage,
   personSummary,
 } from '../lib/recurring.js'
 
 export default function Overview({ data }) {
   const summary = useMemo(() => householdSummary(data), [data])
   const byAccount = useMemo(() => monthlyByAccount(data), [data])
-  const coverage = useMemo(() => jointCoverage(data), [data])
   const persons = useMemo(() => personSummary(data), [data])
   const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
-
-  const covById = Object.fromEntries(coverage.map((c) => [c.account.id, c]))
 
   return (
     <div>
       <div className="page-header">
         <h1>Übersicht</h1>
-        <p>Manuelle Haushaltsplanung – Einnahmen, Fixkosten &amp; Abos je Konto und je Person.</p>
+        <p>Manuelle Fixkosten-Übersicht – pro Konto der monatlich zu buchende Betrag (jährliche Posten ÷ 12).</p>
       </div>
 
       <div className="grid kpis">
@@ -32,35 +28,29 @@ export default function Overview({ data }) {
       </div>
 
       {/* Abschnitt A — Kosten je Konto */}
-      <h2 className="section-title mt">Kosten je Konto</h2>
+      <h2 className="section-title mt">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(monatlich aufs Konto buchen)</span></h2>
       <div className="grid accounts">
-        {byAccount.map(({ account, fixed, subscription, total }) => {
-          const cov = covById[account.id]
-          return (
-            <div className={`card acct ${account.type}`} key={account.id}>
-              <div className="acct-type">{account.type === 'joint' ? 'Gemeinsam' : 'Privat'}</div>
-              <div className="acct-name">{account.name}</div>
-              <div className="acct-owner">{account.owner}</div>
-              <div className="acct-balance">
-                {formatEUR(total)}
-                <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}> / Monat</span>
-              </div>
-              <div className="muted" style={{ fontSize: 12 }}>
+        {byAccount.map(({ account, fixed, subscription, reserve, total }) => (
+          <div className={`card acct ${account.type}`} key={account.id}>
+            <div className="acct-type">{account.type === 'joint' ? 'Gemeinsam' : 'Privat'}</div>
+            <div className="acct-name">{account.name}</div>
+            <div className="acct-balance">
+              {formatEUR(total)}
+              <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}> / Monat</span>
+            </div>
+            <div className="muted" style={{ fontSize: 12 }}>{formatEUR(total * 12)} / Jahr</div>
+            {(fixed > 0 || subscription > 0) && (
+              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                 Fixkosten {formatEUR(fixed)} · Abos {formatEUR(subscription)}
               </div>
-              {cov && (
-                <div className="coverage">
-                  <span className={`pill ${cov.covered ? 'ok' : 'risk'}`}>
-                    {cov.covered ? '✓ gedeckt' : `Lücke ${formatEUR(-cov.delta)}`}
-                  </span>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    Verteilung {formatEUR(cov.funded)} / Bedarf {formatEUR(cov.needed)}
-                  </span>
-                </div>
-              )}
-            </div>
-          )
-        })}
+            )}
+            {reserve > 0 && (
+              <div className="reserve-hint">
+                inkl. {formatEUR(reserve)}/Monat Rücklage für jährliche/vierteljährliche Posten
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Abschnitt B — Kosten je Person */}

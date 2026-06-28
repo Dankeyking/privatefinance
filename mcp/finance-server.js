@@ -22,7 +22,6 @@ import { effectiveCategoryOf } from '../src/lib/selectors.js'
 import {
   monthlyByAccount,
   monthlyByCategory,
-  jointCoverage,
   personSummary,
 } from '../src/lib/recurring.js'
 import { buildPaymentSchedule } from '../src/lib/timing.js'
@@ -87,20 +86,17 @@ server.registerTool(
   },
 )
 
-// --- Kosten je Konto + Deckung ----------------------------------------------
+// --- Kosten je Konto --------------------------------------------------------
 server.registerTool(
   'costs_by_account',
-  { title: 'Kosten je Konto', description: 'Monatslast je Konto (Fixkosten/Abos) plus Deckung der gemeinsamen Konten durch die Verteilung.' },
+  { title: 'Kosten je Konto', description: 'Monatlich aufs Konto zu buchender Betrag je Konto (Fixkosten/Abos, jährlich ÷ 12), inkl. Rücklage-Anteil und Jahreswert.' },
   async () => {
     const byAccount = monthlyByAccount(data).map((a) => ({
       account: a.account.name, type: a.account.type,
-      fixed: round(a.fixed), subscription: round(a.subscription), total: round(a.total),
+      fixed: round(a.fixed), subscription: round(a.subscription),
+      reserve: round(a.reserve), total: round(a.total), perYear: round(a.total * 12),
     }))
-    const coverage = jointCoverage(data).map((c) => ({
-      account: c.account.name, needed: round(c.needed), funded: round(c.funded),
-      delta: round(c.delta), covered: c.covered,
-    }))
-    return ok({ source, byAccount, coverage })
+    return ok({ source, byAccount })
   },
 )
 

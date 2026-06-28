@@ -11,19 +11,17 @@ import { effectiveCategoryOf } from './selectors.js'
 import {
   householdSummary,
   monthlyByAccount,
-  jointCoverage,
   personSummary,
 } from './recurring.js'
 
 const TASK_PROMPT =
-  'Analysiere diesen manuell gepflegten Haushalt. Das Modell: Die Gehälter gehen auf die ' +
-  'Privatkonten; nach Gehaltseingang wird direkt auf mehrere gemeinsame Konten verteilt ' +
-  '(Gemeinschaft, Haushalt, Urlaub, Wohnung & Versicherungen), die jeweils ihre Fixkosten ' +
-  'und Abos tragen. Sage mir konkret: (1) Sind alle gemeinsamen Konten durch die Verteilung ' +
-  'gedeckt (siehe coverage.delta < 0 = Lücke)? (2) Wo gibt es Einsparpotenzial bei Abos? ' +
-  '(3) Ist die Verteilung zwischen den Personen fair im Verhältnis zum Einkommen ' +
-  '(siehe personSummary)? (4) Wie hoch ist die monatliche Sparrate/Überschuss und wie ' +
-  'ließe sie sich erhöhen? Nutze die normalisierten Monatswerte (monthly).'
+  'Analysiere diese manuell gepflegte Fixkosten-Übersicht. Modell: mehrere Konten ' +
+  '(privat + gemeinsam), je Konto Fixkosten und Abos. Jährliche/vierteljährliche Posten ' +
+  'sind auf Monatsbasis normalisiert (monthly = jährlich ÷ 12 bzw. vierteljährlich ÷ 3) – ' +
+  'das ist der Betrag, der monatlich aufs jeweilige Konto gebucht werden sollte ' +
+  '(byAccount.total). Sage mir konkret: (1) Wo gibt es Einsparpotenzial, besonders bei Abos? ' +
+  '(2) Wie verteilen sich die Kosten auf Kategorien und Konten? (3) Wie hoch ist die ' +
+  'monatliche Sparrate/Überschuss und wie ließe sie sich erhöhen?'
 
 const round = (n) => Number((n || 0).toFixed(2))
 
@@ -56,15 +54,9 @@ export function buildClaudeExport(data, overrides = {}) {
     type: a.account.type,
     fixed: round(a.fixed),
     subscription: round(a.subscription),
+    reserve: round(a.reserve),
     total: round(a.total),
-  }))
-
-  const coverage = jointCoverage(data).map((c) => ({
-    account: c.account.name,
-    needed: round(c.needed),
-    funded: round(c.funded),
-    delta: round(c.delta),
-    covered: c.covered,
+    perYear: round(a.total * 12),
   }))
 
   const persons = personSummary(data).map((p) => ({
@@ -96,7 +88,6 @@ export function buildClaudeExport(data, overrides = {}) {
       totalCosts: round(household.totalCosts),
       surplus: round(household.surplus),
       byAccount,
-      coverage,
       personSummary: persons,
     },
   }
