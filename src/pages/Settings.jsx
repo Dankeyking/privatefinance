@@ -25,9 +25,13 @@ export default function Settings({ data, manual, onSave, onReset }) {
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
     })),
+    incomes: (manual.incomes ?? data.incomes ?? []).map((i) => ({
+      id: i.id || newId(), name: i.name || '', amount: i.amount ?? 0, rhythm: i.rhythm || 'monthly',
+      accountId: i.accountId || '', executionDay: i.executionDay || 1,
+    })),
     orders: (manual.standingOrders ?? data.standingOrders ?? []).map((o) => ({
       id: o.id || newId(), recipient: o.recipient || '', amount: o.amount ?? 0, rhythm: o.rhythm || 'monthly',
-      accountId: o.accountId || '', category: o.category || 'Sonstiges', executionDay: o.executionDay || 1,
+      accountId: o.accountId || '', category: o.category || 'Sonstiges', kind: o.kind || 'fixed', executionDay: o.executionDay || 1,
     })),
     transfers: (manual.transfers ?? data.transfers ?? []).map((t) => ({
       id: t.id || newId(), recipient: t.recipient || '', amount: t.amount ?? 0,
@@ -47,18 +51,28 @@ export default function Settings({ data, manual, onSave, onReset }) {
     up({ [key]: form[key].map((r) => (r.id === id ? { ...r, [field]: value } : r)) })
   const delRow = (key, id) => up({ [key]: form[key].filter((r) => r.id !== id) })
 
-  const addOrder = () =>
-    up({ orders: [...form.orders, { id: newId(), recipient: '', amount: 0, rhythm: 'monthly', accountId: jointAccts[0]?.id || accounts[0]?.id || '', category: 'Sonstiges', executionDay: 1 }] })
+  const addIncome = () =>
+    up({ incomes: [...form.incomes, { id: newId(), name: 'Gehalt', amount: 0, rhythm: 'monthly', accountId: personalAccts[0]?.id || accounts[0]?.id || '', executionDay: 1 }] })
+  const addOrder = (kind) =>
+    up({ orders: [...form.orders, { id: newId(), recipient: '', amount: 0, rhythm: 'monthly', accountId: jointAccts[0]?.id || accounts[0]?.id || '', category: 'Sonstiges', kind, executionDay: 1 }] })
   const addTransfer = () =>
-    up({ transfers: [...form.transfers, { id: newId(), recipient: 'Haushaltsbeitrag', amount: 0, fromAccountId: personalAccts[0]?.id || '', toAccountId: jointAccts[0]?.id || '', executionDay: 1 }] })
-  const addAccount = () =>
-    up({ accounts: [...form.accounts, { id: newId(), name: 'Neues Konto', owner: '', type: 'personal', balance: 0 }] })
+    up({ transfers: [...form.transfers, { id: newId(), recipient: 'Anteil', amount: 0, fromAccountId: personalAccts[0]?.id || '', toAccountId: jointAccts[0]?.id || '', executionDay: 1 }] })
+  const addAccount = (type) =>
+    up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0 }] })
 
   function save() {
     const payload = {
-      accounts: form.accounts.map((a) => ({ ...a, balance: Number(a.balance) || 0 })),
+      accounts: form.accounts.map((a) => ({
+        ...a, balance: Number(a.balance) || 0, currency: 'EUR',
+        // Privatkonten brauchen einen Inhaber (Person); Fallback = Kontoname.
+        owner: a.type === 'personal' ? (a.owner || a.name || 'Ich') : (a.owner || 'Gemeinsam'),
+      })),
+      incomes: form.incomes.map((i) => ({
+        ...i, amount: Number(i.amount) || 0, executionDay: Number(i.executionDay) || 1,
+      })),
       standingOrders: form.orders.map((o) => ({
         ...o, amount: Number(o.amount) || 0, executionDay: Number(o.executionDay) || 1,
+        kind: o.kind === 'subscription' ? 'subscription' : 'fixed',
         nextExecution: nextExec(o.executionDay), monthInterval: o.rhythm === 'yearly' ? 12 : o.rhythm === 'quarterly' ? 3 : 1,
       })),
       transfers: form.transfers.map((t) => ({
@@ -75,16 +89,13 @@ export default function Settings({ data, manual, onSave, onReset }) {
     setSaved(false)
   }
 
-  const acctName = (id) => accounts.find((a) => a.id === id)?.name || '—'
-
   return (
     <div>
       <div className="page-header">
         <h1>Meine Daten</h1>
         <p>
-          Konten, Daueraufträge und Beiträge selbst pflegen. Alles bleibt <strong>nur in deinem
-          Browser</strong> (localStorage) – nichts wird hochgeladen. Bank-Umsätze (aus
-          <code> public/data.json</code>) bleiben erhalten; hier ergänzt du die Struktur.
+          Konten, Einnahmen, Fixkosten/Abos und die Verteilung selbst pflegen. Alles bleibt{' '}
+          <strong>nur in deinem Browser</strong> (localStorage) – nichts wird hochgeladen.
         </p>
       </div>
 
@@ -99,16 +110,16 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Saldo (€)</th><th></th></tr>
+              <tr><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Startsaldo (€)</th><th></th></tr>
             </thead>
             <tbody>
               {form.accounts.map((a) => (
                 <tr key={a.id}>
                   <td><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
-                  <td><input value={a.owner} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
+                  <td><input value={a.owner} placeholder={a.type === 'personal' ? 'z. B. Elisa' : 'Gemeinsam'} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
                   <td>
                     <select value={a.type} onChange={(e) => setRow('accounts', a.id, 'type', e.target.value)}>
-                      <option value="joint">Gemeinschaft</option>
+                      <option value="joint">Gemeinsam</option>
                       <option value="personal">Privat</option>
                     </select>
                   </td>
@@ -119,16 +130,53 @@ export default function Settings({ data, manual, onSave, onReset }) {
             </tbody>
           </table>
         </div>
-        <button className="btn add" onClick={addAccount}>+ Konto</button>
+        <button className="btn add" onClick={() => addAccount('personal')}>+ Privatkonto</button>
+        <button className="btn add" onClick={() => addAccount('joint')}>+ Gemeinsames Konto</button>
       </div>
 
-      {/* Daueraufträge */}
+      {/* Einnahmen */}
       <div className="card mt">
-        <h2>Daueraufträge (Fixkosten)</h2>
+        <h2>Einnahmen</h2>
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th><th>Kategorie</th><th className="num">Tag</th><th></th></tr>
+              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th><th className="num">Tag</th><th></th></tr>
+            </thead>
+            <tbody>
+              {form.incomes.map((i) => (
+                <tr key={i.id}>
+                  <td><input value={i.name} onChange={(e) => setRow('incomes', i.id, 'name', e.target.value)} /></td>
+                  <td className="num"><input type="number" value={i.amount} onChange={(e) => setRow('incomes', i.id, 'amount', e.target.value)} /></td>
+                  <td>
+                    <select value={i.rhythm} onChange={(e) => setRow('incomes', i.id, 'rhythm', e.target.value)}>
+                      {RHYTHMS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select value={i.accountId} onChange={(e) => setRow('incomes', i.id, 'accountId', e.target.value)}>
+                      {personalAccts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </td>
+                  <td className="num"><input type="number" min="1" max="31" value={i.executionDay} onChange={(e) => setRow('incomes', i.id, 'executionDay', e.target.value)} /></td>
+                  <td className="num"><button className="btn-del" onClick={() => delRow('incomes', i.id)}>✕</button></td>
+                </tr>
+              ))}
+              {form.incomes.length === 0 && (
+                <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 18 }}>Noch keine Einnahmen.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <button className="btn add" onClick={addIncome}>+ Einnahme</button>
+      </div>
+
+      {/* Fixkosten & Abos */}
+      <div className="card mt">
+        <h2>Fixkosten & Abos</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th><th>Kategorie</th><th>Art</th><th className="num">Tag</th><th></th></tr>
             </thead>
             <tbody>
               {form.orders.map((o) => (
@@ -150,6 +198,12 @@ export default function Settings({ data, manual, onSave, onReset }) {
                       {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                     </select>
                   </td>
+                  <td>
+                    <select value={o.kind} onChange={(e) => setRow('orders', o.id, 'kind', e.target.value)}>
+                      <option value="fixed">Fixkosten</option>
+                      <option value="subscription">Abo</option>
+                    </select>
+                  </td>
                   <td className="num"><input type="number" min="1" max="31" value={o.executionDay} onChange={(e) => setRow('orders', o.id, 'executionDay', e.target.value)} /></td>
                   <td className="num"><button className="btn-del" onClick={() => delRow('orders', o.id)}>✕</button></td>
                 </tr>
@@ -157,16 +211,17 @@ export default function Settings({ data, manual, onSave, onReset }) {
             </tbody>
           </table>
         </div>
-        <button className="btn add" onClick={addOrder}>+ Dauerauftrag</button>
+        <button className="btn add" onClick={() => addOrder('fixed')}>+ Fixkosten</button>
+        <button className="btn add" onClick={() => addOrder('subscription')}>+ Abo</button>
       </div>
 
-      {/* Beiträge */}
+      {/* Verteilung */}
       <div className="card mt">
-        <h2>Beiträge (Privat → Gemeinschaft)</h2>
+        <h2>Verteilung (nach Gehalt → gemeinsame Konten)</h2>
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>von</th><th>nach</th><th className="num">Tag</th><th></th></tr>
+              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>von (privat)</th><th>nach (gemeinsam)</th><th className="num">Tag</th><th></th></tr>
             </thead>
             <tbody>
               {form.transfers.map((t) => (
@@ -190,7 +245,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
             </tbody>
           </table>
         </div>
-        <button className="btn add" onClick={addTransfer}>+ Beitrag</button>
+        <button className="btn add" onClick={addTransfer}>+ Verteilung</button>
       </div>
 
       <div className="settings-actions">

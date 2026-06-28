@@ -4,12 +4,15 @@ import { toMonthly, formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normaliz
 import { CATEGORIES } from '../lib/categories.js'
 import { effectiveCategoryOf } from '../lib/selectors.js'
 
+const KIND_LABEL = { fixed: 'Fixkosten', subscription: 'Abo' }
+
 export default function StandingOrders({ data, overrides, onSetCategory }) {
   const { accounts, standingOrders } = data
   const accMap = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a])), [accounts])
 
   const [accountFilter, setAccountFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [kindFilter, setKindFilter] = useState('all')
 
   const rows = useMemo(
     () =>
@@ -18,29 +21,30 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
           const acc = accMap[so.accountId]
           return {
             ...so,
+            kind: so.kind || 'fixed',
             account: acc,
             monthly: toMonthly(so.amount, so.rhythm),
             category: effectiveCategoryOf(so, overrides),
             isOverride: Boolean(overrides[so.id]),
-            runsOnJoint: acc?.type === 'joint',
           }
         })
         .filter((r) => accountFilter === 'all' || r.accountId === accountFilter)
         .filter((r) => categoryFilter === 'all' || r.category === categoryFilter)
+        .filter((r) => kindFilter === 'all' || r.kind === kindFilter)
         .sort((a, b) => b.monthly - a.monthly),
-    [standingOrders, accMap, overrides, accountFilter, categoryFilter],
+    [standingOrders, accMap, overrides, accountFilter, categoryFilter, kindFilter],
   )
 
   const totalMonthly = rows.reduce((s, r) => s + r.monthly, 0)
-  const notJointCount = rows.filter((r) => !r.runsOnJoint).length
+  const aboCount = rows.filter((r) => r.kind === 'subscription').length
 
   return (
     <div>
       <div className="page-header">
-        <h1>Daueraufträge</h1>
+        <h1>Kosten &amp; Abos</h1>
         <p>
-          {rows.length} Aufträge · {formatEUR(totalMonthly)}/Monat normalisiert
-          {notJointCount > 0 && ` · ${notJointCount} laufen noch übers Privatkonto`}
+          {rows.length} Posten · {formatEUR(totalMonthly)}/Monat normalisiert
+          {aboCount > 0 && ` · davon ${aboCount} Abos`}
         </p>
       </div>
 
@@ -64,6 +68,14 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
               ))}
             </select>
           </label>
+          <label>
+            Art
+            <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)}>
+              <option value="all">Alle</option>
+              <option value="fixed">Fixkosten</option>
+              <option value="subscription">Abos</option>
+            </select>
+          </label>
         </div>
 
         <div className="table-wrap">
@@ -74,6 +86,7 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
                 <th className="num">Betrag</th>
                 <th>Rhythmus</th>
                 <th className="num">pro Monat</th>
+                <th>Art</th>
                 <th>Nächste Ausführung</th>
                 <th>Konto</th>
                 <th>Kategorie</th>
@@ -81,14 +94,12 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className={r.runsOnJoint ? '' : 'not-joint'}>
-                  <td>
-                    {r.recipient}
-                    {!r.runsOnJoint && <span className="flag">⚠ Privatkonto</span>}
-                  </td>
+                <tr key={r.id}>
+                  <td>{r.recipient}</td>
                   <td className="num">{formatEUR(r.amount)}</td>
                   <td>{RHYTHM_LABELS[r.rhythm] || r.rhythm}</td>
                   <td className="num">{formatEUR(r.monthly)}</td>
+                  <td><span className={`pill ${r.kind === 'subscription' ? 'sub' : 'fix'}`}>{KIND_LABEL[r.kind]}</span></td>
                   <td>{formatDate(r.nextExecution)}</td>
                   <td>{r.account?.name || r.accountId}</td>
                   <td>
@@ -102,8 +113,8 @@ export default function StandingOrders({ data, overrides, onSetCategory }) {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 28 }}>
-                    Keine Daueraufträge für diese Filter.
+                  <td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 28 }}>
+                    Keine Posten für diese Filter.
                   </td>
                 </tr>
               )}

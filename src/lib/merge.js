@@ -1,5 +1,5 @@
 // =============================================================================
-//  merge.js — legt manuelle Browser-Daten über die Basis (Enable Banking/Mock)
+//  merge.js — legt manuelle Browser-Daten über die Basis (Demo-Daten)
 // =============================================================================
 
 export function mergeData(base, manual = {}) {
@@ -13,7 +13,8 @@ export function mergeData(base, manual = {}) {
     })
     out.accounts = Object.values(byId)
   }
-  // Daueraufträge / Beiträge: falls manuell gepflegt, komplett ersetzen.
+  // Einnahmen / Fixkosten & Abos / Verteilung: falls manuell gepflegt, ersetzen.
+  if (Array.isArray(manual.incomes)) out.incomes = manual.incomes
   if (Array.isArray(manual.standingOrders)) out.standingOrders = manual.standingOrders
   if (Array.isArray(manual.transfers)) out.transfers = manual.transfers
 

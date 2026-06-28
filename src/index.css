@@ -468,3 +468,36 @@ select, .btn {
   .chart-box.sankey { height: 300px; }
   .page-header h1 { font-size: 22px; }
 }
+
+/* --- Manuelles Modell: Abschnitte, Deckung, Art-Pills, Balken --------------- */
+.section-title { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
+.section-title.mt { margin-top: 26px; }
+
+.coverage {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pill.fix { background: #e0edff; color: #1d4ed8; }
+.pill.sub { background: #fce7f3; color: #be185d; }
+
+.hbars { display: flex; flex-direction: column; gap: 10px; }
+.hbar-row { display: grid; grid-template-columns: 180px 1fr 110px; align-items: center; gap: 12px; }
+.hbar-label { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-track { display: flex; height: 18px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
+.hbar-fill { height: 100%; }
+.hbar-fill.fix { background: var(--accent); }
+.hbar-fill.sub { background: #db2777; }
+.hbar-value { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+.legend-dot.fix { background: var(--accent); }
+.legend-dot.sub { background: #db2777; }
+
+.joint-picker { font-size: 13px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
+
+@media (max-width: 640px) {
+  .hbar-row { grid-template-columns: 120px 1fr 90px; gap: 8px; }
+}

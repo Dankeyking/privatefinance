@@ -1,106 +1,103 @@
 // =============================================================================
 //  claudeExport.js — Analyse-fertiger JSON-Export für Claude
 // =============================================================================
-//  Erzeugt ein strukturiertes JSON, das Duncan direkt an Claude geben kann.
-//  Kernidee: markieren, welche Daueraufträge noch übers Privatkonto laufen
-//  (runsOnJoint=false) und Claude um eine Umstell-Empfehlung bitten.
+//  Erzeugt ein strukturiertes JSON, das den Haushalt manuell abbildet:
+//  Konten, Einnahmen, Fixkosten/Abos und die Verteilung – plus fertige
+//  Auswertungen (Kosten je Konto, Deckung, Kosten je Person).
 // =============================================================================
 
 import { toMonthly } from './normalize.js'
 import { effectiveCategoryOf } from './selectors.js'
+import {
+  householdSummary,
+  monthlyByAccount,
+  jointCoverage,
+  personSummary,
+} from './recurring.js'
 
 const TASK_PROMPT =
-  'Analysiere diesen Haushalts-Cashflow. Das Modell: Die Gehälter gehen auf die ' +
-  'Privatkonten; von dort überweist jede Person einen Beitrag aufs Gemeinschaftskonto, ' +
-  'das die gemeinsamen Fixkosten zahlt. Einige gemeinsame Kosten laufen aber noch direkt ' +
-  'über ein Privatkonto statt über das Gemeinschaftskonto. ' +
-  'Sage mir konkret: (1) Welche dieser Daueraufträge sollten vom Privatkonto auf das ' +
-  'Gemeinschaftskonto umgestellt werden und warum? (2) In welcher Reihenfolge ist die ' +
-  'Umstellung am sinnvollsten (z. B. nach monatlicher Höhe oder nächstem Ausführungsdatum)? ' +
-  '(3) Gibt es Aufträge, die bewusst privat bleiben sollten? (4) Passt die Höhe der ' +
-  'Haushaltsbeiträge zu den Fixkosten auf dem Gemeinschaftskonto? Berücksichtige die ' +
-  'normalisierten Monatskosten (monthlyCost). Die Liste "summary.ordersNotOnJoint" enthält ' +
-  'die Umstell-Kandidaten – nutze das Feld "empfehlung" für deine Einschätzung.'
+  'Analysiere diesen manuell gepflegten Haushalt. Das Modell: Die Gehälter gehen auf die ' +
+  'Privatkonten; nach Gehaltseingang wird direkt auf mehrere gemeinsame Konten verteilt ' +
+  '(Gemeinschaft, Haushalt, Urlaub, Wohnung & Versicherungen), die jeweils ihre Fixkosten ' +
+  'und Abos tragen. Sage mir konkret: (1) Sind alle gemeinsamen Konten durch die Verteilung ' +
+  'gedeckt (siehe coverage.delta < 0 = Lücke)? (2) Wo gibt es Einsparpotenzial bei Abos? ' +
+  '(3) Ist die Verteilung zwischen den Personen fair im Verhältnis zum Einkommen ' +
+  '(siehe personSummary)? (4) Wie hoch ist die monatliche Sparrate/Überschuss und wie ' +
+  'ließe sie sich erhöhen? Nutze die normalisierten Monatswerte (monthly).'
 
-// Baut das Export-Objekt. Erwartet die rohen Daten + die aktiven Overrides.
+const round = (n) => Number((n || 0).toFixed(2))
+
 export function buildClaudeExport(data, overrides = {}) {
   const accounts = data.accounts || []
   const accountById = Object.fromEntries(accounts.map((a) => [a.id, a]))
 
-  const standingOrders = (data.standingOrders || []).map((so) => {
-    const account = accountById[so.accountId]
-    const sourceAccountType = account ? account.type : 'unknown'
-    const runsOnJoint = sourceAccountType === 'joint'
-    const monthlyCost = Number(toMonthly(so.amount, so.rhythm).toFixed(2))
-    return {
-      id: so.id,
-      recipient: so.recipient,
-      amount: so.amount,
-      rhythm: so.rhythm,
-      nextExecution: so.nextExecution,
-      accountId: so.accountId,
-      accountName: account ? account.name : so.accountId,
-      sourceAccountType,
-      runsOnJoint,
-      category: effectiveCategoryOf(so, overrides),
-      monthlyCost,
-    }
-  })
+  const standingOrders = (data.standingOrders || []).map((so) => ({
+    id: so.id,
+    recipient: so.recipient,
+    amount: so.amount,
+    rhythm: so.rhythm,
+    kind: so.kind || 'fixed',
+    accountId: so.accountId,
+    accountName: accountById[so.accountId]?.name || so.accountId,
+    category: effectiveCategoryOf(so, overrides),
+    monthlyCost: round(toMonthly(so.amount, so.rhythm)),
+  }))
 
-  const totalMonthlyOnJoint = Number(
-    standingOrders
-      .filter((s) => s.runsOnJoint)
-      .reduce((sum, s) => sum + s.monthlyCost, 0)
-      .toFixed(2),
-  )
-  const totalMonthlyOnPersonal = Number(
-    standingOrders
-      .filter((s) => !s.runsOnJoint)
-      .reduce((sum, s) => sum + s.monthlyCost, 0)
-      .toFixed(2),
-  )
+  const incomes = (data.incomes || []).map((i) => ({
+    name: i.name,
+    amount: i.amount,
+    rhythm: i.rhythm,
+    accountName: accountById[i.accountId]?.name || i.accountId,
+    monthly: round(toMonthly(i.amount, i.rhythm)),
+  }))
 
-  // Umstell-Kandidaten: laufen nicht übers Gemeinschaftskonto.
-  // Nach monatlicher Höhe absteigend sortiert (größter Hebel zuerst).
-  const ordersNotOnJoint = standingOrders
-    .filter((s) => !s.runsOnJoint)
-    .sort((a, b) => b.monthlyCost - a.monthlyCost)
-    .map((s) => ({
-      recipient: s.recipient,
-      category: s.category,
-      accountName: s.accountName,
-      rhythm: s.rhythm,
-      amount: s.amount,
-      monthlyCost: s.monthlyCost,
-      nextExecution: s.nextExecution,
-      empfehlung: '', // von Claude auszufüllen
-    }))
+  const byAccount = monthlyByAccount(data).map((a) => ({
+    account: a.account.name,
+    type: a.account.type,
+    fixed: round(a.fixed),
+    subscription: round(a.subscription),
+    total: round(a.total),
+  }))
+
+  const coverage = jointCoverage(data).map((c) => ({
+    account: c.account.name,
+    needed: round(c.needed),
+    funded: round(c.funded),
+    delta: round(c.delta),
+    covered: c.covered,
+  }))
+
+  const persons = personSummary(data).map((p) => ({
+    person: p.person,
+    personalCosts: round(p.personalCosts),
+    allocations: round(p.allocations),
+    totalCosts: round(p.costs),
+    income: round(p.income),
+    surplus: round(p.surplus),
+  }))
+
+  const household = householdSummary(data)
 
   return {
-    meta: {
-      exportedAt: new Date().toISOString(),
-      currency: 'EUR',
-      app: 'PrivateFinance',
-    },
+    meta: { exportedAt: new Date().toISOString(), currency: 'EUR', app: 'PrivateFinance' },
     task: TASK_PROMPT,
-    householdModel: {
-      description:
-        'Gehälter -> Privatkonten -> Haushaltsbeitrag aufs Gemeinschaftskonto -> gemeinsame Fixkosten. ' +
-        'Einzelne Kosten werden noch direkt vom Privatkonto gezahlt.',
-      accounts: accounts.map((a) => ({
-        id: a.id,
-        name: a.name,
-        type: a.type,
-        owner: a.owner,
-        balance: a.balance,
-      })),
-    },
+    accounts: accounts.map((a) => ({ id: a.id, name: a.name, type: a.type, owner: a.owner, balance: a.balance })),
+    incomes,
     standingOrders,
+    transfers: (data.transfers || []).map((t) => ({
+      recipient: t.recipient,
+      amount: t.amount,
+      from: accountById[t.fromAccountId]?.name || t.fromAccountId,
+      to: accountById[t.toAccountId]?.name || t.toAccountId,
+      monthly: round(toMonthly(t.amount, t.rhythm || 'monthly')),
+    })),
     summary: {
-      totalMonthlyOnJoint,
-      totalMonthlyOnPersonal,
-      countNotOnJoint: ordersNotOnJoint.length,
-      ordersNotOnJoint,
+      totalIncome: round(household.totalIncome),
+      totalCosts: round(household.totalCosts),
+      surplus: round(household.surplus),
+      byAccount,
+      coverage,
+      personSummary: persons,
     },
   }
 }

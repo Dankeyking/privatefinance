@@ -2,7 +2,7 @@ import { CATEGORIES, KEYWORD_RULES } from '../lib/categories.js'
 
 export default function Categories({ data, overrides, onResetAll, onClearOne }) {
   const itemsById = {}
-  ;[...(data.standingOrders || []), ...(data.transactions || [])].forEach((i) => {
+  ;[...(data.standingOrders || []), ...(data.transfers || []), ...(data.incomes || [])].forEach((i) => {
     itemsById[i.id] = i
   })
   const overrideEntries = Object.entries(overrides)
@@ -13,7 +13,7 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
         <h1>Kategorien</h1>
         <p>
           Vordefinierte Kategorien mit Auto-Zuordnung per Schlüsselwort. Manuelle Änderungen
-          (in der Daueraufträge-Tabelle) überschreiben die Automatik und werden lokal gespeichert.
+          (in der Tabelle „Kosten &amp; Abos") überschreiben die Automatik und werden lokal gespeichert.
         </p>
       </div>
 

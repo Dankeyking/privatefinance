@@ -1,195 +1,102 @@
-# PrivateFinance – Haushalts-Cashflow-Dashboard
+# PrivateFinance – Manuelles Haushalts-Finanztool
 
-Ein schlankes Dashboard zur Verwaltung des Haushalts-Cashflows über mehrere
-**C24-Bank-Konten** (ein Gemeinschaftskonto + zwei Privatkonten). Die Gehälter gehen
-auf die Privatkonten; von dort wird ein Beitrag aufs Gemeinschaftskonto überwiesen,
-das die gemeinsamen Fixkosten zahlt. Einzelne Kosten werden teils noch direkt vom
-Privatkonto gezahlt – die App hilft, diese aufs Gemeinschaftskonto umzustellen.
+Ein schlankes Dashboard, um den Haushalt **manuell** im Blick zu behalten: ihr tragt
+**Einnahmen, Fixkosten, Abos** und eine **Verteilung** selbst ein und bekommt sofort
+übersichtliche Auswertungen – **ohne Bankanbindung**, alles bleibt nur im Browser.
 
-Die App läuft **sofort mit Demo-/Mock-Daten** – ganz ohne API-Schlüssel. Echte
-Daten holst du später über die [Enable Banking Account Information API](https://enablebanking.com/accounts-api/)
-(kostenlos für die private Nutzung).
+Das Modell passt zu mehreren Konten: **Privatkonten** (z. B. Elisa, Duncan) und mehrere
+**gemeinsame Konten** (Gemeinschaft, Haushalt, Urlaub, Wohnung & Versicherungen). Nach
+Gehaltseingang wird direkt auf die richtigen Konten verteilt (kein Zwischenlagern).
+
+## Die zwei wichtigsten Auswertungen
+1. **Kosten je Konto** – pro Konto die monatlichen Fixkosten + Abos, und bei den
+   gemeinsamen Konten ein **Deckungs-Check** (Bedarf vs. eingeplante Verteilung).
+2. **Kosten je Person / Monat** – private Kosten + monatliche Verteilung auf die
+   gemeinsamen Konten = Gesamtkosten je Person, gegen das Einkommen → Überschuss.
 
 ## Features
+- **Übersicht:** KPIs (Einnahmen, Fixkosten & Abos, Überschuss), Karten „Kosten je Konto"
+  mit Deckungs-Badge und Tabelle „Kosten je Person".
+- **Kosten & Abos:** filterbare Tabelle aller Posten (nach Konto, Kategorie, Art =
+  Fixkosten/Abo), normalisierte Monatskosten (jährlich ÷ 12, vierteljährlich ÷ 3) und
+  inline editierbare Kategorie-Tags.
+- **Zahlungslauf:** je gemeinsamem Konto ein Timing-Check – kommt die Verteilung früh
+  genug an, bevor die Buchungen abgehen? Inkl. nötigem Mindest-Puffer.
+- **Analyse:** Donut (Kosten je Kategorie), Balken (Einkommen vs. Kosten je Person) und
+  Balken (Kosten je Konto, aufgeteilt nach Fixkosten/Abos).
+- **Kategorien:** vordefinierte Kategorien, Auto-Zuordnung per Schlüsselwort, manuelle
+  Overrides (in `localStorage`).
+- **Meine Daten:** Konten, Einnahmen, Fixkosten/Abos und die Verteilung direkt in der App
+  pflegen – **nur im Browser** gespeichert, nichts wird hochgeladen.
+- **Export für Claude:** ein Klick erzeugt eine analyse-fertige JSON (inkl. Kosten je
+  Konto, Deckung, Kosten je Person) für eine Auswertung durch Claude.
 
-- **Übersicht:** KPI-Karten (Gesamtsaldo, Einnahmen, Ausgaben, Überschuss),
-  Konto-Karten mit Farbcodierung und ein Geldfluss-Diagramm.
-- **Daueraufträge:** Tabelle mit Empfänger, Betrag, Rhythmus, nächster Ausführung,
-  Konto und Kategorie. Filter nach Konto/Kategorie, normalisierte Monatskosten
-  (jährlich ÷ 12, vierteljährlich ÷ 3) und **inline editierbare Kategorie-Tags**.
-  Aufträge, die noch übers Privatkonto laufen, sind farblich markiert.
-- **Zahlungslauf:** Timing-Check der Kette Privatkonto → Beitrag → Gemeinschaftskonto
-  → Lastschrift/Dauerauftrag. Zeigt chronologisch, ob das Geld rechtzeitig da ist,
-  bevor die Buchungen abgehen, und welchen Mindest-Puffer das Gemeinschaftskonto braucht.
-- **Analyse:** animierte Charts (Chart.js) – Balken (Einnahmen vs. Ausgaben),
-  Donut (Ausgaben je Kategorie, mit Klick-Drilldown) und Saldoverlauf-Linie inkl. Prognose.
-- **Kategorien:** vordefinierte Kategorien, Auto-Zuordnung per Schlüsselwort,
-  manuelle Overrides (in `localStorage` gespeichert).
-- **Meine Daten:** Konten, Daueraufträge und Beiträge (inkl. Ausführungstage) direkt
-  in der App pflegen. Wird **nur im Browser** gespeichert (localStorage) und über die
-  Bank-/Mock-Daten gelegt – nichts wird hochgeladen. So nutzt du auch die
-  öffentliche Seite mit echten Zahlen, ohne dass jemand sie sieht.
-- **Export für Claude:** ein Klick erzeugt eine analyse-fertige JSON – inkl.
-  Markierung, welche Daueraufträge noch übers Privatkonto laufen. Diese Datei
-  kannst du Claude geben, um eine Empfehlung zur Umstellung aufs
-  Gemeinschaftskonto zu bekommen.
-
-## Schnellstart (Mock-Daten)
-
+## Schnellstart
 ```bash
 npm install
 npm run dev
 ```
+Die App öffnet auf <http://localhost:5173> und startet sofort mit Demo-Daten
+(6 Konten, Beispiel-Einnahmen, -Fixkosten, -Abos und -Verteilung).
 
-Die App öffnet auf <http://localhost:5173>. Solange keine echten Daten vorhanden
-sind, wird automatisch der Demo-Datensatz genutzt (Badge „Demo-/Mock-Daten“ in der
-Seitenleiste).
+## Eigene Daten eintragen
+Alles läuft über die Seite **„Meine Daten"** – keine Einrichtung, keine Schlüssel:
+1. **Konten:** Privat- und gemeinsame Konten anlegen/umbenennen/löschen. Bei Privatkonten
+   den **Inhaber** (Person) eintragen – daraus entstehen die Personen in der Auswertung.
+2. **Einnahmen:** je Gehalt/Einnahme Betrag, Rhythmus und Privatkonto.
+3. **Fixkosten & Abos:** je Posten Betrag, Rhythmus, Konto, Kategorie und **Art**
+   (Fixkosten oder Abo) sowie den Ausführungstag.
+4. **Verteilung:** wer nach Gehalt wie viel von einem Privatkonto auf ein gemeinsames
+   Konto bucht.
 
-## Echte C24-Konten verbinden (Schritt für Schritt)
+**Speichern** legt alles im `localStorage` deines Browsers ab. Die Eingaben überlagern die
+Demo-Daten; „Auf Demo-Daten zurücksetzen" entfernt sie wieder.
 
-> **Warum Enable Banking?** GoCardless / Nordigen hat die kostenlose Neuregistrierung
-> für „Bank Account Data" eingestellt. [Enable Banking](https://enablebanking.com/)
-> bietet denselben PSD2-Zugang (Salden + Umsätze lesen) **kostenlos für die private
-> Nutzung** und unterstützt deutsche Banken inkl. C24.
+> **Datenschutz:** Deine Zahlen verlassen dein Gerät nicht. Eine öffentlich gehostete
+> Variante zeigt für andere Besucher weiterhin nur die Demo-Daten.
 
-> **Hinweis zu CORS:** Die Enable-Banking-API erlaubt **keine** direkten Aufrufe aus
-> dem Browser. Deshalb holt das kleine Node-Skript `scripts/fetch-data.js` die Daten
-> und legt sie als `public/data.json` ab – die App lädt diese Datei dann automatisch.
+## Export für Claude
+1. In der App auf **„Export für Claude"** (Seitenleiste) klicken.
+2. Die heruntergeladene `privatefinance-export-<datum>.json` enthält Konten, Einnahmen,
+   Fixkosten/Abos, die Kosten je Konto, die Deckung der gemeinsamen Konten und die Kosten
+   je Person – inkl. eingebettetem `task`-Text (der Frage an Claude).
+3. Lade die JSON in einen Claude-Chat und frage nach einer Auswertung (Deckung,
+   Sparpotenzial bei Abos, faire Verteilung, Sparrate).
 
-### Schritt 1 – Enable-Banking-Anwendung anlegen
-1. Registriere dich unter <https://enablebanking.com/> und lege im Control Panel eine
-   **Application** an (Typ „personal" genügt).
-2. Hinterlege als **Redirect-URL** exakt
-   `https://dankeyking.github.io/privatefinance/` (oder eine eigene, die du dann auch
-   in `.env` setzt).
-3. Beim Anlegen lädt dein Browser einen **privaten Schlüssel (.pem)** herunter – der
-   Dateiname ist deine App-ID. Lege die Datei in den Projektordner.
-4. Kopiere `.env.example` → `.env` und trage App-ID und Schlüsselpfad ein:
-   ```bash
-   cp .env.example .env
-   ```
-   ```ini
-   ENABLEBANKING_APP_ID=...
-   ENABLEBANKING_KEY_PATH=./aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.pem
-   ```
+## MCP – Claude direkten Zugriff geben (optional)
+Statt Export kann Claude die (Demo-)Daten über einen **MCP-Server** direkt abfragen:
 
-### Schritt 2 – Konto-Konfiguration
-1. Kopiere `config.example.js` → `config.js` (ist in `.gitignore`):
-   ```bash
-   cp config.example.js config.js
-   ```
-2. Die `enableBankingAccountUid` je Konto trägst du nach Schritt 3 ein.
+- `list_accounts` – Konten
+- `list_standing_orders` – Fixkosten/Abos inkl. Monatskosten (optional nach Art filtern)
+- `costs_by_account` – Kosten je Konto + Deckung der gemeinsamen Konten
+- `person_summary` – Kosten/Einkommen/Überschuss je Person
+- `expenses_by_category` – Kosten je Kategorie
+- `analyze_cashflow` – komplette analyse-fertige Struktur
+- `payment_schedule` – Zahlungslauf/Timing je gemeinsamem Konto
 
-### Schritt 3 – C24 verknüpfen (Session)
-1. **Bank finden** (C24, Land DE):
-   ```bash
-   npm run eb-setup aspsps
-   ```
-   → zeigt den exakten Bank-Namen.
-2. **Autorisierung starten** mit diesem Namen:
-   ```bash
-   npm run eb-setup link "C24 Bank"
-   ```
-   → gibt einen Login-Link aus. Im Browser öffnen, bei C24 einloggen und den Zugriff
-   bestätigen. Danach landest du auf der Redirect-URL mit `?code=…` in der Adresszeile.
-3. **Konto-UIDs abrufen** mit dem `code` aus der Adresszeile:
-   ```bash
-   npm run eb-setup session <code>
-   ```
-   → listet die verknüpften Konto-UIDs (+ IBANs). Trage diese in `config.js` als
-   `enableBankingAccountUid` bei `joint` / `p1` / `p2` ein und setze jeweils den
-   passenden `type` (`joint` oder `personal`).
+**In Claude Code:** Das Repo enthält eine `.mcp.json`; beim Öffnen wird der Server
+`privatefinance` angeboten. Manuell testen: `npm run mcp`.
 
-### Schritt 4 – Daten holen & starten
-```bash
-npm run fetch-data   # holt Salden + Transaktionen -> public/data.json
-npm run dev
-```
-Die Seitenleiste zeigt jetzt „Echte Daten”. Aktualisieren: einfach
-`npm run fetch-data` erneut ausführen. (Der Zugriff gilt ~90 Tage; danach Schritt 3
-wiederholen.)
-
-### Schritt 5 – Daueraufträge & Beiträge ergänzen (wichtig)
-Die Bank-API liefert **Salden + Umsätze, aber keine Daueraufträge und keine
-Ausführungstage**. Diese – und die Haushaltsbeiträge (Privat → Gemeinschaft) – trägst
-du unter **„Meine Daten”** in der App selbst ein. Erst damit funktionieren die Seiten
-**Daueraufträge** und **Zahlungslauf** mit deinen echten Zahlen. Die Eingaben bleiben
-nur in deinem Browser.
-
-> **Datenschutz:** Die öffentliche GitHub-Pages-Seite enthält nie echte Daten –
-> `public/data.json` ist in `.gitignore` und deine „Meine Daten”-Eingaben liegen nur
-> im localStorage deines Browsers. Andere Besucher sehen weiterhin nur Demo-Daten.
-
-## Export für Claude nutzen
-
-1. In der App auf **„⬇︎ Export für Claude“** (Seitenleiste) klicken.
-2. Die heruntergeladene `privatefinance-export-<datum>.json` enthält:
-   - alle Daueraufträge inkl. normalisierter Monatskosten und Quellkonto-Typ,
-   - `summary.ordersNotOnJoint`: die Kandidaten, die noch übers Privatkonto laufen,
-   - einen eingebetteten `task`-Text (die Frage an Claude).
-3. Lade die JSON in einen Claude-Chat hoch und frage nach der sinnvollsten
-   Umstellungs-Reihenfolge aufs Gemeinschaftskonto.
-
-## MCP – Claude direkten Zugriff geben (statt JSON-Export)
-
-Statt jedes Mal die JSON zu exportieren, kann Claude die Daten über einen
-**MCP-Server** direkt abfragen. Der Server liest dieselbe Datenquelle wie die App
-(`public/data.json`, sonst Mock-Daten) und stellt Tools bereit:
-
-- `list_accounts` – Konten + Salden
-- `list_standing_orders` – Daueraufträge inkl. Monatskosten; `onlyPersonal: true`
-  liefert nur die, die noch übers Privatkonto laufen (Umstell-Kandidaten)
-- `analyze_cashflow` – komplette analyse-fertige Struktur (wie der JSON-Export)
-- `expenses_by_category` – Ausgaben je Kategorie
-- `payment_schedule` – Zahlungslauf/Timing: nötiger Puffer + ob alle Buchungen
-  rechtzeitig durch die Beiträge gedeckt sind
-
-**In Claude Code einbinden:** Das Repo enthält bereits eine `.mcp.json`. Beim Öffnen
-des Projekts in Claude Code wird der Server `privatefinance` automatisch angeboten –
-einmal bestätigen, fertig. Manuell testen:
-
-```bash
-npm run mcp
-```
-
-**In Claude Desktop einbinden:** in der Konfigurationsdatei
-(`claude_desktop_config.json`) ergänzen und Pfad anpassen:
-
-```json
-{
-  "mcpServers": {
-    "privatefinance": {
-      "command": "node",
-      "args": ["/voller/pfad/zu/privatefinance/mcp/finance-server.js"]
-    }
-  }
-}
-```
-
-Danach kannst du Claude einfach fragen: *„Welche Daueraufträge sollte ich aufs
-Gemeinschaftskonto umstellen?"* – Claude ruft `analyze_cashflow` selbst auf.
+> Hinweis: Der MCP-Server liest die Demo-Daten (`src/data/mockData.js`). Deine echten
+> Eingaben liegen im Browser-localStorage – für deren Analyse den „Export für Claude" nutzen.
 
 ## Kategorien erweitern
-
 Die Auto-Kategorisierung steckt in `src/lib/categories.js`:
 - Neue Schlüsselwörter zu `KEYWORD_RULES` hinzufügen.
 - Neue Kategorie? In `CATEGORIES` und `KEYWORD_RULES` ergänzen.
 
 ## Projektstruktur
-
 ```
 src/
-  data/        Datenquelle (live vs. mock) + Mock-Generator
-  lib/         Kategorien, Normalisierung, localStorage, Claude-Export, Selektoren
-  components/  Sidebar, Karten, Flow-Diagramm, Kategorie-Tag, Charts
-  pages/       Übersicht, Daueraufträge, Analyse, Kategorien
-scripts/
-  setup-enablebanking.js  Bank finden / verknüpfen / Konten auslesen
-  fetch-data.js           Enable Banking -> public/data.json
+  data/        Demo-Daten (mockData) + Datenquelle
+  lib/         recurring (Auswertungen), normalize, categories, storage, merge,
+               selectors, timing, claudeExport
+  components/  Sidebar, Karten, Kategorie-Tag, Charts
+  pages/       Übersicht, Kosten & Abos, Zahlungslauf, Analyse, Kategorien, Meine Daten
+mcp/
+  finance-server.js   MCP-Server (Demo-Daten)
 ```
 
 ## Tech Stack
-
 React + Vite · Chart.js / react-chartjs-2 · reines Frontend, kein Backend ·
-`localStorage` für Kategorie-Overrides · CSS-Variablen-Theming (dunkle Sidebar,
-weißer Content). UI durchgehend auf Deutsch.
+`localStorage` für eigene Daten + Kategorie-Overrides · UI durchgehend auf Deutsch.

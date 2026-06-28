@@ -4,8 +4,6 @@ import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
 import Timing from './pages/Timing.jsx'
 import Analytics from './pages/Analytics.jsx'
-import Budget from './pages/Budget.jsx'
-import Cash from './pages/Cash.jsx'
 import Categories from './pages/Categories.jsx'
 import Settings from './pages/Settings.jsx'
 import { loadData } from './data/dataSource.js'
@@ -19,8 +17,6 @@ import {
   getManualData,
   saveManualData,
   clearManualData,
-  getCashAllocations,
-  saveCashAllocations,
 } from './lib/storage.js'
 
 export default function App() {
@@ -29,13 +25,11 @@ export default function App() {
   const [source, setSource] = useState('mock')
   const [overrides, setOverrides] = useState({})
   const [manual, setManual] = useState({})
-  const [cashAlloc, setCashAlloc] = useState({})
   const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     setOverrides(getOverrides())
     setManual(getManualData())
-    setCashAlloc(getCashAllocations())
     loadData().then(({ data, source }) => {
       setBaseData(data)
       setSource(source)
@@ -43,7 +37,9 @@ export default function App() {
   }, [])
 
   const data = useMemo(() => mergeData(baseData, manual), [baseData, manual])
-  const hasManual = Boolean(manual && (manual.standingOrders || manual.transfers || manual.accounts))
+  const hasManual = Boolean(
+    manual && (manual.standingOrders || manual.transfers || manual.accounts || manual.incomes),
+  )
 
   function handleSetCategory(itemId, categoryId) {
     setOverrides(setOverride(itemId, categoryId))
@@ -62,9 +58,6 @@ export default function App() {
   }
   function handleResetManual() {
     setManual(clearManualData())
-  }
-  function handleSaveCash(map) {
-    setCashAlloc(saveCashAllocations(map))
   }
   function navigate(p) {
     setPage(p)
@@ -100,13 +93,11 @@ export default function App() {
 
       <main className="content">
         {page === 'overview' && <Overview data={data} overrides={overrides} />}
-        {page === 'standing' && (
+        {page === 'recurring' && (
           <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
         )}
         {page === 'timing' && <Timing data={data} />}
-        {page === 'analytics' && <Analytics data={data} overrides={overrides} allocations={cashAlloc} />}
-        {page === 'cash' && <Cash data={data} allocations={cashAlloc} onSave={handleSaveCash} />}
-        {page === 'budget' && <Budget data={data} overrides={overrides} allocations={cashAlloc} />}
+        {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
         {page === 'categories' && (
           <Categories
             data={data}

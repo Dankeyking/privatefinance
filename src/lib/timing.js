@@ -16,9 +16,10 @@ const dayOf = (item) =>
   item.executionDay ||
   (item.nextExecution ? parseLocalDate(item.nextExecution).getDate() : 1)
 
-export function buildPaymentSchedule(data) {
+export function buildPaymentSchedule(data, jointId = null) {
   const { accounts = [], standingOrders = [], transfers = [] } = data
-  const joint = accounts.find((a) => a.type === 'joint')
+  const joint = (jointId && accounts.find((a) => a.id === jointId)) ||
+    accounts.find((a) => a.type === 'joint')
   if (!joint) return null
   const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
 

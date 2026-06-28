@@ -1,23 +1,39 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import TimingChart from '../components/charts/TimingChart.jsx'
 import Icon from '../components/Icon.jsx'
 import { buildPaymentSchedule } from '../lib/timing.js'
 import { formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
 
 export default function Timing({ data }) {
-  const sched = useMemo(() => buildPaymentSchedule(data), [data])
+  const joints = useMemo(() => (data.accounts || []).filter((a) => a.type === 'joint'), [data])
+  const [jointId, setJointId] = useState(joints[0]?.id || '')
+  const activeId = joints.some((j) => j.id === jointId) ? jointId : joints[0]?.id || ''
+  const sched = useMemo(() => buildPaymentSchedule(data, activeId), [data, activeId])
+
+  const picker = joints.length > 1 && (
+    <label className="joint-picker">
+      Konto
+      <select value={activeId} onChange={(e) => setJointId(e.target.value)}>
+        {joints.map((j) => (
+          <option key={j.id} value={j.id}>{j.name}</option>
+        ))}
+      </select>
+    </label>
+  )
 
   if (!sched || sched.events.length === 0) {
     return (
       <div>
         <div className="page-header">
           <h1>Zahlungslauf</h1>
-          <p>Timing-Check der Daueraufträge übers Gemeinschaftskonto.</p>
+          <p>Timing-Check der Verteilung &amp; Buchungen je gemeinsamem Konto.</p>
         </div>
-        <div className="card">
+        {picker && <div className="card">{picker}</div>}
+        <div className="card mt">
           <p className="muted">
-            Noch keine Beiträge/Daueraufträge mit Ausführungstag hinterlegt. Mit echten Daten
-            bitte die Haushaltsbeiträge (Privat → Gemeinschaft) und Ausführungstage pflegen.
+            Für dieses Konto sind noch keine Verteilungen/Posten mit Ausführungstag hinterlegt.
+            Pflege unter „Meine Daten" die Verteilung (Privat → gemeinsames Konto) und die
+            Ausführungstage.
           </p>
         </div>
       </div>
@@ -32,10 +48,12 @@ export default function Timing({ data }) {
       <div className="page-header">
         <h1>Zahlungslauf</h1>
         <p>
-          Kette Privatkonto → Beitrag → Gemeinschaftskonto → Lastschrift/Dauerauftrag.
-          Ist das Geld rechtzeitig da, bevor die Buchungen abgehen?
+          Verteilung (Privat → <strong>{sched.joint.name}</strong>) gegen die Buchungen dieses
+          Kontos. Ist das Geld rechtzeitig da, bevor die Buchungen abgehen?
         </p>
       </div>
+
+      {picker && <div className="card" style={{ marginBottom: 16 }}>{picker}</div>}
 
       {/* Verdikt-Banner */}
       <div className={`verdict ${status}`}>
@@ -74,11 +92,11 @@ export default function Timing({ data }) {
 
       <div className="grid kpis mt">
         <div className="card kpi">
-          <div className="kpi-label">Beiträge / Monat</div>
+          <div className="kpi-label">Verteilung / Monat</div>
           <div className="kpi-value pos">{formatEUR(sched.totalIn)}</div>
         </div>
         <div className="card kpi">
-          <div className="kpi-label">Fixkosten Gemeinschaft</div>
+          <div className="kpi-label">Buchungen vom Konto</div>
           <div className="kpi-value neg">{formatEUR(sched.totalOut)}</div>
         </div>
         <div className="card kpi">
