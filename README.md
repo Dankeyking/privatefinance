@@ -35,6 +35,9 @@ sodass pro Konto der **monatlich aufs Konto zu buchende Betrag** herauskommt.
   Kosten je Konto).
 - **Kategorien:** vordefinierte Kategorien, Auto-Zuordnung per Schlüsselwort, manuelle
   Overrides (in `localStorage`).
+- **CSV-Import:** Bank-Umsätze (CSV-Export) einlesen – die App erkennt Trennzeichen und
+  Spalten automatisch, findet **wiederkehrende Zahlungen** und schlägt sie als
+  Fixkosten/Abos vor (Konto & Aufteilung wählst du, dann übernehmen).
 - **Meine Daten:** Konten, Einnahmen und Fixkosten/Abos inkl. Aufteilung pflegen – **nur
   im Browser** gespeichert, nichts wird hochgeladen.
 - **Export für Claude:** ein Klick erzeugt eine analyse-fertige JSON (Kosten je Konto,
@@ -96,7 +99,7 @@ src/
   lib/         recurring (Auswertungen, Aufteilung, Flüsse), normalize, categories,
                storage, merge, selectors, claudeExport
   components/  Sidebar, Karten, Kategorie-Tag, Charts
-  pages/       Übersicht, Kosten & Abos, Analyse, Kategorien, Meine Daten
+  pages/       Übersicht, Kosten & Abos, CSV-Import, Analyse, Kategorien, Meine Daten
 mcp/
   finance-server.js   MCP-Server (Beispiel-Daten)
 ```

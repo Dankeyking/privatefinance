@@ -42,11 +42,15 @@ diese Konzepte wurden entfernt. Der Geldfluss wird **aus den Splits abgeleitet**
 - `src/lib/merge.js` — legt manuelle Browser-Daten über die Startdaten.
 - `src/lib/storage.js` — `localStorage` (Kategorie-Overrides + manuelle Daten).
 - `src/lib/claudeExport.js` — analyse-fertiger JSON-Export für Claude.
+- `src/lib/csvImport.js` — CSV-Umsätze parsen (Trennzeichen-Erkennung, deutsche
+  Zahlen/Datum), Spalten-Auto-Mapping, `detectRecurring` (Gruppierung nach Empfänger,
+  Rhythmus-Schätzung) für den Import.
 - `src/components/RecurringEditor.jsx` — **wiederverwendbare** inline-editierbare Kosten-Tabelle
   (inkl. Split-Editor). Voll kontrolliert: `orders` rein, `onChange(next)` raus.
 
 ## Seiten (`src/pages/`, Routing in `src/App.jsx` per `page`-State)
 Übersicht (inkl. Inline-Editor + Auto-Speichern) · Kosten & Abos (Filter/Analyse) ·
+CSV-Import (Umsätze einlesen → wiederkehrende erkennen → als Posten übernehmen) ·
 Analyse (Charts) · Kategorien · Meine Daten (Settings).
 
 ## Konventionen

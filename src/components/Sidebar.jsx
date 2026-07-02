@@ -3,6 +3,7 @@ import Icon from './Icon.jsx'
 const NAV = [
   { id: 'overview', label: 'Übersicht', icon: 'overview' },
   { id: 'recurring', label: 'Kosten & Abos', icon: 'standing' },
+  { id: 'import', label: 'CSV-Import', icon: 'export' },
   { id: 'analytics', label: 'Analyse', icon: 'analytics' },
   { id: 'categories', label: 'Kategorien', icon: 'categories' },
   { id: 'settings', label: 'Meine Daten', icon: 'settings' },

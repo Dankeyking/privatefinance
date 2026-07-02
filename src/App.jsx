@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
 import Analytics from './pages/Analytics.jsx'
+import Import from './pages/Import.jsx'
 import Categories from './pages/Categories.jsx'
 import Settings from './pages/Settings.jsx'
 import { loadData } from './data/dataSource.js'
@@ -99,6 +100,7 @@ export default function App() {
           <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
         )}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
+        {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}
         {page === 'categories' && (
           <Categories
             data={data}
