@@ -3,6 +3,7 @@ import CategoryTag from './CategoryTag.jsx'
 import { makeNewOrder, formToOrder, parseAmountDE } from '../lib/orderForm.js'
 import { toMonthly, formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
 import { personShareMonthly } from '../lib/recurring.js'
+import { accountColor } from '../lib/accountColors.js'
 
 const RHYTHMS = ['monthly', 'quarterly', 'yearly']
 const KIND_LABEL = { fixed: 'Fixkosten', subscription: 'Abo' }
@@ -31,7 +32,9 @@ export default function CostsTable({ accounts, persons, orders, onChange }) {
   const isEd = (id, field) => edit && edit.id === id && edit.field === field
   const open = (id, field) => (e) => { e.stopPropagation(); setEdit({ id, field }) }
 
-  const accName = (id) => accounts.find((a) => a.id === id)?.name || '—'
+  const accById = (id) => accounts.find((a) => a.id === id)
+  const accName = (id) => accById(id)?.name || '—'
+  const accColor = (id) => accountColor(accById(id), accounts)
   const monthly = (o) => toMonthly(parseAmountDE(o.amount), o.rhythm)
   const splitText = (o) => {
     const cost = formToOrder(o, persons)
@@ -158,6 +161,7 @@ export default function CostsTable({ accounts, persons, orders, onChange }) {
                     </select></span>
                   ) : (
                     <Disp id={o.id} field="accountId">
+                      <span className="acct-dot" style={{ background: accColor(o.accountId) }} />
                       <span className="ellip" title={accName(o.accountId)}>{accName(o.accountId)}</span>
                     </Disp>
                   )}

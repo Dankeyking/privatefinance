@@ -167,8 +167,7 @@ body {
   content: '';
   position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
 }
-.acct.joint::before { background: var(--accent); }
-.acct.personal::before { background: #94a3b8; }
+.acct::before { background: var(--acct-color, var(--accent)); }
 .acct .acct-type { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .acct .acct-name { font-size: 16px; font-weight: 600; margin-top: 4px; }
 .acct .acct-owner { font-size: 13px; color: var(--text-muted); }
@@ -569,6 +568,11 @@ tbody td:first-child { color: var(--text); }
 .costs-table th:first-child, .costs-table td:first-child { padding-left: 4px; }
 .costs-table th:last-child, .costs-table td:last-child { padding-right: 2px; }
 .ellip { display: inline-block; max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+/* Farbiger Konto-Punkt + Farb-Picker */
+.acct-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; flex-shrink: 0; vertical-align: middle; }
+td .acct-dot { vertical-align: baseline; }
+.color-input { width: 46px; min-width: 46px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 7px; background: #fff; cursor: pointer; }
 .ct-edit {
   cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
   padding: 4px 8px; margin: -4px -8px; border-radius: 7px; min-height: 28px;

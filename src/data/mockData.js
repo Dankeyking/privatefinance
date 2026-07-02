@@ -9,12 +9,12 @@
 
 // --- Konten ------------------------------------------------------------------
 const accounts = [
-  { id: 'p_duncan', name: 'Privatkonto Duncan', type: 'personal', owner: 'Duncan', balance: 0, currency: 'EUR' },
-  { id: 'p_elisa', name: 'Privatkonto Elisa', type: 'personal', owner: 'Elisa', balance: 0, currency: 'EUR' },
-  { id: 'j_gemein', name: 'Gemeinschaftskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR' },
-  { id: 'j_haushalt', name: 'Haushaltskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR' },
-  { id: 'j_urlaub', name: 'Urlaubskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR' },
-  { id: 'j_wohnen', name: 'Wohnung & Versicherungen', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR' },
+  { id: 'p_duncan', name: 'Privatkonto Duncan', type: 'personal', owner: 'Duncan', balance: 0, currency: 'EUR', color: '#3b82f6' },
+  { id: 'p_elisa', name: 'Privatkonto Elisa', type: 'personal', owner: 'Elisa', balance: 0, currency: 'EUR', color: '#ec4899' },
+  { id: 'j_gemein', name: 'Gemeinschaftskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#10b981' },
+  { id: 'j_haushalt', name: 'Haushaltskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#f59e0b' },
+  { id: 'j_urlaub', name: 'Urlaubskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#14b8a6' },
+  { id: 'j_wohnen', name: 'Wohnung & Versicherungen', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#8b5cf6' },
 ]
 
 // --- Einnahmen (netto) -------------------------------------------------------

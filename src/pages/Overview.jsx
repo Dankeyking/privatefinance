@@ -5,6 +5,7 @@ import RecurringEditor from '../components/RecurringEditor.jsx'
 import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import { upcomingPayments } from '../lib/selectors.js'
 import { orderToForm, formToOrder } from '../lib/orderForm.js'
+import { accountColor, colorMaps } from '../lib/accountColors.js'
 import {
   householdSummary,
   monthlyByAccount,
@@ -19,6 +20,7 @@ export default function Overview({ data, onSaveOrders }) {
   const persons = useMemo(() => personSummary(data), [data])
   const flows = useMemo(() => accountFlows(data), [data])
   const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
+  const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
 
   // Inline-Editor: eigener Entwurf (bewahrt Roh-Eingaben), speichert automatisch.
   const personNames = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
@@ -98,8 +100,8 @@ export default function Overview({ data, onSaveOrders }) {
                 <tbody>
                   {flows.flows.map((f, i) => (
                     <tr key={i}>
-                      <td>{f.from}</td>
-                      <td>{f.to}</td>
+                      <td><span className="acct-dot" style={{ background: acctColorByName[f.from] }} />{f.from}</td>
+                      <td><span className="acct-dot" style={{ background: acctColorByName[f.to] }} />{f.to}</td>
                       <td className="num">{formatEUR(f.flow)}</td>
                     </tr>
                   ))}
@@ -118,7 +120,8 @@ export default function Overview({ data, onSaveOrders }) {
       <h2 className="section-title mt">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(monatlich aufs Konto buchen)</span></h2>
       <div className="grid accounts">
         {byAccount.map(({ account, fixed, subscription, reserve, total }) => (
-          <div className={`card acct ${account.type}`} key={account.id}>
+          <div className={`card acct ${account.type}`} key={account.id}
+            style={{ '--acct-color': accountColor(account, data.accounts) }}>
             <div className="acct-type">{account.type === 'joint' ? 'Gemeinsam' : 'Privat'}</div>
             <div className="acct-name">{account.name}</div>
             <div className="acct-balance">

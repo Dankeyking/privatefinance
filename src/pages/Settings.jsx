@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import RecurringEditor from '../components/RecurringEditor.jsx'
 import { orderToForm, formToOrder, newOrderId } from '../lib/orderForm.js'
+import { ACCOUNT_PALETTE } from '../lib/accountColors.js'
 
 const RHYTHMS = [
   { id: 'monthly', label: 'monatlich' },
@@ -13,8 +14,9 @@ const newId = () => `s${Date.now()}${idc++}`
 
 export default function Settings({ data, manual, onSave, onReset }) {
   const seed = () => ({
-    accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a) => ({
+    accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a, i) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
+      color: a.color || ACCOUNT_PALETTE[i % ACCOUNT_PALETTE.length],
     })),
     incomes: (manual.incomes ?? data.incomes ?? []).map((i) => ({
       id: i.id || newId(), name: i.name || '', amount: i.amount ?? 0, rhythm: i.rhythm || 'monthly',
@@ -38,7 +40,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
   const addIncome = () =>
     up({ incomes: [...form.incomes, { id: newId(), name: 'Gehalt', amount: 0, rhythm: 'monthly', accountId: personalAccts[0]?.id || accounts[0]?.id || '', executionDay: 1 }] })
   const addAccount = (type) =>
-    up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0 }] })
+    up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0, color: ACCOUNT_PALETTE[form.accounts.length % ACCOUNT_PALETTE.length] }] })
 
   function save() {
     const payload = {
@@ -83,11 +85,12 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Startsaldo (€)</th><th></th></tr>
+              <tr><th>Farbe</th><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Startsaldo (€)</th><th></th></tr>
             </thead>
             <tbody>
               {form.accounts.map((a) => (
                 <tr key={a.id}>
+                  <td><input type="color" className="color-input" value={a.color || '#3b82f6'} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
                   <td><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
                   <td><input value={a.owner} placeholder={a.type === 'personal' ? 'z. B. Elisa' : 'Gemeinsam'} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
                   <td>

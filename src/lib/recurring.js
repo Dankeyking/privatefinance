@@ -13,9 +13,7 @@
 
 import { toMonthly, formatEUR } from './normalize.js'
 import { effectiveCategoryOf } from './selectors.js'
-
-const FLOW_PERSONAL = '#94a3b8'
-const FLOW_JOINT = '#3b82f6'
+import { accountColor } from './accountColors.js'
 
 export function accountsById(accounts = []) {
   return Object.fromEntries(accounts.map((a) => [a.id, a]))
@@ -151,7 +149,7 @@ export function accountFlows(data) {
   const nodeColors = {}
   const columns = {}
   accounts.forEach((a) => {
-    nodeColors[a.name] = a.type === 'joint' ? FLOW_JOINT : FLOW_PERSONAL
+    nodeColors[a.name] = accountColor(a, accounts)
     columns[a.name] = a.type === 'joint' ? 1 : 0
   })
 
