@@ -563,3 +563,25 @@ tbody td:first-child { color: var(--text); }
   background: #f8fafc; color: var(--text);
 }
 .import-textarea:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: #fff; }
+
+/* --- Click-to-Edit-Tabelle (Kosten & Abos) -------------------------------- */
+.costs-table td, .costs-table th { padding: 10px 8px; vertical-align: middle; }
+.costs-table th:first-child, .costs-table td:first-child { padding-left: 4px; }
+.costs-table th:last-child, .costs-table td:last-child { padding-right: 2px; }
+.ellip { display: inline-block; max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.ct-edit {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 8px; margin: -4px -8px; border-radius: 7px; min-height: 28px;
+  max-width: 100%; transition: background 0.1s, box-shadow 0.1s;
+}
+.ct-edit:hover { background: #eef2f7; box-shadow: inset 0 0 0 1px var(--border); }
+.ct-edit.empty { color: var(--text-muted); font-style: italic; }
+td.num .ct-edit { justify-content: flex-end; }
+.split-summary { white-space: nowrap; }
+.split-mode-tag {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-muted); background: #f1f5f9; border-radius: 4px; padding: 1px 6px;
+}
+.ct-del { opacity: 0; transition: opacity 0.12s; }
+tr:hover .ct-del { opacity: 1; }
+.costs-table tbody tr:hover { background: #f8fafc; }

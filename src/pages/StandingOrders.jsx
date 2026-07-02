@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import RecurringEditor from '../components/RecurringEditor.jsx'
+import CostsTable from '../components/CostsTable.jsx'
 import { formatEUR } from '../lib/normalize.js'
 import { orderToForm, formToOrder } from '../lib/orderForm.js'
 import { personsFromAccounts, householdSummary } from '../lib/recurring.js'
@@ -34,16 +34,16 @@ export default function StandingOrders({ data, onSaveOrders }) {
             </span>
           </div>
         </div>
-        <RecurringEditor
+        <CostsTable
           accounts={data.accounts}
           persons={persons}
           orders={orders}
           onChange={handleChange}
         />
         <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
-          Tipp: Mit <strong>+ Fixkosten</strong> / <strong>+ Abo</strong> neue Posten anlegen, mit
-          <strong> ✕</strong> löschen. Die <em>Aufteilung</em> legt fest, wer welchen Anteil trägt
-          (Gleich / Eine Person / Prozent / Beträge €).
+          Tipp: <strong>Auf eine Zelle klicken</strong>, um sie zu bearbeiten. Mit
+          <strong> + Fixkosten</strong> / <strong>+ Abo</strong> neue Posten anlegen, mit dem
+          <strong> ✕</strong> (erscheint beim Überfahren der Zeile) löschen.
         </p>
       </div>
     </div>
