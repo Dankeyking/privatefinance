@@ -97,7 +97,7 @@ export default function App() {
       <main className="content">
         {page === 'overview' && <Overview data={data} onSaveOrders={handleSaveOrders} />}
         {page === 'recurring' && (
-          <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
+          <StandingOrders data={data} onSaveOrders={handleSaveOrders} />
         )}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
         {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}

@@ -7,6 +7,19 @@
 let idc = 0
 export const newOrderId = () => `m${Date.now()}${idc++}`
 
+// Betrag robust parsen: akzeptiert deutsches Format ("1.234,56", "9,99 €")
+// ebenso wie "9.99". Ungültiges -> 0.
+export function parseAmountDE(v) {
+  if (typeof v === 'number') return v
+  if (v == null) return 0
+  let s = String(v).trim().replace(/[^\d.,-]/g, '')
+  if (!s) return 0
+  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.')
+  else if (s.includes(',')) s = s.replace(',', '.')
+  const n = Number(s)
+  return Number.isFinite(n) ? n : 0
+}
+
 function localISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -41,7 +54,7 @@ export function formToOrder(o, persons = []) {
     if (o.splitMode === 'single') return { mode: 'single', person: o.splitPerson || persons[0] || '' }
     if (o.splitMode === 'percent' || o.splitMode === 'amount') {
       const shares = {}
-      persons.forEach((p) => { shares[p] = Number(o.splitShares?.[p]) || 0 })
+      persons.forEach((p) => { shares[p] = parseAmountDE(o.splitShares?.[p]) })
       return { mode: o.splitMode, shares }
     }
     return { mode: 'even' }
@@ -49,7 +62,7 @@ export function formToOrder(o, persons = []) {
   return {
     id: o.id,
     recipient: o.recipient,
-    amount: Number(o.amount) || 0,
+    amount: parseAmountDE(o.amount),
     rhythm: o.rhythm,
     accountId: o.accountId,
     category: o.category,

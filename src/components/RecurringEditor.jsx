@@ -31,7 +31,7 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
             {orders.map((o) => (
               <tr key={o.id}>
                 <td><input value={o.recipient} placeholder="z. B. Netflix" onChange={(e) => set(o.id, 'recipient', e.target.value)} /></td>
-                <td className="num"><input type="number" value={o.amount} onChange={(e) => set(o.id, 'amount', e.target.value)} /></td>
+                <td className="num"><input type="text" inputMode="decimal" value={o.amount} placeholder="0,00" onChange={(e) => set(o.id, 'amount', e.target.value)} /></td>
                 <td>
                   <select value={o.rhythm} onChange={(e) => set(o.id, 'rhythm', e.target.value)}>
                     {RHYTHMS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
@@ -71,7 +71,7 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
                       persons.map((p) => (
                         <label key={p} className="split-share">
                           <span>{p}</span>
-                          <input type="number" value={o.splitShares?.[p] ?? ''} onChange={(e) => setShare(o.id, p, e.target.value)} />
+                          <input type="text" inputMode="decimal" value={o.splitShares?.[p] ?? ''} onChange={(e) => setShare(o.id, p, e.target.value)} />
                           <span>{o.splitMode === 'percent' ? '%' : '€'}</span>
                         </label>
                       ))}
