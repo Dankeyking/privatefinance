@@ -38,8 +38,8 @@ const standingOrders = [
   // Rechtsschutzversicherung 30,10 € – 50/50, vom Konto Wohnung & Versicherungen.
   { id: 'so_rechtsschutz', recipient: 'Rechtsschutzversicherung', amount: 30.10, rhythm: 'monthly', accountId: 'j_wohnen', category: 'Versicherung', kind: 'fixed', executionDay: 15,
     split: { mode: 'even' } },
-  // Sparen (Art 'savings') – zählt NICHT als Kosten, sondern als Rücklage.
-  { id: 'so_etf', recipient: 'ETF Sparplan', amount: 200, rhythm: 'monthly', accountId: 'j_gemein', category: 'Sparen', kind: 'savings', executionDay: 5,
+  // Kategorie 'Sparen' -> zählt als Rücklage (nicht als Kosten).
+  { id: 'so_etf', recipient: 'ETF Sparplan', amount: 200, rhythm: 'monthly', accountId: 'j_gemein', category: 'Sparen', kind: 'fixed', executionDay: 5,
     split: { mode: 'even' } },
 ]
 

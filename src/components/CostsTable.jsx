@@ -112,7 +112,6 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                       onChange={(e) => { set(o.id, 'kind', e.target.value); setEdit(null) }}>
                       <option value="fixed">Fixkosten</option>
                       <option value="subscription">Abo</option>
-                      <option value="savings">Sparen</option>
                     </select></span>
                   ) : (
                     <span className="ct-edit" onClick={open(o.id, 'kind')} title="Klicken zum Bearbeiten">

@@ -17,11 +17,14 @@ Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten
     nicht hartkodiert — siehe `personsFromAccounts`).
   - `color` = Kontofarbe (Fluss/Karten/Tabellen); Fallback via `src/lib/accountColors.js`.
 - **incomes**: `{ id, name, amount, rhythm, accountId, executionDay }` (landen auf Privatkonten)
-- **standingOrders** (Fixkosten & Abos & Sparen): `{ id, recipient, amount, rhythm, accountId,
-  category, kind: 'fixed'|'subscription'|'savings', executionDay, nextExecution, monthInterval, split }`
-  - `kind: 'savings'` = Sparen/Rücklage; zählt **nicht** als Kosten. `householdSummary`
-    trennt `totalCosts` (fixed+subscription) von `savings` und liefert `surplus`
-    (= Einkommen − Kosten − Sparen), `availableWithoutSavings` und `savingsRate`.
+- **standingOrders** (Fixkosten & Abos): `{ id, recipient, amount, rhythm, accountId,
+  category, kind: 'fixed'|'subscription', executionDay, nextExecution, monthInterval, split }`
+  - **Sparen wird über die Kategorie bestimmt**: alles mit `category === 'Sparen'`
+    (`SAVINGS_CATEGORY` in categories.js) zählt als Rücklage, **nicht** als Kosten — siehe
+    `isSavings(o)` in recurring.js. `householdSummary` trennt `totalCosts` (Nicht-Sparen)
+    von `savings` und liefert `surplus` (= Einkommen − Kosten − Sparen),
+    `availableWithoutSavings` und `savingsRate`. (`kind: 'savings'` wird aus Kompatibilität
+    mit alten Daten noch als Sparen erkannt, ist in der UI aber nicht mehr wählbar.)
   - **split** = wie der Posten auf Personen aufgeteilt wird:
     - `{ mode: 'even' }` – gleichmäßig auf alle Personen (Standard)
     - `{ mode: 'single', person }` – eine Person zahlt alles

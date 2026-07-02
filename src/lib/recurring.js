@@ -14,6 +14,13 @@
 import { toMonthly, formatEUR } from './normalize.js'
 import { effectiveCategoryOf } from './selectors.js'
 import { accountColor } from './accountColors.js'
+import { SAVINGS_CATEGORY } from './categories.js'
+
+// Sparen wird über die Kategorie bestimmt: alles mit Kategorie „Sparen".
+// (kind === 'savings' bleibt aus Kompatibilität mit alten Daten erhalten.)
+export function isSavings(o, overrides = {}) {
+  return effectiveCategoryOf(o, overrides) === SAVINGS_CATEGORY || o.kind === 'savings'
+}
 
 export function accountsById(accounts = []) {
   return Object.fromEntries(accounts.map((a) => [a.id, a]))
@@ -64,7 +71,7 @@ export function monthlyByAccount(data) {
     const s = slot[o.accountId]
     if (!s) return
     const m = toMonthly(o.amount, o.rhythm)
-    if (o.kind === 'savings') s.savings += m
+    if (isSavings(o)) s.savings += m
     else if (o.kind === 'subscription') s.subscription += m
     else s.fixed += m
     if (o.rhythm !== 'monthly') s.reserve += m
@@ -78,7 +85,7 @@ export function monthlyByCategory(data, overrides = {}, { excludeSavings = false
   const { standingOrders = [] } = data
   const totals = {}
   standingOrders.forEach((o) => {
-    if (excludeSavings && o.kind === 'savings') return
+    if (excludeSavings && isSavings(o, overrides)) return
     const cat = effectiveCategoryOf(o, overrides)
     totals[cat] = (totals[cat] || 0) + toMonthly(o.amount, o.rhythm)
   })
@@ -91,7 +98,7 @@ export function monthlyByPerson(data) {
   const persons = personsFromAccounts(accounts)
   const map = Object.fromEntries(persons.map((p) => [p, { person: p, costs: 0, savings: 0 }]))
   standingOrders.forEach((o) => {
-    const isSav = o.kind === 'savings'
+    const isSav = isSavings(o)
     persons.forEach((p) => {
       const share = personShareMonthly(o, p, persons)
       if (isSav) map[p].savings += share
@@ -218,7 +225,7 @@ export function householdSummary(data) {
   let savings = 0
   standingOrders.forEach((o) => {
     const m = toMonthly(o.amount, o.rhythm)
-    if (o.kind === 'savings') savings += m
+    if (isSavings(o)) savings += m
     else totalCosts += m
   })
   const totalIncome = incomes.reduce((s, i) => s + toMonthly(i.amount, i.rhythm), 0)

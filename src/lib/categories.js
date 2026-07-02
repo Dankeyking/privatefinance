@@ -18,6 +18,8 @@ export const CATEGORIES = [
 
 export const CATEGORY_IDS = CATEGORIES.map((c) => c.id)
 export const FALLBACK_CATEGORY = 'Sonstiges'
+// Alles mit dieser Kategorie wird als Sparen/Rücklage behandelt (nicht als Kosten).
+export const SAVINGS_CATEGORY = 'Sparen'
 
 export function categoryColor(id) {
   const c = CATEGORIES.find((x) => x.id === id)
