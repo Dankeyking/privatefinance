@@ -15,3 +15,7 @@ public/data.json
 .DS_Store
 .vscode/
 .idea/
+
+# temporäre Screenshots/Skripte aus Tests
+_*.png
+_*.mjs
