@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import RecurringEditor from '../components/RecurringEditor.jsx'
-import { orderToForm, formToOrder, newOrderId } from '../lib/orderForm.js'
+import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
 import { ACCOUNT_PALETTE } from '../lib/accountColors.js'
 
 const RHYTHMS = [
@@ -23,6 +23,10 @@ export default function Settings({ data, manual, onSave, onReset }) {
       accountId: i.accountId || '', executionDay: i.executionDay || 1,
     })),
     orders: (manual.standingOrders ?? data.standingOrders ?? []).map(orderToForm),
+    transfers: (manual.transfers ?? data.transfers ?? []).map((t) => ({
+      id: t.id || newId(), label: t.label || '', amount: t.amount ?? 0,
+      fromAccountId: t.fromAccountId || '', toAccountId: t.toAccountId || '', rhythm: t.rhythm || 'monthly',
+    })),
   })
 
   const [form, setForm] = useState(seed)
@@ -39,6 +43,8 @@ export default function Settings({ data, manual, onSave, onReset }) {
 
   const addIncome = () =>
     up({ incomes: [...form.incomes, { id: newId(), name: 'Gehalt', amount: 0, rhythm: 'monthly', accountId: personalAccts[0]?.id || accounts[0]?.id || '', executionDay: 1 }] })
+  const addTransfer = () =>
+    up({ transfers: [...form.transfers, { id: newId(), label: 'Umbuchung', amount: 0, fromAccountId: accounts[0]?.id || '', toAccountId: accounts.find((a) => a.type === 'joint')?.id || accounts[1]?.id || '', rhythm: 'monthly' }] })
   const addAccount = (type) =>
     up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0, color: ACCOUNT_PALETTE[form.accounts.length % ACCOUNT_PALETTE.length] }] })
 
@@ -52,6 +58,10 @@ export default function Settings({ data, manual, onSave, onReset }) {
         ...i, amount: Number(i.amount) || 0, executionDay: Number(i.executionDay) || 1,
       })),
       standingOrders: form.orders.map((o) => formToOrder(o, persons)),
+      transfers: form.transfers.map((t) => ({
+        id: t.id, label: t.label, amount: parseAmountDE(t.amount),
+        fromAccountId: t.fromAccountId, toAccountId: t.toAccountId, rhythm: t.rhythm,
+      })),
     }
     onSave(payload)
     setSaved(true)
@@ -67,9 +77,9 @@ export default function Settings({ data, manual, onSave, onReset }) {
       <div className="page-header">
         <h1>Meine Daten</h1>
         <p>
-          Konten, Einnahmen und Fixkosten/Abos selbst pflegen. Pro Posten legst du die
-          <strong> Aufteilung</strong> fest (wer zahlt welchen Anteil) und das Abbuchungskonto –
-          daraus berechnet die App Kosten je Person und den Geldfluss. Alles bleibt
+          Konten (inkl. Farbe), Einnahmen, Fixkosten/Abos und Umbuchungen selbst pflegen. Pro Posten
+          legst du die <strong>Aufteilung</strong> fest (wer zahlt welchen Anteil) und das
+          Abbuchungskonto – daraus berechnet die App Kosten je Person und den Geldfluss. Alles bleibt
           <strong> nur in deinem Browser</strong>.
         </p>
       </div>
@@ -155,6 +165,46 @@ export default function Settings({ data, manual, onSave, onReset }) {
           orders={form.orders}
           onChange={(next) => up({ orders: next })}
         />
+      </div>
+
+      {/* Umbuchungen */}
+      <div className="card mt">
+        <h2>Umbuchungen <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Überträge zwischen Konten, z. B. Sparen)</span></h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>von</th><th>nach</th><th>Rhythmus</th><th></th></tr>
+            </thead>
+            <tbody>
+              {form.transfers.map((t) => (
+                <tr key={t.id}>
+                  <td><input value={t.label} placeholder="z. B. Sparen Urlaub" onChange={(e) => setRow('transfers', t.id, 'label', e.target.value)} /></td>
+                  <td className="num"><input type="text" inputMode="decimal" value={t.amount} placeholder="0,00" onChange={(e) => setRow('transfers', t.id, 'amount', e.target.value)} /></td>
+                  <td>
+                    <select value={t.fromAccountId} onChange={(e) => setRow('transfers', t.id, 'fromAccountId', e.target.value)}>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select value={t.toAccountId} onChange={(e) => setRow('transfers', t.id, 'toAccountId', e.target.value)}>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select value={t.rhythm} onChange={(e) => setRow('transfers', t.id, 'rhythm', e.target.value)}>
+                      {RHYTHMS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                    </select>
+                  </td>
+                  <td className="num"><button className="btn-del" onClick={() => delRow('transfers', t.id)}>✕</button></td>
+                </tr>
+              ))}
+              {form.transfers.length === 0 && (
+                <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 18 }}>Noch keine Umbuchungen.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <button className="btn add" onClick={addTransfer}>+ Umbuchung</button>
       </div>
 
       <div className="settings-actions">

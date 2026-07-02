@@ -40,6 +40,12 @@ const standingOrders = [
     split: { mode: 'even' } },
 ]
 
+// --- Umbuchungen (explizite Überträge zwischen Konten) -----------------------
+// Wiederkehrende Transfers, die nicht aus Kosten entstehen (z. B. Sparen).
+const transfers = [
+  { id: 'um_urlaub', label: 'Sparen Urlaub', fromAccountId: 'p_duncan', toAccountId: 'j_urlaub', amount: 200, rhythm: 'monthly' },
+]
+
 // --- nextExecution + monthInterval ableiten ----------------------------------
 function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -62,5 +68,6 @@ export const mockData = {
   accounts,
   incomes,
   standingOrders: enrichedOrders,
+  transfers,
 }
 export default mockData

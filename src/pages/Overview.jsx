@@ -98,10 +98,13 @@ export default function Overview({ data, onSaveOrders }) {
                   <tr><th>Von</th><th>Nach</th><th className="num">€ / Monat</th></tr>
                 </thead>
                 <tbody>
-                  {flows.flows.map((f, i) => (
+                  {flows.rows.map((f, i) => (
                     <tr key={i}>
                       <td><span className="acct-dot" style={{ background: acctColorByName[f.from] }} />{f.from}</td>
-                      <td><span className="acct-dot" style={{ background: acctColorByName[f.to] }} />{f.to}</td>
+                      <td>
+                        <span className="acct-dot" style={{ background: acctColorByName[f.to] }} />{f.to}
+                        {f.kind === 'umbuchung' && <span className="pill umbuchung" style={{ marginLeft: 6 }}>Umbuchung</span>}
+                      </td>
                       <td className="num">{formatEUR(f.flow)}</td>
                     </tr>
                   ))}

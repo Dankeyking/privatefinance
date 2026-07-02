@@ -484,6 +484,7 @@ select, .btn {
 
 .pill.fix { background: #e0edff; color: #1d4ed8; }
 .pill.sub { background: #fce7f3; color: #be185d; }
+.pill.umbuchung { background: #e0e7ff; color: #4338ca; }
 
 .hbars { display: flex; flex-direction: column; gap: 10px; }
 .hbar-row { display: grid; grid-template-columns: 180px 1fr 110px; align-items: center; gap: 12px; }

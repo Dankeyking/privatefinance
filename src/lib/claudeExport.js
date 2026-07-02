@@ -81,8 +81,16 @@ export function buildClaudeExport(data, overrides = {}) {
       surplus: round(household.surplus),
       byAccount,
       personSummary: persons,
-      flows: accountFlows(data).flows,
+      flows: accountFlows(data).rows,
     },
+    transfers: (data.transfers || []).map((t) => ({
+      label: t.label,
+      from: accountById[t.fromAccountId]?.name || t.fromAccountId,
+      to: accountById[t.toAccountId]?.name || t.toAccountId,
+      amount: t.amount,
+      rhythm: t.rhythm,
+      monthly: round(toMonthly(t.amount, t.rhythm || 'monthly')),
+    })),
   }
 }
 

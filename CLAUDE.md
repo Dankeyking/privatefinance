@@ -12,9 +12,10 @@ Konten**. UI durchgehend **auf Deutsch**. Eigene Daten liegen **nur im Browser**
 ## Datenmodell (das Herzstück)
 Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten):
 
-- **accounts**: `{ id, name, type: 'personal'|'joint', owner, balance, currency }`
+- **accounts**: `{ id, name, type: 'personal'|'joint', owner, balance, currency, color }`
   - `owner` eines **personal**-Kontos = die **Person** (Personen werden daraus abgeleitet,
     nicht hartkodiert — siehe `personsFromAccounts`).
+  - `color` = Kontofarbe (Fluss/Karten/Tabellen); Fallback via `src/lib/accountColors.js`.
 - **incomes**: `{ id, name, amount, rhythm, accountId, executionDay }` (landen auf Privatkonten)
 - **standingOrders** (Fixkosten & Abos): `{ id, recipient, amount, rhythm, accountId,
   category, kind: 'fixed'|'subscription', executionDay, nextExecution, monthInterval, split }`
@@ -24,8 +25,14 @@ Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten
     - `{ mode: 'percent', shares: { Person: % } }`
     - `{ mode: 'amount', shares: { Person: € } }` – feste Beträge (z. B. Miete 720/850)
 
-Es gibt **keine** `transactions`, `balanceHistory` oder manuelle „Verteilung"/`transfers` mehr —
-diese Konzepte wurden entfernt. Der Geldfluss wird **aus den Splits abgeleitet**.
+- **transfers** (Umbuchungen): `{ id, label, fromAccountId, toAccountId, amount, rhythm }` —
+  explizite Überträge zwischen zwei beliebigen Konten (z. B. Sparen). Erscheinen im
+  Geldfluss **zusätzlich** zu den aus Splits abgeleiteten Flüssen (kind 'umbuchung').
+
+Es gibt **keine** `transactions` oder `balanceHistory` mehr. Der Geldfluss (`accountFlows`)
+kombiniert: (1) aus Kosten-Splits abgeleitete Flüsse (kind 'kosten') und (2) explizite
+Umbuchungen (kind 'umbuchung'). `accountFlows` liefert `flows` (pro Kontopaar summiert, für
+die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
 
 `rhythm ∈ {monthly, quarterly, yearly}`; Normalisierung auf Monatsbasis über
 `toMonthly` (yearly ÷ 12, quarterly ÷ 3) in `src/lib/normalize.js`.

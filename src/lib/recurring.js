@@ -109,11 +109,13 @@ export function incomeByPerson(data) {
   return persons.map((p) => ({ person: p, income: map[p] }))
 }
 
-// Geldfluss zwischen den Konten: jede Person finanziert ihren Anteil jedes
-// Postens auf dessen Abbuchungskonto. Läuft der Posten über das eigene
-// Privatkonto, entsteht kein Übertrag.
+// Geldfluss zwischen den Konten:
+//  1) aus Kosten abgeleitet — jede Person finanziert ihren Anteil jedes Postens
+//     auf dessen Abbuchungskonto (kind 'kosten').
+//  2) explizite Umbuchungen — vom Nutzer gepflegte Überträge zwischen zwei
+//     Konten (kind 'umbuchung'), z. B. Sparen aufs Urlaubskonto.
 export function accountFlows(data) {
-  const { accounts = [], standingOrders = [] } = data
+  const { accounts = [], standingOrders = [], transfers = [] } = data
   const byId = accountsById(accounts)
   const persons = personsFromAccounts(accounts)
   // Heimatkonto je Person (erstes Privatkonto mit diesem Inhaber).
@@ -125,7 +127,8 @@ export function accountFlows(data) {
       if (p && !(p in homeByPerson)) homeByPerson[p] = a
     })
 
-  const flowMap = {}
+  // 1) Kosten-abgeleitete Flüsse
+  const costMap = {}
   standingOrders.forEach((o) => {
     const debit = byId[o.accountId]
     if (!debit) return
@@ -135,16 +138,36 @@ export function accountFlows(data) {
       const home = homeByPerson[p]
       if (!home || home.id === debit.id) return
       const key = `${home.name}||${debit.name}`
-      flowMap[key] = (flowMap[key] || 0) + share
+      costMap[key] = (costMap[key] || 0) + share
     })
   })
 
-  const flows = Object.entries(flowMap)
-    .map(([k, v]) => {
+  // 2) Explizite Umbuchungen
+  const transMap = {}
+  transfers.forEach((t) => {
+    const from = byId[t.fromAccountId]
+    const to = byId[t.toAccountId]
+    if (!from || !to || from.id === to.id) return
+    const amt = toMonthly(t.amount, t.rhythm || 'monthly')
+    if (amt <= 0) return
+    const key = `${from.name}||${to.name}`
+    transMap[key] = (transMap[key] || 0) + amt
+  })
+
+  const toRows = (map, kind) =>
+    Object.entries(map).map(([k, v]) => {
       const [from, to] = k.split('||')
-      return { from, to, flow: Number(v.toFixed(2)) }
+      return { from, to, flow: Number(v.toFixed(2)), kind }
     })
-    .sort((a, b) => b.flow - a.flow)
+  const rows = [...toRows(costMap, 'kosten'), ...toRows(transMap, 'umbuchung')].sort((a, b) => b.flow - a.flow)
+
+  // Für die Sankey: pro Kontopaar zusammenfassen.
+  const merged = {}
+  rows.forEach((r) => { merged[`${r.from}||${r.to}`] = (merged[`${r.from}||${r.to}`] || 0) + r.flow })
+  const flows = Object.entries(merged).map(([k, v]) => {
+    const [from, to] = k.split('||')
+    return { from, to, flow: Number(v.toFixed(2)) }
+  })
 
   const nodeColors = {}
   const columns = {}
@@ -165,7 +188,18 @@ export function accountFlows(data) {
     if (through > 0) labels[name] = `${name} · ${formatEUR(through)}`
   })
 
-  return { flows, nodeColors, columns, labels, total: flows.reduce((s, f) => s + f.flow, 0) }
+  const hasTransfers = Object.keys(transMap).length > 0
+  return {
+    flows,
+    rows,
+    nodeColors,
+    // Bei Umbuchungen (auch Konto->Konto in derselben Spalte) automatische
+    // Spalten-Anordnung des Sankey nutzen.
+    columns: hasTransfers ? undefined : columns,
+    labels,
+    total: flows.reduce((s, f) => s + f.flow, 0),
+    umbuchungTotal: toRows(transMap, 'umbuchung').reduce((s, r) => s + r.flow, 0),
+  }
 }
 
 // Haushalts-Summe: Gesamteinkommen, Gesamtkosten (Fixkosten/Abos), Überschuss.
