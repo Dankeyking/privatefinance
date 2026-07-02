@@ -6,11 +6,13 @@ import { personShareMonthly } from '../lib/recurring.js'
 import { accountColor } from '../lib/accountColors.js'
 
 const RHYTHMS = ['monthly', 'quarterly', 'yearly']
-const KIND_LABEL = { fixed: 'Fixkosten', subscription: 'Abo' }
+const KIND_LABEL = { fixed: 'Fixkosten', subscription: 'Abo', savings: 'Sparen' }
+const kindClass = (k) => (k === 'savings' ? 'sav' : k === 'subscription' ? 'sub' : 'fix')
 
 // Click-to-Edit-Tabelle: schöne, formatierte Ansicht; Klick auf eine Zelle
 // macht genau dieses Feld editierbar. Voll kontrolliert (orders/onChange).
-export default function CostsTable({ accounts, persons, orders, onChange }) {
+export default function CostsTable({ accounts, persons, orders, onChange, filter = () => true }) {
+  const visible = orders.filter(filter)
   const [edit, setEdit] = useState(null) // { id, field }
   const cellRef = useRef(null)
 
@@ -64,7 +66,7 @@ export default function CostsTable({ accounts, persons, orders, onChange }) {
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
+            {visible.map((o) => (
               <tr key={o.id}>
                 {/* Empfänger */}
                 <td>
@@ -110,10 +112,11 @@ export default function CostsTable({ accounts, persons, orders, onChange }) {
                       onChange={(e) => { set(o.id, 'kind', e.target.value); setEdit(null) }}>
                       <option value="fixed">Fixkosten</option>
                       <option value="subscription">Abo</option>
+                      <option value="savings">Sparen</option>
                     </select></span>
                   ) : (
                     <span className="ct-edit" onClick={open(o.id, 'kind')} title="Klicken zum Bearbeiten">
-                      <span className={`pill ${o.kind === 'subscription' ? 'sub' : 'fix'}`}>{KIND_LABEL[o.kind] || 'Fixkosten'}</span>
+                      <span className={`pill ${kindClass(o.kind)}`}>{KIND_LABEL[o.kind] || 'Fixkosten'}</span>
                     </span>
                   )}
                 </td>
@@ -178,9 +181,9 @@ export default function CostsTable({ accounts, persons, orders, onChange }) {
                 </td>
               </tr>
             ))}
-            {orders.length === 0 && (
+            {visible.length === 0 && (
               <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 22 }}>
-                Noch keine Fixkosten/Abos – füge unten welche hinzu.
+                {orders.length === 0 ? 'Noch keine Posten – füge unten welche hinzu.' : 'Keine Treffer für diese Filter.'}
               </td></tr>
             )}
           </tbody>

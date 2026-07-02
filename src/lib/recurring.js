@@ -52,19 +52,20 @@ export function personShareMonthly(cost, person, persons) {
   }
 }
 
-// Monatslast je Konto, aufgeteilt nach Fixkosten / Abos.
+// Monatslast je Konto, aufgeteilt nach Fixkosten / Abos / Sparen.
 // `reserve` = monatlicher Anteil aus nicht-monatlichen Posten (jährlich/12,
 // vierteljährlich/3). `total` = Betrag, der monatlich aufs Konto soll.
 export function monthlyByAccount(data) {
   const { accounts = [], standingOrders = [] } = data
   const slot = Object.fromEntries(
-    accounts.map((a) => [a.id, { account: a, fixed: 0, subscription: 0, reserve: 0, total: 0 }]),
+    accounts.map((a) => [a.id, { account: a, fixed: 0, subscription: 0, savings: 0, reserve: 0, total: 0 }]),
   )
   standingOrders.forEach((o) => {
     const s = slot[o.accountId]
     if (!s) return
     const m = toMonthly(o.amount, o.rhythm)
-    if (o.kind === 'subscription') s.subscription += m
+    if (o.kind === 'savings') s.savings += m
+    else if (o.kind === 'subscription') s.subscription += m
     else s.fixed += m
     if (o.rhythm !== 'monthly') s.reserve += m
     s.total += m
@@ -72,28 +73,32 @@ export function monthlyByAccount(data) {
   return accounts.map((a) => slot[a.id])
 }
 
-// Monatskosten je Kategorie (für Donut/Ranking).
-export function monthlyByCategory(data, overrides = {}) {
+// Monatskosten je Kategorie (für Donut/Ranking). Optional Sparen ausschließen.
+export function monthlyByCategory(data, overrides = {}, { excludeSavings = false } = {}) {
   const { standingOrders = [] } = data
   const totals = {}
   standingOrders.forEach((o) => {
+    if (excludeSavings && o.kind === 'savings') return
     const cat = effectiveCategoryOf(o, overrides)
     totals[cat] = (totals[cat] || 0) + toMonthly(o.amount, o.rhythm)
   })
   return totals
 }
 
-// Kosten je Person: Summe der Anteile über alle Posten.
+// Kosten & Sparen je Person: Summe der Anteile, getrennt nach Sparen vs. Rest.
 export function monthlyByPerson(data) {
   const { accounts = [], standingOrders = [] } = data
   const persons = personsFromAccounts(accounts)
-  const map = Object.fromEntries(persons.map((p) => [p, 0]))
+  const map = Object.fromEntries(persons.map((p) => [p, { person: p, costs: 0, savings: 0 }]))
   standingOrders.forEach((o) => {
+    const isSav = o.kind === 'savings'
     persons.forEach((p) => {
-      map[p] += personShareMonthly(o, p, persons)
+      const share = personShareMonthly(o, p, persons)
+      if (isSav) map[p].savings += share
+      else map[p].costs += share
     })
   })
-  return persons.map((p) => ({ person: p, total: map[p] }))
+  return persons.map((p) => map[p])
 }
 
 // Monatseinkommen je Person (aus den Einnahmen auf den Privatkonten).
@@ -202,22 +207,43 @@ export function accountFlows(data) {
   }
 }
 
-// Haushalts-Summe: Gesamteinkommen, Gesamtkosten (Fixkosten/Abos), Überschuss.
+// Haushalts-Summe: Einkommen, Fixkosten/Abos (ohne Sparen), Sparen, Überschuss.
+//  totalCosts   = echte Ausgaben (Fixkosten + Abos)
+//  savings      = Sparen (Rücklagen; kein „Kosten")
+//  surplus      = Einkommen − Kosten − Sparen (frei verfügbar)
+//  availableWithoutSavings = Einkommen − Kosten (verfügbar, wenn man nicht sparen würde)
 export function householdSummary(data) {
   const { standingOrders = [], incomes = [] } = data
-  const totalCosts = standingOrders.reduce((s, o) => s + toMonthly(o.amount, o.rhythm), 0)
+  let totalCosts = 0
+  let savings = 0
+  standingOrders.forEach((o) => {
+    const m = toMonthly(o.amount, o.rhythm)
+    if (o.kind === 'savings') savings += m
+    else totalCosts += m
+  })
   const totalIncome = incomes.reduce((s, i) => s + toMonthly(i.amount, i.rhythm), 0)
-  return { totalIncome, totalCosts, surplus: totalIncome - totalCosts }
+  return {
+    totalIncome,
+    totalCosts,
+    savings,
+    surplus: totalIncome - totalCosts - savings,
+    availableWithoutSavings: totalIncome - totalCosts,
+    savingsRate: totalIncome > 0 ? (savings / totalIncome) * 100 : 0,
+  }
 }
 
-// Pro Person: Gesamtkosten (Summe der Anteile), Einkommen, Überschuss.
+// Pro Person: Kosten, Sparen, Einkommen, Überschuss (= Einkommen − Kosten − Sparen).
 export function personSummary(data) {
-  const costs = monthlyByPerson(data)
+  const rows = monthlyByPerson(data)
   const incById = Object.fromEntries(incomeByPerson(data).map((i) => [i.person, i.income]))
-  return costs.map((c) => ({
-    person: c.person,
-    costs: c.total,
-    income: incById[c.person] || 0,
-    surplus: (incById[c.person] || 0) - c.total,
-  }))
+  return rows.map((r) => {
+    const income = incById[r.person] || 0
+    return {
+      person: r.person,
+      costs: r.costs,
+      savings: r.savings,
+      income,
+      surplus: income - r.costs - r.savings,
+    }
+  })
 }

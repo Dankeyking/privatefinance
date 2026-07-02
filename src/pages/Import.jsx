@@ -199,6 +199,7 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
                           <select value={i.kind} onChange={(e) => setItem(i.id, 'kind', e.target.value)}>
                             <option value="fixed">Fixkosten</option>
                             <option value="subscription">Abo</option>
+                            <option value="savings">Sparen</option>
                           </select>
                         </td>
                         <td>

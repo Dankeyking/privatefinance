@@ -42,7 +42,13 @@ export default function Overview({ data, onSaveOrders }) {
       <div className="grid kpis">
         <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" />
         <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" />
-        <KpiCard label="Überschuss / Monat" value={summary.surplus} tone={summary.surplus >= 0 ? 'pos' : 'neg'} />
+        <KpiCard label="Sparen / Monat" value={summary.savings} hint={`Sparquote ${summary.savingsRate.toFixed(0)} %`} />
+        <KpiCard
+          label="Überschuss / Monat"
+          value={summary.surplus}
+          tone={summary.surplus >= 0 ? 'pos' : 'neg'}
+          hint={`ohne Sparen: ${formatEUR(summary.availableWithoutSavings)}`}
+        />
       </div>
 
       {/* Inline-Editor: Kosten & Abos direkt hier bearbeiten */}
@@ -122,7 +128,7 @@ export default function Overview({ data, onSaveOrders }) {
       {/* Abschnitt A — Kosten je Konto */}
       <h2 className="section-title mt">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(monatlich aufs Konto buchen)</span></h2>
       <div className="grid accounts">
-        {byAccount.map(({ account, fixed, subscription, reserve, total }) => (
+        {byAccount.map(({ account, fixed, subscription, savings, reserve, total }) => (
           <div className={`card acct ${account.type}`} key={account.id}
             style={{ '--acct-color': accountColor(account, data.accounts) }}>
             <div className="acct-type">{account.type === 'joint' ? 'Gemeinsam' : 'Privat'}</div>
@@ -132,9 +138,13 @@ export default function Overview({ data, onSaveOrders }) {
               <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}> / Monat</span>
             </div>
             <div className="muted" style={{ fontSize: 12 }}>{formatEUR(total * 12)} / Jahr</div>
-            {(fixed > 0 || subscription > 0) && (
+            {total > 0 && (
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                Fixkosten {formatEUR(fixed)} · Abos {formatEUR(subscription)}
+                {[
+                  fixed > 0 && `Fixkosten ${formatEUR(fixed)}`,
+                  subscription > 0 && `Abos ${formatEUR(subscription)}`,
+                  savings > 0 && `Sparen ${formatEUR(savings)}`,
+                ].filter(Boolean).join(' · ')}
               </div>
             )}
             {reserve > 0 && (
@@ -154,7 +164,8 @@ export default function Overview({ data, onSaveOrders }) {
             <thead>
               <tr>
                 <th>Person</th>
-                <th className="num">Gesamtkosten</th>
+                <th className="num">Kosten</th>
+                <th className="num">Sparen</th>
                 <th className="num">Einkommen</th>
                 <th className="num">Überschuss</th>
               </tr>
@@ -164,12 +175,13 @@ export default function Overview({ data, onSaveOrders }) {
                 <tr key={p.person}>
                   <td><strong>{p.person}</strong></td>
                   <td className="num">{formatEUR(p.costs)}</td>
+                  <td className="num">{formatEUR(p.savings)}</td>
                   <td className="num">{formatEUR(p.income)}</td>
                   <td className={`num amount ${p.surplus >= 0 ? 'pos' : 'neg'}`}>{formatEUR(p.surplus)}</td>
                 </tr>
               ))}
               {persons.length === 0 && (
-                <tr><td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 24 }}>
                   Noch keine Personen – lege unter „Meine Daten" Privatkonten mit Inhaber an.
                 </td></tr>
               )}
@@ -177,7 +189,7 @@ export default function Overview({ data, onSaveOrders }) {
           </table>
         </div>
         <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-          Gesamtkosten = Summe der Anteile jeder Person an allen Fixkosten/Abos (gemäß Aufteilung).
+          Kosten = Anteil an Fixkosten/Abos · Sparen = Anteil an Rücklagen · Überschuss = Einkommen − Kosten − Sparen.
         </p>
       </div>
 

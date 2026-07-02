@@ -51,6 +51,7 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
                   <select value={o.kind} onChange={(e) => set(o.id, 'kind', e.target.value)}>
                     <option value="fixed">Fixkosten</option>
                     <option value="subscription">Abo</option>
+                    <option value="savings">Sparen</option>
                   </select>
                 </td>
                 <td className="num"><input type="number" min="1" max="31" value={o.executionDay} onChange={(e) => set(o.id, 'executionDay', e.target.value)} /></td>

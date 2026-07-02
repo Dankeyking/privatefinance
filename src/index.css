@@ -484,6 +484,7 @@ select, .btn {
 
 .pill.fix { background: #e0edff; color: #1d4ed8; }
 .pill.sub { background: #fce7f3; color: #be185d; }
+.pill.sav { background: #dcfce7; color: #15803d; }
 .pill.umbuchung { background: #e0e7ff; color: #4338ca; }
 
 .hbars { display: flex; flex-direction: column; gap: 10px; }
@@ -493,11 +494,13 @@ select, .btn {
 .hbar-fill { height: 100%; }
 .hbar-fill.fix { background: var(--accent); }
 .hbar-fill.sub { background: #db2777; }
+.hbar-fill.sav { background: #16a34a; }
 .hbar-value { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
 .legend-dot.fix { background: var(--accent); }
 .legend-dot.sub { background: #db2777; }
+.legend-dot.sav { background: #16a34a; }
 
 .joint-picker { font-size: 13px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
 
