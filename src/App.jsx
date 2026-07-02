@@ -55,6 +55,9 @@ export default function App() {
   function handleSaveManual(next) {
     setManual(saveManualData(next))
   }
+  function handleSaveOrders(orders) {
+    setManual(saveManualData({ ...manual, standingOrders: orders }))
+  }
   function handleResetManual() {
     setManual(clearManualData())
   }
@@ -91,7 +94,7 @@ export default function App() {
       />
 
       <main className="content">
-        {page === 'overview' && <Overview data={data} overrides={overrides} />}
+        {page === 'overview' && <Overview data={data} onSaveOrders={handleSaveOrders} />}
         {page === 'recurring' && (
           <StandingOrders data={data} overrides={overrides} onSetCategory={handleSetCategory} />
         )}

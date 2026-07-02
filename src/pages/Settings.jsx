@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { CATEGORIES } from '../lib/categories.js'
+import RecurringEditor from '../components/RecurringEditor.jsx'
+import { orderToForm, formToOrder, newOrderId } from '../lib/orderForm.js'
 
 const RHYTHMS = [
   { id: 'monthly', label: 'monatlich' },
@@ -8,26 +9,7 @@ const RHYTHMS = [
 ]
 
 let idc = 0
-const newId = () => `m${Date.now()}${idc++}`
-
-function localISO(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function nextExec(day) {
-  const t = new Date()
-  const d = new Date(t.getFullYear(), t.getMonth(), Number(day) || 1)
-  if (d <= t) d.setMonth(d.getMonth() + 1)
-  return localISO(d)
-}
-
-// Aufteilung aus gespeichertem split-Objekt in Formularfelder zerlegen.
-function splitToForm(split = { mode: 'even' }) {
-  return {
-    splitMode: split.mode || 'even',
-    splitPerson: split.person || '',
-    splitShares: { ...(split.shares || {}) },
-  }
-}
+const newId = () => `s${Date.now()}${idc++}`
 
 export default function Settings({ data, manual, onSave, onReset }) {
   const seed = () => ({
@@ -38,11 +20,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
       id: i.id || newId(), name: i.name || '', amount: i.amount ?? 0, rhythm: i.rhythm || 'monthly',
       accountId: i.accountId || '', executionDay: i.executionDay || 1,
     })),
-    orders: (manual.standingOrders ?? data.standingOrders ?? []).map((o) => ({
-      id: o.id || newId(), recipient: o.recipient || '', amount: o.amount ?? 0, rhythm: o.rhythm || 'monthly',
-      accountId: o.accountId || '', category: o.category || 'Sonstiges', kind: o.kind || 'fixed', executionDay: o.executionDay || 1,
-      ...splitToForm(o.split),
-    })),
+    orders: (manual.standingOrders ?? data.standingOrders ?? []).map(orderToForm),
   })
 
   const [form, setForm] = useState(seed)
@@ -56,25 +34,11 @@ export default function Settings({ data, manual, onSave, onReset }) {
   const setRow = (key, id, field, value) =>
     up({ [key]: form[key].map((r) => (r.id === id ? { ...r, [field]: value } : r)) })
   const delRow = (key, id) => up({ [key]: form[key].filter((r) => r.id !== id) })
-  const setShare = (id, person, value) =>
-    up({ orders: form.orders.map((r) => (r.id === id ? { ...r, splitShares: { ...r.splitShares, [person]: value } } : r)) })
 
   const addIncome = () =>
     up({ incomes: [...form.incomes, { id: newId(), name: 'Gehalt', amount: 0, rhythm: 'monthly', accountId: personalAccts[0]?.id || accounts[0]?.id || '', executionDay: 1 }] })
-  const addOrder = (kind) =>
-    up({ orders: [...form.orders, { id: newId(), recipient: '', amount: 0, rhythm: 'monthly', accountId: accounts.find((a) => a.type === 'joint')?.id || accounts[0]?.id || '', category: 'Sonstiges', kind, executionDay: 1, splitMode: 'even', splitPerson: persons[0] || '', splitShares: {} }] })
   const addAccount = (type) =>
     up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0 }] })
-
-  function buildSplit(o) {
-    if (o.splitMode === 'single') return { mode: 'single', person: o.splitPerson || persons[0] || '' }
-    if (o.splitMode === 'percent' || o.splitMode === 'amount') {
-      const shares = {}
-      persons.forEach((p) => { shares[p] = Number(o.splitShares?.[p]) || 0 })
-      return { mode: o.splitMode, shares }
-    }
-    return { mode: 'even' }
-  }
 
   function save() {
     const payload = {
@@ -85,12 +49,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
       incomes: form.incomes.map((i) => ({
         ...i, amount: Number(i.amount) || 0, executionDay: Number(i.executionDay) || 1,
       })),
-      standingOrders: form.orders.map((o) => ({
-        id: o.id, recipient: o.recipient, amount: Number(o.amount) || 0, rhythm: o.rhythm,
-        accountId: o.accountId, category: o.category, kind: o.kind === 'subscription' ? 'subscription' : 'fixed',
-        executionDay: Number(o.executionDay) || 1, split: buildSplit(o),
-        nextExecution: nextExec(o.executionDay), monthInterval: o.rhythm === 'yearly' ? 12 : o.rhythm === 'quarterly' ? 3 : 1,
-      })),
+      standingOrders: form.orders.map((o) => formToOrder(o, persons)),
     }
     onSave(payload)
     setSaved(true)
@@ -187,72 +146,12 @@ export default function Settings({ data, manual, onSave, onReset }) {
       {/* Fixkosten & Abos */}
       <div className="card mt">
         <h2>Fixkosten & Abos</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th>
-                <th>Kategorie</th><th>Art</th><th className="num">Tag</th><th>Aufteilung</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {form.orders.map((o) => (
-                <tr key={o.id}>
-                  <td><input value={o.recipient} onChange={(e) => setRow('orders', o.id, 'recipient', e.target.value)} /></td>
-                  <td className="num"><input type="number" value={o.amount} onChange={(e) => setRow('orders', o.id, 'amount', e.target.value)} /></td>
-                  <td>
-                    <select value={o.rhythm} onChange={(e) => setRow('orders', o.id, 'rhythm', e.target.value)}>
-                      {RHYTHMS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <select value={o.accountId} onChange={(e) => setRow('orders', o.id, 'accountId', e.target.value)}>
-                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <select value={o.category} onChange={(e) => setRow('orders', o.id, 'category', e.target.value)}>
-                      {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <select value={o.kind} onChange={(e) => setRow('orders', o.id, 'kind', e.target.value)}>
-                      <option value="fixed">Fixkosten</option>
-                      <option value="subscription">Abo</option>
-                    </select>
-                  </td>
-                  <td className="num"><input type="number" min="1" max="31" value={o.executionDay} onChange={(e) => setRow('orders', o.id, 'executionDay', e.target.value)} /></td>
-                  <td>
-                    <div className="split-cell">
-                      <select value={o.splitMode} onChange={(e) => setRow('orders', o.id, 'splitMode', e.target.value)}>
-                        <option value="even">Gleich (alle)</option>
-                        <option value="single">Eine Person</option>
-                        <option value="percent">Prozent</option>
-                        <option value="amount">Beträge €</option>
-                      </select>
-                      {o.splitMode === 'single' && (
-                        <select value={o.splitPerson} onChange={(e) => setRow('orders', o.id, 'splitPerson', e.target.value)}>
-                          {persons.map((p) => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                      )}
-                      {(o.splitMode === 'percent' || o.splitMode === 'amount') &&
-                        persons.map((p) => (
-                          <label key={p} className="split-share">
-                            <span>{p}</span>
-                            <input type="number" value={o.splitShares?.[p] ?? ''} onChange={(e) => setShare(o.id, p, e.target.value)} />
-                            <span>{o.splitMode === 'percent' ? '%' : '€'}</span>
-                          </label>
-                        ))}
-                    </div>
-                  </td>
-                  <td className="num"><button className="btn-del" onClick={() => delRow('orders', o.id)}>✕</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <button className="btn add" onClick={() => addOrder('fixed')}>+ Fixkosten</button>
-        <button className="btn add" onClick={() => addOrder('subscription')}>+ Abo</button>
+        <RecurringEditor
+          accounts={form.accounts}
+          persons={persons}
+          orders={form.orders}
+          onChange={(next) => up({ orders: next })}
+        />
       </div>
 
       <div className="settings-actions">

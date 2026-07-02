@@ -1,21 +1,34 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import KpiCard from '../components/KpiCard.jsx'
 import SankeyFlow from '../components/charts/SankeyFlow.jsx'
+import RecurringEditor from '../components/RecurringEditor.jsx'
 import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import { upcomingPayments } from '../lib/selectors.js'
+import { orderToForm, formToOrder } from '../lib/orderForm.js'
 import {
   householdSummary,
   monthlyByAccount,
   personSummary,
   accountFlows,
+  personsFromAccounts,
 } from '../lib/recurring.js'
 
-export default function Overview({ data }) {
+export default function Overview({ data, onSaveOrders }) {
   const summary = useMemo(() => householdSummary(data), [data])
   const byAccount = useMemo(() => monthlyByAccount(data), [data])
   const persons = useMemo(() => personSummary(data), [data])
   const flows = useMemo(() => accountFlows(data), [data])
   const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
+
+  // Inline-Editor: eigener Entwurf (bewahrt Roh-Eingaben), speichert automatisch.
+  const personNames = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
+  const [orders, setOrders] = useState(() => (data.standingOrders || []).map(orderToForm))
+  const [editing, setEditing] = useState(false)
+
+  const handleEditorChange = (next) => {
+    setOrders(next)
+    onSaveOrders?.(next.map((o) => formToOrder(o, personNames)))
+  }
 
   return (
     <div>
@@ -30,13 +43,42 @@ export default function Overview({ data }) {
         <KpiCard label="Überschuss / Monat" value={summary.surplus} tone={summary.surplus >= 0 ? 'pos' : 'neg'} />
       </div>
 
+      {/* Inline-Editor: Kosten & Abos direkt hier bearbeiten */}
+      <div className="card mt editor-card">
+        <div className="editor-head">
+          <div>
+            <h2 style={{ margin: 0 }}>Kosten &amp; Abos</h2>
+            <span className="muted" style={{ fontSize: 13 }}>
+              {orders.length} Posten · {formatEUR(summary.totalCosts)}/Monat
+            </span>
+          </div>
+          <button className={editing ? 'btn-primary' : 'btn'} onClick={() => setEditing((v) => !v)}>
+            {editing ? '✓ Fertig' : '✎ Bearbeiten'}
+          </button>
+        </div>
+        {editing && (
+          <>
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 14px' }}>
+              Änderungen werden automatisch gespeichert (nur in diesem Browser) und fließen sofort in
+              alle Auswertungen unten ein.
+            </p>
+            <RecurringEditor
+              accounts={data.accounts}
+              persons={personNames}
+              orders={orders}
+              onChange={handleEditorChange}
+            />
+          </>
+        )}
+      </div>
+
       {/* Geldfluss zwischen den Konten */}
       <h2 className="section-title mt">Geldfluss zwischen den Konten <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(pro Monat)</span></h2>
       <div className="card">
         {flows.flows.length === 0 ? (
           <p className="muted">
-            Noch keine Verteilung hinterlegt. Lege unter „Meine Daten" fest, wer nach dem Gehalt
-            wie viel von einem Privatkonto auf ein gemeinsames Konto bucht.
+            Noch keine Aufteilung auf Personen hinterlegt. Trage oben unter „Kosten &amp; Abos"
+            Posten mit Aufteilung ein – dann zeigt sich hier, wer wie viel auf welches Konto bucht.
           </p>
         ) : (
           <div className="grid flow-row">
