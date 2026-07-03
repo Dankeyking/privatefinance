@@ -38,6 +38,7 @@ export default function App() {
   const [overrides, setOverrides] = useState({})
   const [manual, setManual] = useState({})
   const [navOpen, setNavOpen] = useState(false)
+  const [pageParams, setPageParams] = useState(null)
   const [theme, setTheme] = useState(initialTheme)
 
   useEffect(() => {
@@ -86,8 +87,11 @@ export default function App() {
   function handleResetManual() {
     setManual(clearManualData())
   }
-  function navigate(p) {
+  // Navigation, optional mit Parametern (z. B. Vorfilter für „Kosten & Abos":
+  // { accountId, category, person, kind, search }).
+  function navigate(p, params = null) {
     setPage(p)
+    setPageParams(params)
     setNavOpen(false)
   }
 
@@ -123,9 +127,9 @@ export default function App() {
       <main className="content" key={theme}>
         {page === 'overview' && <Overview data={data} onNavigate={navigate} />}
         {page === 'recurring' && (
-          <StandingOrders data={data} onSaveOrders={handleSaveOrders} />
+          <StandingOrders data={data} onSaveOrders={handleSaveOrders} initial={pageParams} />
         )}
-        {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
+        {page === 'analytics' && <Analytics data={data} overrides={overrides} onNavigate={navigate} />}
         {page === 'accounts' && <Accounts data={data} onSaveAccounts={handleSaveAccounts} />}
         {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}
         {page === 'categories' && (

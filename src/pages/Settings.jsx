@@ -10,6 +10,7 @@ const RHYTHMS = [
   { id: 'quarterly', label: 'vierteljährlich' },
   { id: 'yearly', label: 'jährlich' },
 ]
+const RHYTHM_RANK = { monthly: 0, quarterly: 1, yearly: 2 }
 
 let idc = 0
 const newId = () => `s${Date.now()}${idc++}`
@@ -41,18 +42,30 @@ export default function Settings({ data, manual, onSave, onReset }) {
   const personalAccts = accounts.filter((a) => a.type === 'personal')
   const persons = [...new Set(personalAccts.map((a) => a.owner || a.name).filter(Boolean))]
 
+  // Sortierwert je Spalte: Beträge numerisch, Rhythmus nach Häufigkeit,
+  // Konto-Spalten nach Kontonamen, Rest alphabetisch.
   const numericKeys = new Set(['balance', 'goal', 'amount', 'executionDay'])
+  const accNameById = (id) => accounts.find((a) => a.id === id)?.name || ''
+  const sortValue = (r, k) => {
+    if (numericKeys.has(k)) return parseAmountDE(r[k])
+    if (k === 'rhythm') return RHYTHM_RANK[r.rhythm] ?? 0
+    if (k === 'accountId' || k === 'fromAccountId' || k === 'toAccountId') return accNameById(r[k])
+    return r[k] || ''
+  }
   const sortedAccounts = useMemo(
-    () => sortRows(form.accounts, acctSort.key, acctSort.dir, (r, k) => (numericKeys.has(k) ? parseAmountDE(r[k]) : r[k] || '')),
+    () => sortRows(form.accounts, acctSort.key, acctSort.dir, sortValue),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [form.accounts, acctSort],
   )
   const sortedIncomes = useMemo(
-    () => sortRows(form.incomes, incomeSort.key, incomeSort.dir, (r, k) => (numericKeys.has(k) ? parseAmountDE(r[k]) : r[k] || '')),
-    [form.incomes, incomeSort],
+    () => sortRows(form.incomes, incomeSort.key, incomeSort.dir, sortValue),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [form.incomes, incomeSort, form.accounts],
   )
   const sortedTransfers = useMemo(
-    () => sortRows(form.transfers, transferSort.key, transferSort.dir, (r, k) => (numericKeys.has(k) ? parseAmountDE(r[k]) : r[k] || '')),
-    [form.transfers, transferSort],
+    () => sortRows(form.transfers, transferSort.key, transferSort.dir, sortValue),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [form.transfers, transferSort, form.accounts],
   )
 
   const up = (patch) => { setForm((f) => ({ ...f, ...patch })); setSaved(false) }
@@ -118,7 +131,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
                 <th>Farbe</th>
                 <SortTh label="Name" sortKey="name" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, false))} />
                 <SortTh label="Inhaber" sortKey="owner" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, false))} />
-                <th>Typ</th>
+                <SortTh label="Typ" sortKey="type" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, false))} />
                 <SortTh label="Saldo (€)" sortKey="balance" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, true))} className="num" />
                 <SortTh label="Sparziel (€)" sortKey="goal" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, true))} className="num" />
                 <th></th>
@@ -157,8 +170,8 @@ export default function Settings({ data, manual, onSave, onReset }) {
               <tr>
                 <SortTh label="Bezeichnung" sortKey="name" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, false))} />
                 <SortTh label="Betrag" sortKey="amount" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, true))} className="num" />
-                <th>Rhythmus</th>
-                <th>Konto</th>
+                <SortTh label="Rhythmus" sortKey="rhythm" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, false))} />
+                <SortTh label="Konto" sortKey="accountId" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, false))} />
                 <SortTh label="Tag" sortKey="executionDay" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, true))} className="num" />
                 <th></th>
               </tr>
@@ -211,7 +224,10 @@ export default function Settings({ data, manual, onSave, onReset }) {
               <tr>
                 <SortTh label="Bezeichnung" sortKey="label" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, false))} />
                 <SortTh label="Betrag" sortKey="amount" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, true))} className="num" />
-                <th>von</th><th>nach</th><th>Rhythmus</th><th></th>
+                <SortTh label="von" sortKey="fromAccountId" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, false))} />
+                <SortTh label="nach" sortKey="toAccountId" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, false))} />
+                <SortTh label="Rhythmus" sortKey="rhythm" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, false))} />
+                <th></th>
               </tr>
             </thead>
             <tbody>

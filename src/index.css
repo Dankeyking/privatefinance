@@ -416,13 +416,17 @@ select, .btn {
 .rule-card h3 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 .kw { display: inline-block; background: var(--surface-2); border-radius: 6px; padding: 2px 8px; font-size: 12px; margin: 0 4px 4px 0; }
 
-/* --- Sankey / Flow-Zeile -------------------------------------------------- */
-.grid.flow-row { grid-template-columns: 1.35fr minmax(340px, 1fr); align-items: start; }
+/* --- Sankey / Flow --------------------------------------------------------- */
 .chart-box.sankey { height: 420px; }
 
-/* Fluss-Liste rechts neben dem Sankey: eine Zeile je Fluss, klickbar,
+/* Fluss-Liste unter dem Sankey: eine Kachel je Fluss, klickbar,
    Auswahl wird im Diagramm gespiegelt (und umgekehrt). */
-.flow-list { display: flex; flex-direction: column; gap: 7px; }
+.flow-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
 .flow-item {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   width: 100%; padding: 10px 13px;
@@ -445,6 +449,7 @@ select, .btn {
 .flow-arrow { color: var(--text-muted); font-weight: 600; }
 .flow-amount { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .flow-total {
+  grid-column: 1 / -1;
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   padding: 10px 13px 2px; margin-top: 2px;
   border-top: 1px solid var(--border);
@@ -639,7 +644,6 @@ select, .btn {
   }
 
   .content { padding: 18px 16px; }
-  .grid.flow-row { grid-template-columns: 1fr; }
   .chart-box.sankey { height: 300px; }
   .page-header h1 { font-size: 22px; }
 }
@@ -923,3 +927,27 @@ tr:hover .ct-del { opacity: 1; }
 /* Deckungs-Hinweis auf Konto-Karten (Saldo < Monatslast) */
 .cover-hint { margin-top: 8px; font-size: 12px; border-radius: 6px; padding: 6px 8px; line-height: 1.35; }
 .cover-hint.warn { background: var(--warn-soft); color: var(--warn); }
+
+/* =============================================================================
+   Klickbare Elemente (Navigation per Klick) + Donut-Drilldown
+   ============================================================================= */
+.clickable { cursor: pointer; }
+.acct.clickable:hover { border-color: var(--accent); }
+tr.clickable td { transition: background 0.12s; }
+.upcoming li.clickable { transition: background 0.12s, border-color 0.12s; }
+.upcoming li.clickable:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.abo-row.clickable { border-radius: var(--radius-sm); padding-left: 8px; padding-right: 8px; margin: 0 -8px; transition: background 0.12s; }
+.abo-row.clickable:hover { background: var(--surface-hover); }
+.hbar-row.clickable { border-radius: 8px; padding: 4px 6px; margin: -4px -6px; transition: background 0.12s; }
+.hbar-row.clickable:hover { background: var(--surface-hover); }
+.hbar-row.clickable:hover .hbar-label { color: var(--accent); }
+
+/* Drilldown unterm Kategorie-Donut */
+.donut-drill { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.donut-drill .acct-dot { margin-right: 7px; }
+.drill-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 8px 2px; font-size: 13.5px;
+  border-bottom: 1px dashed var(--border);
+}
+.drill-row:last-of-type { border-bottom: none; }

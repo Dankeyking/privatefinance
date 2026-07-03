@@ -41,17 +41,15 @@ export default function Overview({ data, onNavigate }) {
               Posten mit Aufteilung ein – dann zeigt sich hier, wer wie viel auf welches Konto bucht.
             </p>
           ) : (
-            <div className="grid flow-row">
-              <div>
-                <SankeyFlow
-                  flows={flows.flows}
-                  nodeColors={flows.nodeColors}
-                  columns={flows.columns}
-                  labels={flows.labels}
-                  selected={selFlow}
-                  onSelect={setSelFlow}
-                />
-              </div>
+            <div>
+              <SankeyFlow
+                flows={flows.flows}
+                nodeColors={flows.nodeColors}
+                columns={flows.columns}
+                labels={flows.labels}
+                selected={selFlow}
+                onSelect={setSelFlow}
+              />
               <div>
                 <div className="flow-list">
                   {flows.rows.map((f, i) => (
@@ -96,8 +94,10 @@ export default function Overview({ data, onNavigate }) {
         <h2 className="section-title">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(monatlich aufs Konto buchen)</span></h2>
         <div className="grid accounts">
           {byAccount.map(({ account, fixed, subscription, savings, reserve, total }) => (
-            <div className={`card acct ${account.type}`} key={account.id}
-              style={{ '--acct-color': accountColor(account, data.accounts) }}>
+            <div className={`card acct clickable ${account.type}`} key={account.id}
+              style={{ '--acct-color': accountColor(account, data.accounts) }}
+              onClick={() => onNavigate?.('recurring', { accountId: account.id })}
+              title="Klicken: Posten dieses Kontos in Kosten & Abos anzeigen">
               <div className="acct-type">{account.type === 'joint' ? 'Gemeinsam' : 'Privat'}</div>
               <div className="acct-name">{account.name}</div>
               <div className="acct-balance">
@@ -141,7 +141,8 @@ export default function Overview({ data, onNavigate }) {
               </thead>
               <tbody>
                 {persons.map((p) => (
-                  <tr key={p.person}>
+                  <tr key={p.person} className="clickable" title="Klicken: Posten dieser Person anzeigen"
+                    onClick={() => onNavigate?.('recurring', { person: p.person })}>
                     <td data-label="Person"><strong>{p.person}</strong></td>
                     <td className="num" data-label="Kosten">{formatEUR(p.costs)}</td>
                     <td className="num" data-label="Sparen">{formatEUR(p.savings)}</td>
@@ -171,7 +172,8 @@ export default function Overview({ data, onNavigate }) {
         ) : (
           <ul className="upcoming">
             {upcoming.map((u) => (
-              <li key={u.id}>
+              <li key={u.id} className="clickable" title="Klicken: Posten in Kosten & Abos öffnen"
+                onClick={() => onNavigate?.('recurring', { search: u.recipient })}>
                 <div className="up-main">
                   <span className="up-recipient">{u.recipient}</span>
                   <span className="up-amount">{formatEUR(u.amount)}</span>

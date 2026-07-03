@@ -91,6 +91,12 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
 ## Seiten (`src/pages/`, Routing in `src/App.jsx` per `page`-State)
 Sidebar-Navigation in Gruppen (Übersicht · Planen: Konten, Kosten & Abos · Auswerten:
 Analyse · Daten: CSV-Import, Kategorien, Meine Daten).
+`App.navigate(page, params)` kann Vorfilter an „Kosten & Abos" übergeben
+(`{ accountId, category, person, kind, search }` → `initial`-Prop von StandingOrders).
+**Klick-Navigation**: Konto-Karten/-Balken, Personen-Zeilen, anstehende Posten, Abo-Radar-
+und Auslaufend-Zeilen springen gefiltert dorthin; Donut-Segmente öffnen einen Drilldown
+(Einzelposten) direkt in der Karte. Geldfluss: Sankey (volle Breite) + klickbare
+Fluss-Liste darunter mit bidirektionalem Highlighting.
 Übersicht (**reines Dashboard**: KPIs mit Icons, Geldfluss, Kosten je Konto/Person,
 anstehende Posten; Bearbeiten-Button führt zu „Kosten & Abos"; Abschnitte per Drag & Drop
 sortierbar) · Konten (Salden/Sparziele **klick-editierbar**, Sortier-Chips,

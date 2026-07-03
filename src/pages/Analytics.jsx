@@ -18,8 +18,9 @@ const splitPersonLabel = (o) => {
   return 'anteilig'
 }
 
-export default function Analytics({ data, overrides }) {
+export default function Analytics({ data, overrides, onNavigate }) {
   const [includeSavings, setIncludeSavings] = useState(false)
+  const [selCat, setSelCat] = useState(null) // Kategorie-Drilldown unterm Donut
   const accById = useMemo(() => Object.fromEntries((data.accounts || []).map((a) => [a.id, a])), [data.accounts])
   const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER)
 
@@ -30,11 +31,22 @@ export default function Analytics({ data, overrides }) {
   const donut = useMemo(() => {
     const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
     return {
+      ids: entries.map((e) => e[0]),
       labels: entries.map((e) => categoryLabel(e[0])),
       values: entries.map((e) => Number(e[1].toFixed(2))),
       colors: entries.map((e) => categoryColor(e[0])),
     }
   }, [catTotals])
+
+  // Posten der angeklickten Donut-Kategorie (Drilldown).
+  const drill = useMemo(() => {
+    if (!selCat) return null
+    const rows = (data.standingOrders || [])
+      .filter((o) => isOrderActive(o) && effectiveCategoryOf(o, overrides) === selCat)
+      .map((o) => ({ id: o.id, recipient: o.recipient || '—', monthly: toMonthly(o.amount, o.rhythm) }))
+      .sort((a, b) => b.monthly - a.monthly)
+    return { rows, total: rows.reduce((s, r) => s + r.monthly, 0) }
+  }, [selCat, data.standingOrders, overrides])
 
   const persons = useMemo(() => personSummary(data), [data])
   const personBars = {
@@ -106,7 +118,34 @@ export default function Analytics({ data, overrides }) {
             Sparen einbeziehen
           </label>
         </div>
-        <CategoryDonut labels={donut.labels} values={donut.values} colors={donut.colors} />
+        <CategoryDonut
+          labels={donut.labels}
+          values={donut.values}
+          colors={donut.colors}
+          onSelect={(i) => setSelCat((cur) => (donut.ids[i] === cur ? null : donut.ids[i]))}
+        />
+        {drill && (
+          <div className="donut-drill">
+            <div className="editor-head">
+              <strong style={{ fontSize: 14 }}>
+                <span className="acct-dot" style={{ background: categoryColor(selCat) }} />
+                {categoryLabel(selCat)} · {formatEUR(drill.total)}/Monat
+              </strong>
+              <button className="btn-del" onClick={() => setSelCat(null)} title="Drilldown schließen">✕</button>
+            </div>
+            {drill.rows.map((r) => (
+              <div className="drill-row" key={r.id}>
+                <span>{r.recipient}</span>
+                <span className="flow-amount">{formatEUR(r.monthly)}</span>
+              </div>
+            ))}
+            <button className="link-btn" style={{ marginTop: 10 }}
+              onClick={() => onNavigate?.('recurring', { category: selCat })}>
+              In „Kosten &amp; Abos" öffnen →
+            </button>
+          </div>
+        )}
+        {!drill && <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Tipp: Klicke ein Segment für die Einzelposten.</p>}
       </div>
     ),
     personBar: (
@@ -134,7 +173,8 @@ export default function Analytics({ data, overrides }) {
         ) : (
           <div>
             {abos.rows.map((r) => (
-              <div className="abo-row" key={r.id}>
+              <div className="abo-row clickable" key={r.id} title="Klicken: in Kosten & Abos öffnen"
+                onClick={() => onNavigate?.('recurring', { search: r.recipient })}>
                 <div className="abo-main">
                   <div className="abo-name">
                     <span className="acct-dot" style={{ background: r.color }} />
@@ -176,7 +216,8 @@ export default function Analytics({ data, overrides }) {
         ) : (
           <div>
             {ending.rows.map((r) => (
-              <div className="abo-row" key={r.id}>
+              <div className="abo-row clickable" key={r.id} title="Klicken: in Kosten & Abos öffnen"
+                onClick={() => onNavigate?.('recurring', { search: r.recipient })}>
                 <div className="abo-main">
                   <div className="abo-name">
                     {r.recipient}
@@ -202,7 +243,8 @@ export default function Analytics({ data, overrides }) {
         <h2>Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat, inkl. Sparen)</span></h2>
         <div className="hbars">
           {byAccount.map(({ account, fixed, subscription, savings, total }) => (
-            <div className="hbar-row" key={account.id}>
+            <div className="hbar-row clickable" key={account.id} title="Klicken: Posten dieses Kontos anzeigen"
+              onClick={() => onNavigate?.('recurring', { accountId: account.id })}>
               <div className="hbar-label">{account.name}</div>
               <div className="hbar-track">
                 <div className="hbar-fill fix" style={{ width: `${(fixed / maxAcc) * 100}%` }} title={`Fixkosten ${formatEUR(fixed)}`} />
