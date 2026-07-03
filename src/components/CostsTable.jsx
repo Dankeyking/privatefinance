@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CategoryTag from './CategoryTag.jsx'
+import SortTh from './SortTh.jsx'
 import { makeNewOrder, formToOrder, parseAmountDE } from '../lib/orderForm.js'
 import { toMonthly, formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
 import { personShareMonthly } from '../lib/recurring.js'
 import { accountColor } from '../lib/accountColors.js'
+import { categoryLabel } from '../lib/categoryStore.js'
+import { sortRows, nextSortState } from '../lib/sorting.js'
 
 const RHYTHMS = ['monthly', 'quarterly', 'yearly']
+const RHYTHM_RANK = { monthly: 0, quarterly: 1, yearly: 2 }
 const KIND_LABEL = { fixed: 'Fixkosten', subscription: 'Abo', savings: 'Sparen' }
 const kindClass = (k) => (k === 'savings' ? 'sav' : k === 'subscription' ? 'sub' : 'fix')
 
@@ -14,6 +18,7 @@ const kindClass = (k) => (k === 'savings' ? 'sav' : k === 'subscription' ? 'sub'
 export default function CostsTable({ accounts, persons, orders, onChange, filter = () => true }) {
   const visible = orders.filter(filter)
   const [edit, setEdit] = useState(null) // { id, field }
+  const [sort, setSort] = useState({ key: null, dir: 'asc' })
   const cellRef = useRef(null)
 
   useEffect(() => {
@@ -47,6 +52,23 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
     return parts.join(' · ') || '—'
   }
 
+  const sorted = useMemo(() => {
+    if (!sort.key) return visible
+    return sortRows(visible, sort.key, sort.dir, (o, key) => {
+      switch (key) {
+        case 'amount': return parseAmountDE(o.amount)
+        case 'rhythm': return RHYTHM_RANK[o.rhythm] ?? 0
+        case 'kind': return KIND_LABEL[o.kind] || 'Fixkosten'
+        case 'split': return splitText(o)
+        case 'accountId': return accName(o.accountId)
+        case 'category': return categoryLabel(o.category)
+        default: return o[key] || ''
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, sort, accounts, persons])
+  const onSort = (key, numeric) => setSort((s) => nextSortState(s, key, numeric))
+
   // Display-Zelle (Klick öffnet Editor)
   const Disp = ({ id, field, children, empty }) => (
     <span className={`ct-edit${empty ? ' empty' : ''}`} onClick={open(id, field)} title="Klicken zum Bearbeiten">
@@ -60,13 +82,18 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
         <table className="costs-table resp-table">
           <thead>
             <tr>
-              <th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th>
-              <th>Art</th><th>Aufteilung / Monat</th>
-              <th>Konto</th><th>Kategorie</th><th></th>
+              <SortTh label="Empfänger" sortKey="recipient" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Betrag" sortKey="amount" sort={sort} onSort={(k) => onSort(k, true)} className="num" />
+              <SortTh label="Rhythmus" sortKey="rhythm" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Art" sortKey="kind" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Aufteilung / Monat" sortKey="split" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Konto" sortKey="accountId" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Kategorie" sortKey="category" sort={sort} onSort={(k) => onSort(k, false)} />
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {visible.map((o) => (
+            {sorted.map((o) => (
               <tr key={o.id}>
                 {/* Empfänger */}
                 <td data-label="Empfänger">
