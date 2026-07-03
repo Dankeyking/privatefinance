@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import CostsTable from '../components/CostsTable.jsx'
-import { CATEGORIES, SAVINGS_CATEGORY } from '../lib/categories.js'
+import { SAVINGS_CATEGORY } from '../lib/categories.js'
+import { getCategories } from '../lib/categoryStore.js'
 import { toMonthly, formatEUR } from '../lib/normalize.js'
 import { orderToForm, formToOrder, parseAmountDE } from '../lib/orderForm.js'
 import { personsFromAccounts } from '../lib/recurring.js'
@@ -26,6 +27,7 @@ function involves(o, person) {
 export default function StandingOrders({ data, onSaveOrders }) {
   const persons = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
   const accounts = data.accounts || []
+  const categories = getCategories()
   const [orders, setOrders] = useState(() => (data.standingOrders || []).map(orderToForm))
 
   const [fKind, setFKind] = useState('all')
@@ -105,7 +107,7 @@ export default function StandingOrders({ data, onSaveOrders }) {
             Kategorie
             <select value={fCategory} onChange={(e) => setFCategory(e.target.value)}>
               <option value="all">Alle Kategorien</option>
-              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </label>
           {persons.length > 0 && (

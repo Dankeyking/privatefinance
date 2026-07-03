@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { CATEGORIES, categoryColor } from '../lib/categories.js'
+import { getCategories, categoryColor, categoryLabel } from '../lib/categoryStore.js'
 
 // Inline editierbares Kategorie-Tag. Klick öffnet die Auswahl.
 // `isOverride` markiert manuell gesetzte Kategorien.
 export default function CategoryTag({ value, isOverride, onChange }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const categories = getCategories()
 
   useEffect(() => {
     if (!open) return
@@ -25,13 +26,13 @@ export default function CategoryTag({ value, isOverride, onChange }) {
         onClick={() => setOpen((o) => !o)}
         title="Kategorie ändern"
       >
-        {value}
+        {categoryLabel(value)}
         {isOverride && <span title="manuell gesetzt">✎</span>}
         <span className="caret">▾</span>
       </button>
       {open && (
         <div className="menu">
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button
               key={c.id}
               type="button"

@@ -60,6 +60,9 @@ export default function App() {
   function handleSaveOrders(orders) {
     setManual(saveManualData({ ...manual, standingOrders: orders }))
   }
+  function handleSaveAccounts(accounts) {
+    setManual(saveManualData({ ...manual, accounts }))
+  }
   function handleResetManual() {
     setManual(clearManualData())
   }
@@ -101,7 +104,7 @@ export default function App() {
           <StandingOrders data={data} onSaveOrders={handleSaveOrders} />
         )}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} />}
-        {page === 'accounts' && <Accounts data={data} />}
+        {page === 'accounts' && <Accounts data={data} onSaveAccounts={handleSaveAccounts} />}
         {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}
         {page === 'categories' && (
           <Categories

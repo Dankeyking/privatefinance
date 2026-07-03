@@ -682,3 +682,55 @@ tr:hover .ct-del { opacity: 1; }
   .chart-box { height: 260px; }
   .chart-box.sankey { height: 320px; }
 }
+
+/* =============================================================================
+   Inline-Betrag (Konten), Sortierung, Drag & Drop, Sparziel-Button
+   ============================================================================= */
+
+/* Inline-Betrag (Kontostand/Sparziel) */
+.inline-amount-edit input {
+  font: inherit; font-weight: inherit; width: 100%; min-width: 90px;
+  padding: 2px 8px; border: 1px solid var(--accent); border-radius: 7px;
+  background: #fff; color: var(--text);
+}
+.goal-edit { font-weight: 600; }
+.goal-edit.ct-edit { padding: 1px 6px; margin: -1px -6px; }
+.goal-add {
+  margin-top: 12px; width: 100%; background: transparent; border: 1px dashed var(--border);
+  color: var(--text-muted); font-size: 12px; font-weight: 600; padding: 7px; border-radius: 8px; cursor: pointer;
+}
+.goal-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* Sortier-Chips (Konten-Seite) */
+.sort-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sort-chip {
+  font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border);
+  background: #fff; color: var(--text-muted);
+}
+.sort-chip:hover { border-color: var(--border-strong); }
+.sort-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Sortierbare Tabellen-Header (Meine Daten, Fixkosten & Abos) */
+.sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
+.sortable-th:hover { color: var(--text); }
+.sort-arrow { color: var(--accent); }
+
+/* Drag & Drop Dashboard-Layout */
+.drag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; align-items: start; }
+.drag-grid .drag-card.full { grid-column: 1 / -1; }
+.drag-card { position: relative; padding-left: 26px; border-radius: var(--radius); transition: opacity 0.15s; }
+.drag-card.dragging { opacity: 0.45; }
+.drag-card.drag-over { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: var(--radius); }
+.drag-handle {
+  position: absolute; left: -2px; top: 2px; width: 22px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); font-size: 16px; cursor: grab; border-radius: 6px;
+  opacity: 0.5; transition: opacity 0.15s, background 0.15s;
+}
+.drag-handle:hover { opacity: 1; background: var(--surface-2); }
+.drag-handle:active { cursor: grabbing; }
+@media (max-width: 640px) {
+  .drag-grid { grid-template-columns: 1fr; }
+  .drag-card { padding-left: 22px; }
+}

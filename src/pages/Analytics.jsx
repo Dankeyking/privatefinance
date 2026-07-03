@@ -2,10 +2,14 @@ import { useMemo, useState } from 'react'
 import IncomeExpenseBar from '../components/charts/IncomeExpenseBar.jsx'
 import CategoryDonut from '../components/charts/CategoryDonut.jsx'
 import CostTreemap from '../components/charts/CostTreemap.jsx'
-import { categoryColor } from '../lib/categories.js'
+import DragCard from '../components/DragCard.jsx'
+import { categoryColor, categoryLabel } from '../lib/categoryStore.js'
 import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
 import { effectiveCategoryOf } from '../lib/selectors.js'
 import { monthlyByCategory, personSummary, monthlyByAccount, isSavings } from '../lib/recurring.js'
+import { useDragOrder } from '../lib/layout.js'
+
+const DEFAULT_ORDER = ['donut', 'personBar', 'treemap', 'abo', 'byAccount']
 
 const splitPersonLabel = (o) => {
   const m = o.split?.mode
@@ -17,6 +21,7 @@ const splitPersonLabel = (o) => {
 export default function Analytics({ data, overrides }) {
   const [includeSavings, setIncludeSavings] = useState(false)
   const accById = useMemo(() => Object.fromEntries((data.accounts || []).map((a) => [a.id, a])), [data.accounts])
+  const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER)
 
   const catTotals = useMemo(
     () => monthlyByCategory(data, overrides, { excludeSavings: !includeSavings }),
@@ -25,7 +30,7 @@ export default function Analytics({ data, overrides }) {
   const donut = useMemo(() => {
     const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
     return {
-      labels: entries.map((e) => e[0]),
+      labels: entries.map((e) => categoryLabel(e[0])),
       values: entries.map((e) => Number(e[1].toFixed(2))),
       colors: entries.map((e) => categoryColor(e[0])),
     }
@@ -51,7 +56,7 @@ export default function Analytics({ data, overrides }) {
       .filter((o) => !isSavings(o, overrides))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
-        return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: cat, color: categoryColor(cat) }
+        return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: categoryLabel(cat), color: categoryColor(cat) }
       })
       .filter((x) => x.value > 0)
   }, [data.standingOrders, overrides])
@@ -65,7 +70,7 @@ export default function Analytics({ data, overrides }) {
         const monthly = toMonthly(o.amount, o.rhythm)
         return {
           id: o.id, recipient: o.recipient || '—', monthly, yearly: monthly * 12,
-          category: cat, color: categoryColor(cat), rhythm: o.rhythm,
+          categoryLabel: categoryLabel(cat), color: categoryColor(cat), rhythm: o.rhythm,
           person: splitPersonLabel(o), account: accById[o.accountId]?.name || '',
         }
       })
@@ -73,40 +78,35 @@ export default function Analytics({ data, overrides }) {
     return { rows, totalYear: rows.reduce((s, r) => s + r.yearly, 0), max: Math.max(1, ...rows.map((r) => r.yearly)) }
   }, [data.standingOrders, overrides, accById])
 
-  return (
-    <div>
-      <div className="page-header">
-        <h1>Analyse</h1>
-        <p>Monatliche Kosten nach Kategorie, je Person und je Konto – plus Kosten-Treemap und Abo-Radar.</p>
-      </div>
-
-      <div className="grid charts-2">
-        <div className="card">
-          <div className="editor-head">
-            <h2 style={{ margin: 0 }}>
-              Kosten nach Kategorie <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat)</span>
-            </h2>
-            <label className="muted" style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input type="checkbox" checked={includeSavings} onChange={(e) => setIncludeSavings(e.target.checked)} />
-              Sparen einbeziehen
-            </label>
-          </div>
-          <CategoryDonut labels={donut.labels} values={donut.values} colors={donut.colors} />
+  const sections = {
+    donut: (
+      <div className="card">
+        <div className="editor-head">
+          <h2 style={{ margin: 0 }}>
+            Kosten nach Kategorie <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat)</span>
+          </h2>
+          <label className="muted" style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input type="checkbox" checked={includeSavings} onChange={(e) => setIncludeSavings(e.target.checked)} />
+            Sparen einbeziehen
+          </label>
         </div>
-        <div className="card">
-          <h2>Einkommen vs. Ausgaben je Person</h2>
-          <IncomeExpenseBar labels={personBars.labels} income={personBars.income} expenses={personBars.expenses} />
-        </div>
+        <CategoryDonut labels={donut.labels} values={donut.values} colors={donut.colors} />
       </div>
-
-      {/* Treemap */}
-      <div className="card mt">
+    ),
+    personBar: (
+      <div className="card">
+        <h2>Einkommen vs. Ausgaben je Person</h2>
+        <IncomeExpenseBar labels={personBars.labels} income={personBars.income} expenses={personBars.expenses} />
+      </div>
+    ),
+    treemap: (
+      <div className="card">
         <h2>Kosten-Treemap <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Kachelgröße = Monatsbetrag, Farbe = Kategorie)</span></h2>
         <CostTreemap items={treemapItems} />
       </div>
-
-      {/* Abo-Radar */}
-      <div className="card mt">
+    ),
+    abo: (
+      <div className="card">
         <div className="editor-head" style={{ marginBottom: 12 }}>
           <h2 style={{ margin: 0 }}>Abo-Radar</h2>
           <span className="muted" style={{ fontSize: 13 }}>
@@ -124,7 +124,7 @@ export default function Analytics({ data, overrides }) {
                     <span className="acct-dot" style={{ background: r.color }} />
                     {r.recipient}
                   </div>
-                  <div className="abo-meta">{r.category} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}{r.account ? ` · ${r.account}` : ''}</div>
+                  <div className="abo-meta">{r.categoryLabel} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}{r.account ? ` · ${r.account}` : ''}</div>
                   <div className="abo-track"><div className="abo-fill" style={{ width: `${(r.yearly / abos.max) * 100}%`, background: r.color }} /></div>
                 </div>
                 <div className="abo-fig">
@@ -136,8 +136,9 @@ export default function Analytics({ data, overrides }) {
           </div>
         )}
       </div>
-
-      <div className="card mt">
+    ),
+    byAccount: (
+      <div className="card">
         <h2>Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat, inkl. Sparen)</span></h2>
         <div className="hbars">
           {byAccount.map(({ account, fixed, subscription, savings, total }) => (
@@ -157,6 +158,29 @@ export default function Analytics({ data, overrides }) {
           <span className="legend-dot fix" /> Fixkosten &nbsp; <span className="legend-dot sub" /> Abos
           {hasSavings && <>&nbsp; <span className="legend-dot sav" /> Sparen</>}
         </p>
+      </div>
+    ),
+  }
+  const fullWidth = { donut: false, personBar: false, treemap: true, abo: true, byAccount: true }
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="editor-head">
+          <div>
+            <h1>Analyse</h1>
+            <p>Monatliche Kosten nach Kategorie, je Person und je Konto – plus Kosten-Treemap und Abo-Radar.</p>
+          </div>
+          {isCustom && <button className="btn" onClick={reset}>Layout zurücksetzen</button>}
+        </div>
+      </div>
+
+      <div className="drag-grid">
+        {order.map((id) => (
+          <DragCard key={id} id={id} api={api} full={fullWidth[id]}>
+            {sections[id]}
+          </DragCard>
+        ))}
       </div>
     </div>
   )

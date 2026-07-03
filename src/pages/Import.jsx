@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CATEGORIES } from '../lib/categories.js'
+import { getCategories } from '../lib/categoryStore.js'
 import { formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
 import { formToOrder, newOrderId } from '../lib/orderForm.js'
 import { personsFromAccounts } from '../lib/recurring.js'
@@ -20,6 +20,7 @@ const MAP_FIELDS = [
 
 export default function Import({ data, onSaveOrders, onNavigate }) {
   const accounts = data.accounts || []
+  const categories = getCategories()
   const persons = useMemo(() => personsFromAccounts(accounts), [accounts])
   const defaultAccount = accounts.find((a) => a.type === 'joint')?.id || accounts[0]?.id || ''
 
@@ -203,7 +204,7 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
                         </td>
                         <td>
                           <select value={i.category} onChange={(e) => setItem(i.id, 'category', e.target.value)}>
-                            {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                            {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                           </select>
                         </td>
                         <td>

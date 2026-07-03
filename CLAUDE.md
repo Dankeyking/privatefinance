@@ -52,7 +52,16 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
 - `src/lib/orderForm.js` — Umwandlung Formularzeile ↔ Posten (`orderToForm`, `formToOrder`,
   `makeNewOrder`). Von „Meine Daten" **und** dem Übersichts-Editor genutzt.
 - `src/lib/selectors.js` — Datum/Kategorie/`upcomingPayments`.
-- `src/lib/categories.js` — Kategorien + Auto-Zuordnung (`KEYWORD_RULES`).
+- `src/lib/categories.js` — **vordefinierte** Kategorien + Auto-Zuordnung (`KEYWORD_RULES`,
+  `autoCategorize`). IDs bleiben stabil (referenziert von `SAVINGS_CATEGORY`/Regeln).
+- `src/lib/categoryStore.js` — **eigene Kategorien** (hinzufügen/umbenennen/farbig machen,
+  `localStorage`). `getCategories()` liefert vordefiniert+eigene gemergt; `categoryColor`/
+  `categoryLabel` für Anzeige. Standard-Kategorien nicht löschbar (nur Label/Farbe editierbar),
+  eigene voll löschbar. UI-Komponenten rufen `getCategories()` direkt auf (kein Prop-Drilling).
+- `src/lib/sorting.js` — generische Spalten-Sortierung (`sortRows`, `nextSortState`) für
+  Tabellen in „Meine Daten"/„Konten"/`RecurringEditor`.
+- `src/lib/layout.js` — `useDragOrder(pageKey, defaultOrder)`-Hook: Drag-&-Drop-Reihenfolge von
+  Dashboard-Karten, pro Seite in `localStorage` (`pf_layout_<page>`) gespeichert.
 - `src/lib/merge.js` — legt manuelle Browser-Daten über die Startdaten.
 - `src/lib/storage.js` — `localStorage` (Kategorie-Overrides + manuelle Daten).
 - `src/lib/claudeExport.js` — analyse-fertiger JSON-Export für Claude.
@@ -60,13 +69,20 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   Zahlen/Datum), Spalten-Auto-Mapping, `detectRecurring` (Gruppierung nach Empfänger,
   Rhythmus-Schätzung) für den Import.
 - `src/components/RecurringEditor.jsx` — **wiederverwendbare** inline-editierbare Kosten-Tabelle
-  (inkl. Split-Editor). Voll kontrolliert: `orders` rein, `onChange(next)` raus.
+  (inkl. Split-Editor + Spalten-Sortierung). Voll kontrolliert: `orders` rein, `onChange(next)` raus.
+- `src/components/CostsTable.jsx` — Click-to-Edit-Ansicht derselben Daten (Kosten & Abos-Seite).
+- `src/components/InlineAmount.jsx` — Klick-zum-Bearbeiten Betragsfeld (Konten-Salden/-Sparziele).
+- `src/components/DragCard.jsx` — Wrapper für per Griff verschiebbare Dashboard-Abschnitte
+  (Übersicht, Analyse); `draggable` nur während Griff-Mousedown aktiv, damit Klicks/Inputs
+  im Karteninhalt nicht gestört werden.
 
 ## Seiten (`src/pages/`, Routing in `src/App.jsx` per `page`-State)
-Übersicht (inkl. Inline-Editor + Auto-Speichern) · Konten (Salden, Monatslast, Sparziele) ·
-Kosten & Abos (Click-to-Edit + Filter) · CSV-Import · Analyse (Donut, Treemap, Abo-Radar,
-Balken) · Kategorien · Meine Daten (Settings). Responsive: Tabellen mit `.resp-table`
-werden am Handy zu Karten (data-label).
+Übersicht (inkl. Inline-Editor + Auto-Speichern, Abschnitte per Drag & Drop sortierbar) ·
+Konten (Salden/Sparziele **klick-editierbar**, Sortier-Chips) · Kosten & Abos (Click-to-Edit +
+Filter) · CSV-Import · Analyse (Donut, Treemap, Abo-Radar, Balken, Karten per Drag & Drop
+sortierbar) · Kategorien (eigene anlegen/umbenennen/farbig machen) · Meine Daten (Settings,
+Tabellen spaltensortierbar). Responsive: Tabellen mit `.resp-table` werden am Handy zu Karten
+(data-label).
 
 ## Konventionen
 - Deutsch in UI, Kommentaren und Commit-relevanten Texten.

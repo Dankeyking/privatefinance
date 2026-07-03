@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import RecurringEditor from '../components/RecurringEditor.jsx'
+import SortTh from '../components/SortTh.jsx'
 import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
 import { ACCOUNT_PALETTE } from '../lib/accountColors.js'
+import { sortRows, nextSortState } from '../lib/sorting.js'
 
 const RHYTHMS = [
   { id: 'monthly', label: 'monatlich' },
@@ -31,10 +33,27 @@ export default function Settings({ data, manual, onSave, onReset }) {
 
   const [form, setForm] = useState(seed)
   const [saved, setSaved] = useState(false)
+  const [acctSort, setAcctSort] = useState({ key: null, dir: 'asc' })
+  const [incomeSort, setIncomeSort] = useState({ key: null, dir: 'asc' })
+  const [transferSort, setTransferSort] = useState({ key: null, dir: 'asc' })
 
   const accounts = form.accounts
   const personalAccts = accounts.filter((a) => a.type === 'personal')
   const persons = [...new Set(personalAccts.map((a) => a.owner || a.name).filter(Boolean))]
+
+  const numericKeys = new Set(['balance', 'goal', 'amount', 'executionDay'])
+  const sortedAccounts = useMemo(
+    () => sortRows(form.accounts, acctSort.key, acctSort.dir, (r, k) => (numericKeys.has(k) ? parseAmountDE(r[k]) : r[k] || '')),
+    [form.accounts, acctSort],
+  )
+  const sortedIncomes = useMemo(
+    () => sortRows(form.incomes, incomeSort.key, incomeSort.dir, (r, k) => (numericKeys.has(k) ? parseAmountDE(r[k]) : r[k] || '')),
+    [form.incomes, incomeSort],
+  )
+  const sortedTransfers = useMemo(
+    () => sortRows(form.transfers, transferSort.key, transferSort.dir, (r, k) => (numericKeys.has(k) ? parseAmountDE(r[k]) : r[k] || '')),
+    [form.transfers, transferSort],
+  )
 
   const up = (patch) => { setForm((f) => ({ ...f, ...patch })); setSaved(false) }
   const setRow = (key, id, field, value) =>
@@ -95,10 +114,18 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Farbe</th><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Saldo (€)</th><th className="num">Sparziel (€)</th><th></th></tr>
+              <tr>
+                <th>Farbe</th>
+                <SortTh label="Name" sortKey="name" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, false))} />
+                <SortTh label="Inhaber" sortKey="owner" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, false))} />
+                <th>Typ</th>
+                <SortTh label="Saldo (€)" sortKey="balance" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, true))} className="num" />
+                <SortTh label="Sparziel (€)" sortKey="goal" sort={acctSort} onSort={(k) => setAcctSort((s) => nextSortState(s, k, true))} className="num" />
+                <th></th>
+              </tr>
             </thead>
             <tbody>
-              {form.accounts.map((a) => (
+              {sortedAccounts.map((a) => (
                 <tr key={a.id}>
                   <td><input type="color" className="color-input" value={a.color || '#3b82f6'} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
                   <td><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
@@ -127,10 +154,17 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th><th className="num">Tag</th><th></th></tr>
+              <tr>
+                <SortTh label="Bezeichnung" sortKey="name" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, false))} />
+                <SortTh label="Betrag" sortKey="amount" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, true))} className="num" />
+                <th>Rhythmus</th>
+                <th>Konto</th>
+                <SortTh label="Tag" sortKey="executionDay" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, true))} className="num" />
+                <th></th>
+              </tr>
             </thead>
             <tbody>
-              {form.incomes.map((i) => (
+              {sortedIncomes.map((i) => (
                 <tr key={i.id}>
                   <td><input value={i.name} onChange={(e) => setRow('incomes', i.id, 'name', e.target.value)} /></td>
                   <td className="num"><input type="number" value={i.amount} onChange={(e) => setRow('incomes', i.id, 'amount', e.target.value)} /></td>
@@ -174,10 +208,14 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Bezeichnung</th><th className="num">Betrag</th><th>von</th><th>nach</th><th>Rhythmus</th><th></th></tr>
+              <tr>
+                <SortTh label="Bezeichnung" sortKey="label" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, false))} />
+                <SortTh label="Betrag" sortKey="amount" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, true))} className="num" />
+                <th>von</th><th>nach</th><th>Rhythmus</th><th></th>
+              </tr>
             </thead>
             <tbody>
-              {form.transfers.map((t) => (
+              {sortedTransfers.map((t) => (
                 <tr key={t.id}>
                   <td><input value={t.label} placeholder="z. B. Sparen Urlaub" onChange={(e) => setRow('transfers', t.id, 'label', e.target.value)} /></td>
                   <td className="num"><input type="text" inputMode="decimal" value={t.amount} placeholder="0,00" onChange={(e) => setRow('transfers', t.id, 'amount', e.target.value)} /></td>

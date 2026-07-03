@@ -1,5 +1,8 @@
-import { CATEGORIES } from '../lib/categories.js'
-import { makeNewOrder } from '../lib/orderForm.js'
+import { useMemo, useState } from 'react'
+import { getCategories } from '../lib/categoryStore.js'
+import { makeNewOrder, parseAmountDE } from '../lib/orderForm.js'
+import { sortRows, nextSortState } from '../lib/sorting.js'
+import SortTh from './SortTh.jsx'
 
 const RHYTHMS = [
   { id: 'monthly', label: 'monatlich' },
@@ -10,6 +13,10 @@ const RHYTHMS = [
 // Inline-editierbare Tabelle für Fixkosten & Abos inkl. Aufteilung.
 // Voll kontrolliert: `orders` (Formularzeilen) rein, `onChange(next)` raus.
 export default function RecurringEditor({ accounts, persons, orders, onChange }) {
+  const categories = getCategories()
+  const [sort, setSort] = useState({ key: null, dir: 'asc' })
+  const accName = (id) => accounts.find((a) => a.id === id)?.name || ''
+
   const set = (id, field, value) =>
     onChange(orders.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
   const setShare = (id, person, value) =>
@@ -17,18 +24,33 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
   const del = (id) => onChange(orders.filter((r) => r.id !== id))
   const add = (kind) => onChange([...orders, makeNewOrder(kind, accounts)])
 
+  const sorted = useMemo(() => {
+    if (!sort.key) return orders
+    return sortRows(orders, sort.key, sort.dir, (r, k) => {
+      if (k === 'amount') return parseAmountDE(r.amount)
+      if (k === 'accountId') return accName(r.accountId)
+      return r[k] || ''
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, sort, accounts])
+
   return (
     <div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th><th>Konto</th>
-              <th>Kategorie</th><th>Art</th><th className="num">Tag</th><th>Aufteilung</th><th></th>
+              <SortTh label="Empfänger" sortKey="recipient" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
+              <SortTh label="Betrag" sortKey="amount" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, true))} className="num" />
+              <th>Rhythmus</th>
+              <SortTh label="Konto" sortKey="accountId" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
+              <SortTh label="Kategorie" sortKey="category" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
+              <SortTh label="Art" sortKey="kind" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
+              <th className="num">Tag</th><th>Aufteilung</th><th></th>
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
+            {sorted.map((o) => (
               <tr key={o.id}>
                 <td><input value={o.recipient} placeholder="z. B. Netflix" onChange={(e) => set(o.id, 'recipient', e.target.value)} /></td>
                 <td className="num"><input type="text" inputMode="decimal" value={o.amount} placeholder="0,00" onChange={(e) => set(o.id, 'amount', e.target.value)} /></td>
@@ -44,7 +66,7 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
                 </td>
                 <td>
                   <select value={o.category} onChange={(e) => set(o.id, 'category', e.target.value)}>
-                    {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
                 </td>
                 <td>
