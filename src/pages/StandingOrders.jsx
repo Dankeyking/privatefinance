@@ -3,6 +3,7 @@ import CostsTable from '../components/CostsTable.jsx'
 import { SAVINGS_CATEGORY } from '../lib/categories.js'
 import { getCategories } from '../lib/categoryStore.js'
 import { toMonthly, formatEUR } from '../lib/normalize.js'
+import { isOrderActive } from '../lib/selectors.js'
 import { orderToForm, formToOrder, parseAmountDE } from '../lib/orderForm.js'
 import { personsFromAccounts } from '../lib/recurring.js'
 
@@ -53,9 +54,10 @@ export default function StandingOrders({ data, onSaveOrders }) {
   }
 
   // Live-Aufschlüsselung (aus dem Entwurf, damit sie sofort mitzieht).
+  // Beendete Posten (Enddatum überschritten) zählen nicht mehr mit.
   const sums = useMemo(() => {
     const acc = { fixed: 0, sub: 0, savings: 0, count: orders.length }
-    orders.forEach((o) => {
+    orders.filter((o) => isOrderActive(o)).forEach((o) => {
       const m = toMonthly(parseAmountDE(o.amount), o.rhythm)
       if (isSav(o)) acc.savings += m
       else if (o.kind === 'subscription') acc.sub += m

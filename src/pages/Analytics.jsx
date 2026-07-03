@@ -4,12 +4,12 @@ import CategoryDonut from '../components/charts/CategoryDonut.jsx'
 import CostTreemap from '../components/charts/CostTreemap.jsx'
 import DragCard from '../components/DragCard.jsx'
 import { categoryColor, categoryLabel } from '../lib/categoryStore.js'
-import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
-import { effectiveCategoryOf } from '../lib/selectors.js'
+import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
+import { effectiveCategoryOf, isOrderActive, monthsRemaining } from '../lib/selectors.js'
 import { monthlyByCategory, personSummary, monthlyByAccount, isSavings } from '../lib/recurring.js'
 import { useDragOrder } from '../lib/layout.js'
 
-const DEFAULT_ORDER = ['donut', 'personBar', 'treemap', 'abo', 'byAccount']
+const DEFAULT_ORDER = ['donut', 'personBar', 'treemap', 'abo', 'ending', 'byAccount']
 
 const splitPersonLabel = (o) => {
   const m = o.split?.mode
@@ -50,10 +50,10 @@ export default function Analytics({ data, overrides }) {
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
 
-  // Treemap: alle Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
+  // Treemap: alle aktiven Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
   const treemapItems = useMemo(() => {
     return (data.standingOrders || [])
-      .filter((o) => !isSavings(o, overrides))
+      .filter((o) => isOrderActive(o) && !isSavings(o, overrides))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
         return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: categoryLabel(cat), color: categoryColor(cat) }
@@ -61,10 +61,10 @@ export default function Analytics({ data, overrides }) {
       .filter((x) => x.value > 0)
   }, [data.standingOrders, overrides])
 
-  // Abo-Radar: Abos nach Jahresbetrag.
+  // Abo-Radar: aktive Abos nach Jahresbetrag.
   const abos = useMemo(() => {
     const rows = (data.standingOrders || [])
-      .filter((o) => o.kind === 'subscription')
+      .filter((o) => o.kind === 'subscription' && isOrderActive(o))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
         const monthly = toMonthly(o.amount, o.rhythm)
@@ -72,11 +72,27 @@ export default function Analytics({ data, overrides }) {
           id: o.id, recipient: o.recipient || '—', monthly, yearly: monthly * 12,
           categoryLabel: categoryLabel(cat), color: categoryColor(cat), rhythm: o.rhythm,
           person: splitPersonLabel(o), account: accById[o.accountId]?.name || '',
+          endDate: o.endDate || '',
         }
       })
       .sort((a, b) => b.yearly - a.yearly)
     return { rows, totalYear: rows.reduce((s, r) => s + r.yearly, 0), max: Math.max(1, ...rows.map((r) => r.yearly)) }
   }, [data.standingOrders, overrides, accById])
+
+  // Auslaufende Posten: alles mit Enddatum – zeigt, wann Budget frei wird.
+  const ending = useMemo(() => {
+    const rows = (data.standingOrders || [])
+      .filter((o) => o.endDate)
+      .map((o) => ({
+        id: o.id, recipient: o.recipient || '—',
+        monthly: toMonthly(o.amount, o.rhythm),
+        endDate: o.endDate, active: isOrderActive(o), left: monthsRemaining(o),
+        account: accById[o.accountId]?.name || '',
+      }))
+      .sort((a, b) => (a.endDate < b.endDate ? -1 : 1))
+    const freed = rows.filter((r) => r.active).reduce((s, r) => s + r.monthly, 0)
+    return { rows, freed }
+  }, [data.standingOrders, accById])
 
   const sections = {
     donut: (
@@ -124,12 +140,56 @@ export default function Analytics({ data, overrides }) {
                     <span className="acct-dot" style={{ background: r.color }} />
                     {r.recipient}
                   </div>
-                  <div className="abo-meta">{r.categoryLabel} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}{r.account ? ` · ${r.account}` : ''}</div>
+                  <div className="abo-meta">
+                    {r.categoryLabel} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}
+                    {r.account ? ` · ${r.account}` : ''}
+                    {r.endDate ? ` · endet ${formatDate(r.endDate)}` : ''}
+                  </div>
                   <div className="abo-track"><div className="abo-fill" style={{ width: `${(r.yearly / abos.max) * 100}%`, background: r.color }} /></div>
                 </div>
                 <div className="abo-fig">
                   <div className="abo-year">{formatEUR(r.yearly)}<span className="abo-month"> /Jahr</span></div>
                   <div className="abo-month">{formatEUR(r.monthly)}/Monat</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ),
+    ending: (
+      <div className="card">
+        <div className="editor-head" style={{ marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>Auslaufende Posten</h2>
+          {ending.freed > 0 && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              wird frei: <strong className="amount pos">{formatEUR(ending.freed)}/Monat</strong>
+            </span>
+          )}
+        </div>
+        {ending.rows.length === 0 ? (
+          <p className="muted">
+            Kein Posten hat ein Enddatum. Tipp: Trage bei Ratenkäufen (z. B. Kühlschrank) oder
+            gekündigten Verträgen unter „Kosten &amp; Abos" in der Spalte <strong>Ende</strong> die
+            letzte Zahlung ein – dann siehst du hier, wann wie viel Budget frei wird.
+          </p>
+        ) : (
+          <div>
+            {ending.rows.map((r) => (
+              <div className="abo-row" key={r.id}>
+                <div className="abo-main">
+                  <div className="abo-name">
+                    {r.recipient}
+                    {!r.active && <span className="pill ended">beendet</span>}
+                  </div>
+                  <div className="abo-meta">
+                    {r.active ? `endet ${formatDate(r.endDate)} · noch ${r.left} Mon.` : `endete ${formatDate(r.endDate)}`}
+                    {r.account ? ` · ${r.account}` : ''}
+                  </div>
+                </div>
+                <div className="abo-fig">
+                  <div className="abo-year">{formatEUR(r.monthly)}<span className="abo-month"> /Monat</span></div>
+                  {r.active && <div className="abo-month">≈ {formatEUR(r.monthly * r.left)} bis Ende</div>}
                 </div>
               </div>
             ))}
@@ -161,7 +221,7 @@ export default function Analytics({ data, overrides }) {
       </div>
     ),
   }
-  const fullWidth = { donut: false, personBar: false, treemap: true, abo: true, byAccount: true }
+  const fullWidth = { donut: false, personBar: false, treemap: true, abo: true, ending: true, byAccount: true }
 
   return (
     <div>

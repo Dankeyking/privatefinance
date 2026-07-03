@@ -46,7 +46,9 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
               <SortTh label="Konto" sortKey="accountId" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
               <SortTh label="Kategorie" sortKey="category" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
               <SortTh label="Art" sortKey="kind" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
-              <th className="num">Tag</th><th>Aufteilung</th><th></th>
+              <th className="num">Tag</th>
+              <SortTh label="Ende" sortKey="endDate" sort={sort} onSort={(k) => setSort((s) => nextSortState(s, k, false))} />
+              <th>Aufteilung</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -76,6 +78,7 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
                   </select>
                 </td>
                 <td className="num"><input type="number" min="1" max="31" value={o.executionDay} onChange={(e) => set(o.id, 'executionDay', e.target.value)} /></td>
+                <td><input type="date" value={o.endDate || ''} title="Optionales Enddatum (z. B. letzte Rate)" onChange={(e) => set(o.id, 'endDate', e.target.value)} /></td>
                 <td>
                   <div className="split-cell">
                     <select value={o.splitMode} onChange={(e) => set(o.id, 'splitMode', e.target.value)}>
@@ -103,7 +106,7 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
               </tr>
             ))}
             {orders.length === 0 && (
-              <tr><td colSpan={9} className="muted" style={{ textAlign: 'center', padding: 22 }}>
+              <tr><td colSpan={10} className="muted" style={{ textAlign: 'center', padding: 22 }}>
                 Noch keine Fixkosten/Abos – füge unten welche hinzu.
               </td></tr>
             )}

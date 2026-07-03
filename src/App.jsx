@@ -10,6 +10,7 @@ import Settings from './pages/Settings.jsx'
 import { loadData } from './data/dataSource.js'
 import { mergeData } from './lib/merge.js'
 import { downloadClaudeExport } from './lib/claudeExport.js'
+import { ChartJS } from './components/charts/setup.js'
 import {
   getOverrides,
   setOverride,
@@ -20,6 +21,16 @@ import {
   clearManualData,
 } from './lib/storage.js'
 
+// Design (hell/dunkel): gespeicherte Wahl > Systemeinstellung.
+const THEME_KEY = 'pf_theme'
+function initialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY)
+    if (saved === 'light' || saved === 'dark') return saved
+  } catch { /* ignore */ }
+  return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light'
+}
+
 export default function App() {
   const [page, setPage] = useState('overview')
   const [baseData, setBaseData] = useState(null)
@@ -27,6 +38,15 @@ export default function App() {
   const [overrides, setOverrides] = useState({})
   const [manual, setManual] = useState({})
   const [navOpen, setNavOpen] = useState(false)
+  const [theme, setTheme] = useState(initialTheme)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem(THEME_KEY, theme) } catch { /* ignore */ }
+    // Chart.js-Grundfarben ans Theme anpassen; Charts werden über key={theme} neu aufgebaut.
+    ChartJS.defaults.color = theme === 'dark' ? '#94a3b8' : '#64748b'
+    ChartJS.defaults.borderColor = theme === 'dark' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)'
+  }, [theme])
 
   useEffect(() => {
     setOverrides(getOverrides())
@@ -96,10 +116,12 @@ export default function App() {
         onExport={handleExport}
         open={navOpen}
         onClose={() => setNavOpen(false)}
+        theme={theme}
+        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
       />
 
-      <main className="content">
-        {page === 'overview' && <Overview data={data} onSaveOrders={handleSaveOrders} />}
+      <main className="content" key={theme}>
+        {page === 'overview' && <Overview data={data} onNavigate={navigate} />}
         {page === 'recurring' && (
           <StandingOrders data={data} onSaveOrders={handleSaveOrders} />
         )}

@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { toMonthly } from './normalize.js'
-import { effectiveCategoryOf } from './selectors.js'
+import { effectiveCategoryOf, isOrderActive } from './selectors.js'
 import {
   householdSummary,
   monthlyByAccount,
@@ -22,7 +22,9 @@ const TASK_PROMPT =
   'das ist der Betrag, der monatlich aufs jeweilige Konto gebucht werden sollte ' +
   '(byAccount.total). Sage mir konkret: (1) Wo gibt es Einsparpotenzial, besonders bei Abos? ' +
   '(2) Wie verteilen sich die Kosten auf Kategorien und Konten? (3) Wie hoch ist die ' +
-  'monatliche Sparrate/Überschuss und wie ließe sie sich erhöhen?'
+  'monatliche Sparrate/Überschuss und wie ließe sie sich erhöhen? Posten mit endDate sind ' +
+  'Raten/gekündigte Verträge; active:false bedeutet bereits beendet (zählt nicht mehr in ' +
+  'den Summen).'
 
 const round = (n) => Number((n || 0).toFixed(2))
 
@@ -40,6 +42,7 @@ export function buildClaudeExport(data, overrides = {}) {
     category: effectiveCategoryOf(so, overrides),
     monthlyCost: round(toMonthly(so.amount, so.rhythm)),
     split: so.split || { mode: 'even' },
+    ...(so.endDate ? { endDate: so.endDate, active: isOrderActive(so) } : {}),
   }))
 
   const incomes = (data.incomes || []).map((i) => ({

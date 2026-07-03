@@ -19,7 +19,13 @@ Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten
   - `goal` = optionales Sparziel (€); Fortschritt = balance/goal auf der „Konten"-Seite.
 - **incomes**: `{ id, name, amount, rhythm, accountId, executionDay }` (landen auf Privatkonten)
 - **standingOrders** (Fixkosten & Abos): `{ id, recipient, amount, rhythm, accountId,
-  category, kind: 'fixed'|'subscription', executionDay, nextExecution, monthInterval, split }`
+  category, kind: 'fixed'|'subscription', executionDay, nextExecution, monthInterval, split,
+  endDate }`
+  - **endDate** (optional, `YYYY-MM-DD`) = letzte Zahlung, z. B. Ratenkauf oder gekündigtes
+    Abo. Nach dem Enddatum zählt der Posten in **keiner** Auswertung mehr mit
+    (`isOrderActive`/`activeOrders`/`monthsRemaining` in selectors.js), bleibt aber in den
+    Tabellen sichtbar (ausgegraut, Pill „beendet"). Analyse-Karte „Auslaufende Posten"
+    zeigt, wann wie viel Budget frei wird.
   - **Sparen wird über die Kategorie bestimmt**: alles mit `category === 'Sparen'`
     (`SAVINGS_CATEGORY` in categories.js) zählt als Rücklage, **nicht** als Kosten — siehe
     `isSavings(o)` in recurring.js. `householdSummary` trennt `totalCosts` (Nicht-Sparen)
@@ -48,10 +54,15 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
 - `src/lib/recurring.js` — **alle Auswertungen**: `monthlyByAccount` (inkl. `reserve` =
   Monatsanteil nicht-monatlicher Posten), `monthlyByCategory`, `monthlyByPerson`,
   `incomeByPerson`, `personSummary`, `householdSummary`, `accountFlows` (Geldfluss aus
-  Splits), `personShareMonthly`, `personsFromAccounts`.
+  Splits), `personShareMonthly`, `personsFromAccounts`, `monthlyInflowByAccount` (Zufluss
+  je Konto = Posten + eingehende Umbuchungen; Grundlage der Sparziel-Prognose auf
+  „Konten"). Alle Auswertungen filtern beendete Posten (`endDate` überschritten) über
+  `activeOrders` heraus. (Ein früherer Fairness-Check wurde auf Nutzerwunsch entfernt –
+  nicht wieder einbauen.)
 - `src/lib/orderForm.js` — Umwandlung Formularzeile ↔ Posten (`orderToForm`, `formToOrder`,
   `makeNewOrder`). Von „Meine Daten" **und** dem Übersichts-Editor genutzt.
-- `src/lib/selectors.js` — Datum/Kategorie/`upcomingPayments`.
+- `src/lib/selectors.js` — Datum/Kategorie/`upcomingPayments` + Enddatum-Logik
+  (`isOrderActive`, `activeOrders`, `monthsRemaining`).
 - `src/lib/categories.js` — **vordefinierte** Kategorien + Auto-Zuordnung (`KEYWORD_RULES`,
   `autoCategorize`). IDs bleiben stabil (referenziert von `SAVINGS_CATEGORY`/Regeln).
 - `src/lib/categoryStore.js` — **eigene Kategorien** (hinzufügen/umbenennen/farbig machen,
@@ -62,7 +73,8 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   Tabellen in „Meine Daten"/„Konten"/`RecurringEditor`.
 - `src/lib/layout.js` — `useDragOrder(pageKey, defaultOrder)`-Hook: Drag-&-Drop-Reihenfolge von
   Dashboard-Karten, pro Seite in `localStorage` (`pf_layout_<page>`) gespeichert.
-- `src/lib/merge.js` — legt manuelle Browser-Daten über die Startdaten.
+- `src/lib/merge.js` — legt manuelle Browser-Daten über die Startdaten. Konten: die
+  manuelle Liste **ersetzt** die Basis (gelöschte Konten bleiben gelöscht).
 - `src/lib/storage.js` — `localStorage` (Kategorie-Overrides + manuelle Daten).
 - `src/lib/claudeExport.js` — analyse-fertiger JSON-Export für Claude.
 - `src/lib/csvImport.js` — CSV-Umsätze parsen (Trennzeichen-Erkennung, deutsche
@@ -77,12 +89,28 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   im Karteninhalt nicht gestört werden.
 
 ## Seiten (`src/pages/`, Routing in `src/App.jsx` per `page`-State)
-Übersicht (inkl. Inline-Editor + Auto-Speichern, Abschnitte per Drag & Drop sortierbar) ·
-Konten (Salden/Sparziele **klick-editierbar**, Sortier-Chips) · Kosten & Abos (Click-to-Edit +
-Filter) · CSV-Import · Analyse (Donut, Treemap, Abo-Radar, Balken, Karten per Drag & Drop
-sortierbar) · Kategorien (eigene anlegen/umbenennen/farbig machen) · Meine Daten (Settings,
-Tabellen spaltensortierbar). Responsive: Tabellen mit `.resp-table` werden am Handy zu Karten
-(data-label).
+Sidebar-Navigation in Gruppen (Übersicht · Planen: Konten, Kosten & Abos · Auswerten:
+Analyse · Daten: CSV-Import, Kategorien, Meine Daten).
+Übersicht (**reines Dashboard**: KPIs mit Icons, Geldfluss, Kosten je Konto/Person,
+anstehende Posten; Bearbeiten-Button führt zu „Kosten & Abos"; Abschnitte per Drag & Drop
+sortierbar) · Konten (Salden/Sparziele **klick-editierbar**, Sortier-Chips,
+**Deckungs-Hinweis** bei Saldo < Monatslast, **Sparziel-Prognose** aus
+`monthlyInflowByAccount`) · Kosten & Abos (Click-to-Edit + Filter, Spalte **Ende**) ·
+CSV-Import · Analyse (Donut, Treemap, Abo-Radar, **Auslaufende Posten**, Balken, Karten per
+Drag & Drop sortierbar) · Kategorien (eigene anlegen/umbenennen/farbig machen) · Meine Daten
+(Settings, Tabellen spaltensortierbar). Responsive: Tabellen mit `.resp-table` werden am
+Handy zu Karten (data-label).
+
+## Design / Theme
+Schrift: **Inter Variable** (gebundelt via `@fontsource-variable/inter`, Import in
+`main.jsx`). Akzent = Indigo-Verlauf (`--accent` → `--accent-2`), Karten 16px-Radius,
+Sidebar mit Gruppen-Labels und Logo-Mark.
+Hell + Dunkel: Umschalter in der Sidebar, gespeichert in `localStorage` (`pf_theme`),
+Default = Systemeinstellung. Umsetzung über CSS-Variablen in `index.css`
+(`[data-theme='dark']`-Block); **keine hartkodierten Farben** in Komponenten-CSS verwenden,
+immer Variablen (`--card-bg`, `--surface-2`, `--chip-*`, `--pill-*`, `--info-*` …).
+Chart.js-Grundfarben werden in `App.jsx` je Theme gesetzt; `<main key={theme}>` baut die
+Charts beim Umschalten neu auf.
 
 ## Konventionen
 - Deutsch in UI, Kommentaren und Commit-relevanten Texten.

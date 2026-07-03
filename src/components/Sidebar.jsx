@@ -1,34 +1,62 @@
 import Icon from './Icon.jsx'
 
-const NAV = [
-  { id: 'overview', label: 'Übersicht', icon: 'overview' },
-  { id: 'accounts', label: 'Konten', icon: 'cash' },
-  { id: 'recurring', label: 'Kosten & Abos', icon: 'standing' },
-  { id: 'import', label: 'CSV-Import', icon: 'export' },
-  { id: 'analytics', label: 'Analyse', icon: 'analytics' },
-  { id: 'categories', label: 'Kategorien', icon: 'categories' },
-  { id: 'settings', label: 'Meine Daten', icon: 'settings' },
+// Navigation in Gruppen: Dashboard, Planen (Daten pflegen), Auswerten, Verwaltung.
+const NAV_GROUPS = [
+  {
+    label: null,
+    items: [{ id: 'overview', label: 'Übersicht', icon: 'overview' }],
+  },
+  {
+    label: 'Planen',
+    items: [
+      { id: 'accounts', label: 'Konten', icon: 'cash' },
+      { id: 'recurring', label: 'Kosten & Abos', icon: 'standing' },
+    ],
+  },
+  {
+    label: 'Auswerten',
+    items: [{ id: 'analytics', label: 'Analyse', icon: 'analytics' }],
+  },
+  {
+    label: 'Daten',
+    items: [
+      { id: 'import', label: 'CSV-Import', icon: 'export' },
+      { id: 'categories', label: 'Kategorien', icon: 'categories' },
+      { id: 'settings', label: 'Meine Daten', icon: 'settings' },
+    ],
+  },
 ]
 
-export default function Sidebar({ page, onNavigate, source, hasManual, onExport, open, onClose }) {
+export default function Sidebar({ page, onNavigate, source, hasManual, onExport, open, onClose, theme, onToggleTheme }) {
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
-        Private<span>Finance</span>
+        <span className="brand-mark">€</span>
+        <span className="brand-name">Private<span>Finance</span></span>
         <button className="sidebar-close" onClick={onClose} aria-label="Menü schließen">✕</button>
       </div>
       <nav className="nav">
-        {NAV.map((item) => (
-          <button
-            key={item.id}
-            className={page === item.id ? 'active' : ''}
-            onClick={() => onNavigate(item.id)}
-          >
-            <span className="ico"><Icon name={item.icon} /></span>
-            {item.label}
-          </button>
+        {NAV_GROUPS.map((g, gi) => (
+          <div className="nav-group" key={gi}>
+            {g.label && <div className="nav-group-label">{g.label}</div>}
+            {g.items.map((item) => (
+              <button
+                key={item.id}
+                className={page === item.id ? 'active' : ''}
+                onClick={() => onNavigate(item.id)}
+              >
+                <span className="ico"><Icon name={item.icon} /></span>
+                {item.label}
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
+
+      <button className="theme-toggle" onClick={onToggleTheme}>
+        <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
+        {theme === 'dark' ? 'Helles Design' : 'Dunkles Design'}
+      </button>
 
       <span className={`source-badge ${hasManual ? 'live' : source}`}>
         {hasManual ? '● Eigene Daten' : '● Demo-/Mock-Daten'}

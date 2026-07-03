@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import KpiCard from '../components/KpiCard.jsx'
 import SankeyFlow from '../components/charts/SankeyFlow.jsx'
-import RecurringEditor from '../components/RecurringEditor.jsx'
 import DragCard from '../components/DragCard.jsx'
+import Icon from '../components/Icon.jsx'
 import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import { upcomingPayments } from '../lib/selectors.js'
-import { orderToForm, formToOrder } from '../lib/orderForm.js'
 import { accountColor, colorMaps } from '../lib/accountColors.js'
 import { useDragOrder } from '../lib/layout.js'
 import {
@@ -13,12 +12,11 @@ import {
   monthlyByAccount,
   personSummary,
   accountFlows,
-  personsFromAccounts,
 } from '../lib/recurring.js'
 
 const DEFAULT_ORDER = ['flow', 'byAccount', 'byPerson', 'upcoming']
 
-export default function Overview({ data, onSaveOrders }) {
+export default function Overview({ data, onNavigate }) {
   const summary = useMemo(() => householdSummary(data), [data])
   const byAccount = useMemo(() => monthlyByAccount(data), [data])
   const persons = useMemo(() => personSummary(data), [data])
@@ -27,16 +25,6 @@ export default function Overview({ data, onSaveOrders }) {
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
   const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER)
 
-  // Inline-Editor: eigener Entwurf (bewahrt Roh-Eingaben), speichert automatisch.
-  const personNames = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
-  const [orders, setOrders] = useState(() => (data.standingOrders || []).map(orderToForm))
-  const [editing, setEditing] = useState(false)
-
-  const handleEditorChange = (next) => {
-    setOrders(next)
-    onSaveOrders?.(next.map((o) => formToOrder(o, personNames)))
-  }
-
   const sections = {
     flow: (
       <>
@@ -44,7 +32,7 @@ export default function Overview({ data, onSaveOrders }) {
         <div className="card">
           {flows.flows.length === 0 ? (
             <p className="muted">
-              Noch keine Aufteilung auf Personen hinterlegt. Trage oben unter „Kosten &amp; Abos"
+              Noch keine Aufteilung auf Personen hinterlegt. Trage unter „Kosten &amp; Abos"
               Posten mit Aufteilung ein – dann zeigt sich hier, wer wie viel auf welches Konto bucht.
             </p>
           ) : (
@@ -186,50 +174,27 @@ export default function Overview({ data, onSaveOrders }) {
 
   return (
     <div>
-      <div className="page-header">
-        <h1>Übersicht</h1>
-        <p>Manuelle Fixkosten-Übersicht – pro Konto der monatlich zu buchende Betrag (jährliche Posten ÷ 12).</p>
+      <div className="page-header with-actions">
+        <div>
+          <h1>Übersicht</h1>
+          <p>Dein Haushalt auf einen Blick – pro Konto der monatlich zu buchende Betrag (jährliche Posten ÷ 12).</p>
+        </div>
+        <button className="btn header-action" onClick={() => onNavigate?.('recurring')}>
+          <Icon name="standing" size={15} /> Kosten &amp; Abos bearbeiten
+        </button>
       </div>
 
       <div className="grid kpis">
-        <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" />
-        <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" />
-        <KpiCard label="Sparen / Monat" value={summary.savings} hint={`Sparquote ${summary.savingsRate.toFixed(0)} %`} />
+        <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" icon="plus" />
+        <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" icon="minus" />
+        <KpiCard label="Sparen / Monat" value={summary.savings} icon="budget" hint={`Sparquote ${summary.savingsRate.toFixed(0)} %`} />
         <KpiCard
           label="Überschuss / Monat"
           value={summary.surplus}
           tone={summary.surplus >= 0 ? 'pos' : 'neg'}
+          icon="check"
           hint={`ohne Sparen: ${formatEUR(summary.availableWithoutSavings)}`}
         />
-      </div>
-
-      {/* Inline-Editor: Kosten & Abos direkt hier bearbeiten */}
-      <div className="card mt editor-card">
-        <div className="editor-head">
-          <div>
-            <h2 style={{ margin: 0 }}>Kosten &amp; Abos</h2>
-            <span className="muted" style={{ fontSize: 13 }}>
-              {orders.length} Posten · {formatEUR(summary.totalCosts)}/Monat
-            </span>
-          </div>
-          <button className={editing ? 'btn-primary' : 'btn'} onClick={() => setEditing((v) => !v)}>
-            {editing ? '✓ Fertig' : '✎ Bearbeiten'}
-          </button>
-        </div>
-        {editing && (
-          <>
-            <p className="muted" style={{ fontSize: 12, margin: '6px 0 14px' }}>
-              Änderungen werden automatisch gespeichert (nur in diesem Browser) und fließen sofort in
-              alle Auswertungen unten ein.
-            </p>
-            <RecurringEditor
-              accounts={data.accounts}
-              persons={personNames}
-              orders={orders}
-              onChange={handleEditorChange}
-            />
-          </>
-        )}
       </div>
 
       <div className="editor-head mt" style={{ alignItems: 'baseline' }}>

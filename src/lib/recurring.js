@@ -12,7 +12,7 @@
 // =============================================================================
 
 import { toMonthly, formatEUR } from './normalize.js'
-import { effectiveCategoryOf } from './selectors.js'
+import { effectiveCategoryOf, activeOrders } from './selectors.js'
 import { accountColor } from './accountColors.js'
 import { SAVINGS_CATEGORY } from './categories.js'
 
@@ -67,7 +67,7 @@ export function monthlyByAccount(data) {
   const slot = Object.fromEntries(
     accounts.map((a) => [a.id, { account: a, fixed: 0, subscription: 0, savings: 0, reserve: 0, total: 0 }]),
   )
-  standingOrders.forEach((o) => {
+  activeOrders(standingOrders).forEach((o) => {
     const s = slot[o.accountId]
     if (!s) return
     const m = toMonthly(o.amount, o.rhythm)
@@ -84,7 +84,7 @@ export function monthlyByAccount(data) {
 export function monthlyByCategory(data, overrides = {}, { excludeSavings = false } = {}) {
   const { standingOrders = [] } = data
   const totals = {}
-  standingOrders.forEach((o) => {
+  activeOrders(standingOrders).forEach((o) => {
     if (excludeSavings && isSavings(o, overrides)) return
     const cat = effectiveCategoryOf(o, overrides)
     totals[cat] = (totals[cat] || 0) + toMonthly(o.amount, o.rhythm)
@@ -97,7 +97,7 @@ export function monthlyByPerson(data) {
   const { accounts = [], standingOrders = [] } = data
   const persons = personsFromAccounts(accounts)
   const map = Object.fromEntries(persons.map((p) => [p, { person: p, costs: 0, savings: 0 }]))
-  standingOrders.forEach((o) => {
+  activeOrders(standingOrders).forEach((o) => {
     const isSav = isSavings(o)
     persons.forEach((p) => {
       const share = personShareMonthly(o, p, persons)
@@ -141,7 +141,7 @@ export function accountFlows(data) {
 
   // 1) Kosten-abgeleitete Flüsse
   const costMap = {}
-  standingOrders.forEach((o) => {
+  activeOrders(standingOrders).forEach((o) => {
     const debit = byId[o.accountId]
     if (!debit) return
     persons.forEach((p) => {
@@ -223,7 +223,7 @@ export function householdSummary(data) {
   const { standingOrders = [], incomes = [] } = data
   let totalCosts = 0
   let savings = 0
-  standingOrders.forEach((o) => {
+  activeOrders(standingOrders).forEach((o) => {
     const m = toMonthly(o.amount, o.rhythm)
     if (isSavings(o)) savings += m
     else totalCosts += m
@@ -237,6 +237,20 @@ export function householdSummary(data) {
     availableWithoutSavings: totalIncome - totalCosts,
     savingsRate: totalIncome > 0 ? (savings / totalIncome) * 100 : 0,
   }
+}
+
+// Monatlicher Zufluss je Konto: dort gebuchte Posten + eingehende Umbuchungen.
+// Grundlage für die Sparziel-Prognose auf der Konten-Seite.
+export function monthlyInflowByAccount(data) {
+  const { accounts = [], standingOrders = [], transfers = [] } = data
+  const map = Object.fromEntries(accounts.map((a) => [a.id, 0]))
+  activeOrders(standingOrders).forEach((o) => {
+    if (o.accountId in map) map[o.accountId] += toMonthly(o.amount, o.rhythm)
+  })
+  transfers.forEach((t) => {
+    if (t.toAccountId in map) map[t.toAccountId] += toMonthly(t.amount, t.rhythm || 'monthly')
+  })
+  return map
 }
 
 // Pro Person: Kosten, Sparen, Einkommen, Überschuss (= Einkommen − Kosten − Sparen).
