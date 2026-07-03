@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import KpiCard from '../components/KpiCard.jsx'
 import SankeyFlow from '../components/charts/SankeyFlow.jsx'
 import DragCard from '../components/DragCard.jsx'
@@ -25,6 +25,11 @@ export default function Overview({ data, onNavigate }) {
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
   const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER)
 
+  // Ausgewählter Fluss (Kontopaar): Klick in Liste ODER Sankey hebt beides hervor.
+  const [selFlow, setSelFlow] = useState(null) // { from, to } | null
+  const flowMatches = (f) => selFlow && f.from === selFlow.from && f.to === selFlow.to
+  const toggleFlow = (f) => setSelFlow(flowMatches(f) ? null : { from: f.from, to: f.to })
+
   const sections = {
     flow: (
       <>
@@ -43,30 +48,43 @@ export default function Overview({ data, onNavigate }) {
                   nodeColors={flows.nodeColors}
                   columns={flows.columns}
                   labels={flows.labels}
+                  selected={selFlow}
+                  onSelect={setSelFlow}
                 />
               </div>
-              <div className="table-wrap">
-                <table className="resp-table">
-                  <thead>
-                    <tr><th>Von</th><th>Nach</th><th className="num">€ / Monat</th></tr>
-                  </thead>
-                  <tbody>
-                    {flows.rows.map((f, i) => (
-                      <tr key={i}>
-                        <td data-label="Von"><span className="acct-dot" style={{ background: acctColorByName[f.from] }} />{f.from}</td>
-                        <td data-label="Nach">
-                          <span className="acct-dot" style={{ background: acctColorByName[f.to] }} />{f.to}
-                          {f.kind === 'umbuchung' && <span className="pill umbuchung" style={{ marginLeft: 6 }}>Umbuchung</span>}
-                        </td>
-                        <td className="num" data-label="€ / Monat">{formatEUR(f.flow)}</td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td colSpan={2}><strong>Summe</strong></td>
-                      <td className="num"><strong>{formatEUR(flows.total)}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div>
+                <div className="flow-list">
+                  {flows.rows.map((f, i) => (
+                    <button
+                      key={i}
+                      className={`flow-item ${flowMatches(f) ? 'sel' : selFlow ? 'dim' : ''}`}
+                      onClick={() => toggleFlow(f)}
+                      title="Klicken, um den Fluss im Diagramm hervorzuheben"
+                    >
+                      <span className="flow-route">
+                        <span className="flow-endpoint">
+                          <span className="acct-dot" style={{ background: acctColorByName[f.from] }} />
+                          {f.from}
+                        </span>
+                        <span className="flow-arrow">→</span>
+                        <span className="flow-endpoint">
+                          <span className="acct-dot" style={{ background: acctColorByName[f.to] }} />
+                          {f.to}
+                        </span>
+                        {f.kind === 'umbuchung' && <span className="pill umbuchung">Umbuchung</span>}
+                      </span>
+                      <span className="flow-amount">{formatEUR(f.flow)}</span>
+                    </button>
+                  ))}
+                  <div className="flow-total">
+                    <span>Summe</span>
+                    <span className="flow-amount">{formatEUR(flows.total)}</span>
+                  </div>
+                </div>
+                <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                  Klicke eine Zeile oder einen Fluss im Diagramm, um ihn hervorzuheben.
+                  {selFlow && <> <button className="link-btn" onClick={() => setSelFlow(null)}>Auswahl aufheben</button></>}
+                </p>
               </div>
             </div>
           )}
