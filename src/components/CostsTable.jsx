@@ -57,7 +57,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
   return (
     <div>
       <div className="table-wrap">
-        <table className="costs-table">
+        <table className="costs-table resp-table">
           <thead>
             <tr>
               <th>Empfänger</th><th className="num">Betrag</th><th>Rhythmus</th>
@@ -69,7 +69,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
             {visible.map((o) => (
               <tr key={o.id}>
                 {/* Empfänger */}
-                <td>
+                <td data-label="Empfänger">
                   {isEd(o.id, 'recipient') ? (
                     <span ref={cellRef}><input autoFocus value={o.recipient} placeholder="Empfänger"
                       onChange={(e) => set(o.id, 'recipient', e.target.value)} /></span>
@@ -79,7 +79,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                 </td>
 
                 {/* Betrag */}
-                <td className="num">
+                <td className="num" data-label="Betrag">
                   {isEd(o.id, 'amount') ? (
                     <span ref={cellRef}><input autoFocus type="text" inputMode="decimal" value={o.amount}
                       placeholder="0,00" onChange={(e) => set(o.id, 'amount', e.target.value)} /></span>
@@ -94,7 +94,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                 </td>
 
                 {/* Rhythmus */}
-                <td>
+                <td data-label="Rhythmus">
                   {isEd(o.id, 'rhythm') ? (
                     <span ref={cellRef}><select autoFocus value={o.rhythm}
                       onChange={(e) => { set(o.id, 'rhythm', e.target.value); setEdit(null) }}>
@@ -106,7 +106,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                 </td>
 
                 {/* Art */}
-                <td>
+                <td data-label="Art">
                   {isEd(o.id, 'kind') ? (
                     <span ref={cellRef}><select autoFocus value={o.kind}
                       onChange={(e) => { set(o.id, 'kind', e.target.value); setEdit(null) }}>
@@ -121,7 +121,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                 </td>
 
                 {/* Aufteilung */}
-                <td>
+                <td data-label="Aufteilung">
                   {isEd(o.id, 'split') ? (
                     <span ref={cellRef}>
                       <div className="split-cell">
@@ -155,7 +155,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                 </td>
 
                 {/* Konto */}
-                <td>
+                <td data-label="Konto">
                   {isEd(o.id, 'accountId') ? (
                     <span ref={cellRef}><select autoFocus value={o.accountId}
                       onChange={(e) => { set(o.id, 'accountId', e.target.value); setEdit(null) }}>
@@ -170,12 +170,12 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                 </td>
 
                 {/* Kategorie (eigenes Chip-Menü) */}
-                <td>
+                <td data-label="Kategorie">
                   <CategoryTag value={o.category} onChange={(cat) => set(o.id, 'category', cat)} />
                 </td>
 
                 {/* Löschen */}
-                <td className="num">
+                <td className="num" data-label="">
                   <button className="btn-del ct-del" onClick={() => del(o.id)} title="Löschen">✕</button>
                 </td>
               </tr>

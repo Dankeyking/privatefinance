@@ -99,19 +99,19 @@ export default function Overview({ data, onSaveOrders }) {
               />
             </div>
             <div className="table-wrap">
-              <table>
+              <table className="resp-table">
                 <thead>
                   <tr><th>Von</th><th>Nach</th><th className="num">€ / Monat</th></tr>
                 </thead>
                 <tbody>
                   {flows.rows.map((f, i) => (
                     <tr key={i}>
-                      <td><span className="acct-dot" style={{ background: acctColorByName[f.from] }} />{f.from}</td>
-                      <td>
+                      <td data-label="Von"><span className="acct-dot" style={{ background: acctColorByName[f.from] }} />{f.from}</td>
+                      <td data-label="Nach">
                         <span className="acct-dot" style={{ background: acctColorByName[f.to] }} />{f.to}
                         {f.kind === 'umbuchung' && <span className="pill umbuchung" style={{ marginLeft: 6 }}>Umbuchung</span>}
                       </td>
-                      <td className="num">{formatEUR(f.flow)}</td>
+                      <td className="num" data-label="€ / Monat">{formatEUR(f.flow)}</td>
                     </tr>
                   ))}
                   <tr>
@@ -160,7 +160,7 @@ export default function Overview({ data, onSaveOrders }) {
       <h2 className="section-title mt">Kosten je Person <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(pro Monat)</span></h2>
       <div className="card">
         <div className="table-wrap">
-          <table>
+          <table className="resp-table">
             <thead>
               <tr>
                 <th>Person</th>
@@ -173,11 +173,11 @@ export default function Overview({ data, onSaveOrders }) {
             <tbody>
               {persons.map((p) => (
                 <tr key={p.person}>
-                  <td><strong>{p.person}</strong></td>
-                  <td className="num">{formatEUR(p.costs)}</td>
-                  <td className="num">{formatEUR(p.savings)}</td>
-                  <td className="num">{formatEUR(p.income)}</td>
-                  <td className={`num amount ${p.surplus >= 0 ? 'pos' : 'neg'}`}>{formatEUR(p.surplus)}</td>
+                  <td data-label="Person"><strong>{p.person}</strong></td>
+                  <td className="num" data-label="Kosten">{formatEUR(p.costs)}</td>
+                  <td className="num" data-label="Sparen">{formatEUR(p.savings)}</td>
+                  <td className="num" data-label="Einkommen">{formatEUR(p.income)}</td>
+                  <td className={`num amount ${p.surplus >= 0 ? 'pos' : 'neg'}`} data-label="Überschuss">{formatEUR(p.surplus)}</td>
                 </tr>
               ))}
               {persons.length === 0 && (

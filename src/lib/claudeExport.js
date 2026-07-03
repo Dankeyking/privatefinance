@@ -63,6 +63,7 @@ export function buildClaudeExport(data, overrides = {}) {
   const persons = personSummary(data).map((p) => ({
     person: p.person,
     totalCosts: round(p.costs),
+    savings: round(p.savings),
     income: round(p.income),
     surplus: round(p.surplus),
   }))
@@ -78,7 +79,10 @@ export function buildClaudeExport(data, overrides = {}) {
     summary: {
       totalIncome: round(household.totalIncome),
       totalCosts: round(household.totalCosts),
+      savings: round(household.savings),
       surplus: round(household.surplus),
+      availableWithoutSavings: round(household.availableWithoutSavings),
+      savingsRate: round(household.savingsRate),
       byAccount,
       personSummary: persons,
       flows: accountFlows(data).rows,
