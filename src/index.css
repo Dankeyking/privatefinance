@@ -513,6 +513,24 @@ select, .btn {
 
 .joint-picker { font-size: 13px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
 
+/* Sparziel-Fortschritt (Konten) */
+.goal { margin-top: 14px; }
+.goal-bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.goal-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+.goal-sub { font-size: 12px; margin-top: 6px; }
+
+/* Abo-Radar */
+.abo-row { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--surface-2); }
+.abo-row:last-child { border-bottom: none; }
+.abo-main { min-width: 0; }
+.abo-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.abo-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.abo-track { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+.abo-fill { height: 100%; border-radius: 999px; }
+.abo-fig { text-align: right; }
+.abo-year { font-weight: 700; font-variant-numeric: tabular-nums; }
+.abo-month { font-size: 12px; color: var(--text-muted); }
+
 .split-cell { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
 .split-cell > select { width: 100%; }
 .split-share { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }

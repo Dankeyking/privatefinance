@@ -9,12 +9,12 @@
 
 // --- Konten ------------------------------------------------------------------
 const accounts = [
-  { id: 'p_duncan', name: 'Privatkonto Duncan', type: 'personal', owner: 'Duncan', balance: 0, currency: 'EUR', color: '#3b82f6' },
-  { id: 'p_elisa', name: 'Privatkonto Elisa', type: 'personal', owner: 'Elisa', balance: 0, currency: 'EUR', color: '#ec4899' },
-  { id: 'j_gemein', name: 'Gemeinschaftskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#10b981' },
-  { id: 'j_haushalt', name: 'Haushaltskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#f59e0b' },
-  { id: 'j_urlaub', name: 'Urlaubskonto', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#14b8a6' },
-  { id: 'j_wohnen', name: 'Wohnung & Versicherungen', type: 'joint', owner: 'Gemeinsam', balance: 0, currency: 'EUR', color: '#8b5cf6' },
+  { id: 'p_duncan', name: 'Privatkonto Duncan', type: 'personal', owner: 'Duncan', balance: 1500, currency: 'EUR', color: '#3b82f6' },
+  { id: 'p_elisa', name: 'Privatkonto Elisa', type: 'personal', owner: 'Elisa', balance: 1300, currency: 'EUR', color: '#ec4899' },
+  { id: 'j_gemein', name: 'Gemeinschaftskonto', type: 'joint', owner: 'Gemeinsam', balance: 800, currency: 'EUR', color: '#10b981' },
+  { id: 'j_haushalt', name: 'Haushaltskonto', type: 'joint', owner: 'Gemeinsam', balance: 650, currency: 'EUR', color: '#f59e0b' },
+  { id: 'j_urlaub', name: 'Urlaubskonto', type: 'joint', owner: 'Gemeinsam', balance: 900, currency: 'EUR', color: '#14b8a6', goal: 2500 },
+  { id: 'j_wohnen', name: 'Wohnung & Versicherungen', type: 'joint', owner: 'Gemeinsam', balance: 950, currency: 'EUR', color: '#8b5cf6' },
 ]
 
 // --- Einnahmen (netto) -------------------------------------------------------
@@ -38,6 +38,15 @@ const standingOrders = [
   // Rechtsschutzversicherung 30,10 € – 50/50, vom Konto Wohnung & Versicherungen.
   { id: 'so_rechtsschutz', recipient: 'Rechtsschutzversicherung', amount: 30.10, rhythm: 'monthly', accountId: 'j_wohnen', category: 'Versicherung', kind: 'fixed', executionDay: 15,
     split: { mode: 'even' } },
+  // Abos (kind 'subscription')
+  { id: 'so_netflix', recipient: 'Netflix', amount: 17.99, rhythm: 'monthly', accountId: 'j_gemein', category: 'Freizeit', kind: 'subscription', executionDay: 20,
+    split: { mode: 'even' } },
+  { id: 'so_spotify', recipient: 'Spotify Family', amount: 17.99, rhythm: 'monthly', accountId: 'j_gemein', category: 'Freizeit', kind: 'subscription', executionDay: 6,
+    split: { mode: 'even' } },
+  { id: 'so_handy', recipient: 'Handyvertrag', amount: 29.99, rhythm: 'monthly', accountId: 'p_duncan', category: 'Mobilität', kind: 'subscription', executionDay: 1,
+    split: { mode: 'single', person: 'Duncan' } },
+  { id: 'so_cloud', recipient: 'iCloud Speicher', amount: 35.88, rhythm: 'yearly', accountId: 'p_duncan', category: 'Technik', kind: 'subscription', executionDay: 10,
+    split: { mode: 'single', person: 'Duncan' } },
   // Kategorie 'Sparen' -> zählt als Rücklage (nicht als Kosten).
   { id: 'so_etf', recipient: 'ETF Sparplan', amount: 200, rhythm: 'monthly', accountId: 'j_gemein', category: 'Sparen', kind: 'fixed', executionDay: 5,
     split: { mode: 'even' } },

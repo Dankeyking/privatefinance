@@ -16,7 +16,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
   const seed = () => ({
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a, i) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
-      color: a.color || ACCOUNT_PALETTE[i % ACCOUNT_PALETTE.length],
+      color: a.color || ACCOUNT_PALETTE[i % ACCOUNT_PALETTE.length], goal: a.goal ?? '',
     })),
     incomes: (manual.incomes ?? data.incomes ?? []).map((i) => ({
       id: i.id || newId(), name: i.name || '', amount: i.amount ?? 0, rhythm: i.rhythm || 'monthly',
@@ -51,7 +51,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
   function save() {
     const payload = {
       accounts: form.accounts.map((a) => ({
-        ...a, balance: Number(a.balance) || 0, currency: 'EUR',
+        ...a, balance: Number(a.balance) || 0, goal: Number(a.goal) || 0, currency: 'EUR',
         owner: a.type === 'personal' ? (a.owner || a.name || 'Ich') : (a.owner || 'Gemeinsam'),
       })),
       incomes: form.incomes.map((i) => ({
@@ -95,7 +95,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Farbe</th><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Startsaldo (€)</th><th></th></tr>
+              <tr><th>Farbe</th><th>Name</th><th>Inhaber</th><th>Typ</th><th className="num">Saldo (€)</th><th className="num">Sparziel (€)</th><th></th></tr>
             </thead>
             <tbody>
               {form.accounts.map((a) => (
@@ -110,6 +110,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
                     </select>
                   </td>
                   <td className="num"><input type="number" value={a.balance} onChange={(e) => setRow('accounts', a.id, 'balance', e.target.value)} /></td>
+                  <td className="num"><input type="number" value={a.goal} placeholder="—" onChange={(e) => setRow('accounts', a.id, 'goal', e.target.value)} /></td>
                   <td className="num"><button className="btn-del" onClick={() => delRow('accounts', a.id)}>✕</button></td>
                 </tr>
               ))}

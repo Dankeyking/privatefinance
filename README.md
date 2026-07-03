@@ -31,8 +31,10 @@ sodass pro Konto der **monatlich aufs Konto zu buchende Betrag** herauskommt.
 - **Übersicht:** KPIs, Geldfluss-Diagramm, Kosten je Konto und Kosten je Person.
 - **Kosten & Abos:** filterbare Tabelle aller Posten (nach Konto, Kategorie, Art =
   Fixkosten/Abo), normalisierte Monatskosten und die Aufteilung je Person.
-- **Analyse:** Donut (Kosten je Kategorie), Balken (Einkommen vs. Kosten je Person,
-  Kosten je Konto).
+- **Konten:** Kontostände, Monatslast je Konto und **Sparziele** mit Fortschrittsbalken.
+- **Analyse:** Donut (Kosten je Kategorie), **Kosten-Treemap**, **Abo-Radar** (Abos nach
+  €/Jahr), Balken (Einkommen vs. Ausgaben je Person, Kosten je Konto).
+- **Responsiv:** funktioniert am Handy – Tabellen werden zu übersichtlichen Karten.
 - **Kategorien:** vordefinierte Kategorien, Auto-Zuordnung per Schlüsselwort, manuelle
   Overrides (in `localStorage`).
 - **CSV-Import:** Bank-Umsätze (CSV-Export) einlesen – die App erkennt Trennzeichen und

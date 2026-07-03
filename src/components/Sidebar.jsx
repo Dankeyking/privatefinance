@@ -2,6 +2,7 @@ import Icon from './Icon.jsx'
 
 const NAV = [
   { id: 'overview', label: 'Übersicht', icon: 'overview' },
+  { id: 'accounts', label: 'Konten', icon: 'cash' },
   { id: 'recurring', label: 'Kosten & Abos', icon: 'standing' },
   { id: 'import', label: 'CSV-Import', icon: 'export' },
   { id: 'analytics', label: 'Analyse', icon: 'analytics' },

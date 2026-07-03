@@ -13,6 +13,7 @@ import {
   Filler,
 } from 'chart.js'
 import { SankeyController, Flow } from 'chartjs-chart-sankey'
+import { TreemapController, TreemapElement } from 'chartjs-chart-treemap'
 
 ChartJS.register(
   CategoryScale,
@@ -27,6 +28,8 @@ ChartJS.register(
   Filler,
   SankeyController,
   Flow,
+  TreemapController,
+  TreemapElement,
 )
 
 export { ChartJS }

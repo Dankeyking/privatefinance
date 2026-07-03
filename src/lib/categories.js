@@ -9,8 +9,10 @@
 export const CATEGORIES = [
   { id: 'Wohnen', label: 'Wohnen', color: '#2563eb' },
   { id: 'Mobilität', label: 'Mobilität', color: '#0891b2' },
+  { id: 'Gesundheit', label: 'Gesundheit', color: '#0d9488' },
   { id: 'Versicherung', label: 'Versicherung', color: '#7c3aed' },
   { id: 'Freizeit', label: 'Freizeit', color: '#db2777' },
+  { id: 'Technik', label: 'Technik', color: '#6366f1' },
   { id: 'Sparen', label: 'Sparen', color: '#16a34a' },
   { id: 'Bargeld', label: 'Bargeld', color: '#ca8a04' },
   { id: 'Sonstiges', label: 'Sonstiges', color: '#64748b' },
@@ -40,10 +42,18 @@ export const KEYWORD_RULES = {
     'bahn', 'bvg', 'mvg', 'hvv', 'leasing', 'kfz', 'auto', 'werkstatt',
     'parken', 'tankt', 'sixt', 'tier', 'lime',
   ],
+  Gesundheit: [
+    'arzt', 'ärzt', 'medis', 'medikament', 'apotheke', 'barmenia', 'zahnarzt',
+    'physio', 'optiker', 'brille', 'therapie', 'krankengymnastik', 'klinik', 'medi',
+  ],
   Versicherung: [
     'versicherung', 'allianz', 'huk', 'axa', 'ergo', 'generali', 'devk',
-    'krankenkasse', 'krankenversicherung', 'tk', 'aok', 'barmer', 'dak',
-    'haftpflicht', 'rente',
+    'haftpflicht', 'rechtsschutz', 'hausrat', 'rente', 'kfz-vers',
+  ],
+  Technik: [
+    'homeassistant', 'home assistant', 'goneo', 'domain', 'domän', 'google one',
+    'gmx', 'icloud', 'dropbox', 'github', 'hetzner', 'netcup', 'hosting', 'nas',
+    'openai', 'chatgpt', 'claude', 'server', 'vpn',
   ],
   Freizeit: [
     'netflix', 'spotify', 'disney', 'amazon prime', 'dazn', 'sky',
@@ -53,7 +63,7 @@ export const KEYWORD_RULES = {
   Sparen: [
     'depot', 'etf', 'sparplan', 'trade republic', 'traderepublic', 'scalable',
     'tagesgeld', 'festgeld', 'sparkonto', 'rücklage', 'ruecklage', 'invest',
-    'comdirect', 'ing depot',
+    'comdirect', 'ing depot', 'bausparvertrag', 'bauspar', 'sparen',
   ],
   Bargeld: [
     'bargeld', 'bargeldabhebung', 'geldautomat', 'auszahlung', 'atm',

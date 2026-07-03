@@ -12,10 +12,11 @@ Konten**. UI durchgehend **auf Deutsch**. Eigene Daten liegen **nur im Browser**
 ## Datenmodell (das Herzstück)
 Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten):
 
-- **accounts**: `{ id, name, type: 'personal'|'joint', owner, balance, currency, color }`
+- **accounts**: `{ id, name, type: 'personal'|'joint', owner, balance, currency, color, goal }`
   - `owner` eines **personal**-Kontos = die **Person** (Personen werden daraus abgeleitet,
     nicht hartkodiert — siehe `personsFromAccounts`).
   - `color` = Kontofarbe (Fluss/Karten/Tabellen); Fallback via `src/lib/accountColors.js`.
+  - `goal` = optionales Sparziel (€); Fortschritt = balance/goal auf der „Konten"-Seite.
 - **incomes**: `{ id, name, amount, rhythm, accountId, executionDay }` (landen auf Privatkonten)
 - **standingOrders** (Fixkosten & Abos): `{ id, recipient, amount, rhythm, accountId,
   category, kind: 'fixed'|'subscription', executionDay, nextExecution, monthInterval, split }`
@@ -62,9 +63,10 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   (inkl. Split-Editor). Voll kontrolliert: `orders` rein, `onChange(next)` raus.
 
 ## Seiten (`src/pages/`, Routing in `src/App.jsx` per `page`-State)
-Übersicht (inkl. Inline-Editor + Auto-Speichern) · Kosten & Abos (Filter/Analyse) ·
-CSV-Import (Umsätze einlesen → wiederkehrende erkennen → als Posten übernehmen) ·
-Analyse (Charts) · Kategorien · Meine Daten (Settings).
+Übersicht (inkl. Inline-Editor + Auto-Speichern) · Konten (Salden, Monatslast, Sparziele) ·
+Kosten & Abos (Click-to-Edit + Filter) · CSV-Import · Analyse (Donut, Treemap, Abo-Radar,
+Balken) · Kategorien · Meine Daten (Settings). Responsive: Tabellen mit `.resp-table`
+werden am Handy zu Karten (data-label).
 
 ## Konventionen
 - Deutsch in UI, Kommentaren und Commit-relevanten Texten.

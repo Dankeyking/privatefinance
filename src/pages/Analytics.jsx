@@ -1,12 +1,22 @@
 import { useMemo, useState } from 'react'
 import IncomeExpenseBar from '../components/charts/IncomeExpenseBar.jsx'
 import CategoryDonut from '../components/charts/CategoryDonut.jsx'
+import CostTreemap from '../components/charts/CostTreemap.jsx'
 import { categoryColor } from '../lib/categories.js'
-import { formatEUR } from '../lib/normalize.js'
-import { monthlyByCategory, personSummary, monthlyByAccount } from '../lib/recurring.js'
+import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
+import { effectiveCategoryOf } from '../lib/selectors.js'
+import { monthlyByCategory, personSummary, monthlyByAccount, isSavings } from '../lib/recurring.js'
+
+const splitPersonLabel = (o) => {
+  const m = o.split?.mode
+  if (m === 'single') return o.split.person
+  if (m === 'even') return 'geteilt'
+  return 'anteilig'
+}
 
 export default function Analytics({ data, overrides }) {
   const [includeSavings, setIncludeSavings] = useState(false)
+  const accById = useMemo(() => Object.fromEntries((data.accounts || []).map((a) => [a.id, a])), [data.accounts])
 
   const catTotals = useMemo(
     () => monthlyByCategory(data, overrides, { excludeSavings: !includeSavings }),
@@ -35,11 +45,39 @@ export default function Analytics({ data, overrides }) {
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
 
+  // Treemap: alle Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
+  const treemapItems = useMemo(() => {
+    return (data.standingOrders || [])
+      .filter((o) => !isSavings(o, overrides))
+      .map((o) => {
+        const cat = effectiveCategoryOf(o, overrides)
+        return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: cat, color: categoryColor(cat) }
+      })
+      .filter((x) => x.value > 0)
+  }, [data.standingOrders, overrides])
+
+  // Abo-Radar: Abos nach Jahresbetrag.
+  const abos = useMemo(() => {
+    const rows = (data.standingOrders || [])
+      .filter((o) => o.kind === 'subscription')
+      .map((o) => {
+        const cat = effectiveCategoryOf(o, overrides)
+        const monthly = toMonthly(o.amount, o.rhythm)
+        return {
+          id: o.id, recipient: o.recipient || '—', monthly, yearly: monthly * 12,
+          category: cat, color: categoryColor(cat), rhythm: o.rhythm,
+          person: splitPersonLabel(o), account: accById[o.accountId]?.name || '',
+        }
+      })
+      .sort((a, b) => b.yearly - a.yearly)
+    return { rows, totalYear: rows.reduce((s, r) => s + r.yearly, 0), max: Math.max(1, ...rows.map((r) => r.yearly)) }
+  }, [data.standingOrders, overrides, accById])
+
   return (
     <div>
       <div className="page-header">
         <h1>Analyse</h1>
-        <p>Monatliche Kosten nach Kategorie, je Person und je Konto (aus den wiederkehrenden Posten).</p>
+        <p>Monatliche Kosten nach Kategorie, je Person und je Konto – plus Kosten-Treemap und Abo-Radar.</p>
       </div>
 
       <div className="grid charts-2">
@@ -59,6 +97,44 @@ export default function Analytics({ data, overrides }) {
           <h2>Einkommen vs. Ausgaben je Person</h2>
           <IncomeExpenseBar labels={personBars.labels} income={personBars.income} expenses={personBars.expenses} />
         </div>
+      </div>
+
+      {/* Treemap */}
+      <div className="card mt">
+        <h2>Kosten-Treemap <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Kachelgröße = Monatsbetrag, Farbe = Kategorie)</span></h2>
+        <CostTreemap items={treemapItems} />
+      </div>
+
+      {/* Abo-Radar */}
+      <div className="card mt">
+        <div className="editor-head" style={{ marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>Abo-Radar</h2>
+          <span className="muted" style={{ fontSize: 13 }}>
+            {abos.rows.length} Abos · {formatEUR(abos.totalYear)}/Jahr · {formatEUR(abos.totalYear / 12)}/Monat
+          </span>
+        </div>
+        {abos.rows.length === 0 ? (
+          <p className="muted">Keine Abos erfasst.</p>
+        ) : (
+          <div>
+            {abos.rows.map((r) => (
+              <div className="abo-row" key={r.id}>
+                <div className="abo-main">
+                  <div className="abo-name">
+                    <span className="acct-dot" style={{ background: r.color }} />
+                    {r.recipient}
+                  </div>
+                  <div className="abo-meta">{r.category} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}{r.account ? ` · ${r.account}` : ''}</div>
+                  <div className="abo-track"><div className="abo-fill" style={{ width: `${(r.yearly / abos.max) * 100}%`, background: r.color }} /></div>
+                </div>
+                <div className="abo-fig">
+                  <div className="abo-year">{formatEUR(r.yearly)}<span className="abo-month"> /Jahr</span></div>
+                  <div className="abo-month">{formatEUR(r.monthly)}/Monat</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card mt">
