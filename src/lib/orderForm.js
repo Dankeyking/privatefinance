@@ -4,6 +4,8 @@
 //  Wird von „Meine Daten" und dem Inline-Editor der Übersicht gemeinsam genutzt.
 // =============================================================================
 
+import { nextDueDate } from './selectors.js'
+
 let idc = 0
 export const newOrderId = () => `m${Date.now()}${idc++}`
 
@@ -23,12 +25,6 @@ export function parseAmountDE(v) {
 function localISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-export function nextExec(day) {
-  const t = new Date()
-  const d = new Date(t.getFullYear(), t.getMonth(), Number(day) || 1)
-  if (d <= t) d.setMonth(d.getMonth() + 1)
-  return localISO(d)
-}
 
 // Gespeicherter Posten -> Formularzeile.
 export function orderToForm(o = {}) {
@@ -42,6 +38,7 @@ export function orderToForm(o = {}) {
     category: o.category || 'Sonstiges',
     kind: o.kind || 'fixed',
     executionDay: o.executionDay || 1,
+    dueMonth: o.dueMonth || '',
     endDate: o.endDate || '',
     splitMode: split.mode || 'even',
     splitPerson: split.person || '',
@@ -60,7 +57,7 @@ export function formToOrder(o, persons = []) {
     }
     return { mode: 'even' }
   }
-  return {
+  const order = {
     id: o.id,
     recipient: o.recipient,
     amount: parseAmountDE(o.amount),
@@ -69,11 +66,15 @@ export function formToOrder(o, persons = []) {
     category: o.category,
     kind: o.kind === 'subscription' ? 'subscription' : 'fixed',
     executionDay: Number(o.executionDay) || 1,
+    // dueMonth (1-12) nur für nicht-monatliche Posten: verankert Jahres-/Quartals-Fälligkeit.
+    dueMonth: o.rhythm !== 'monthly' ? Number(o.dueMonth) || null : null,
     endDate: o.endDate || '',
     split: buildSplit(),
-    nextExecution: nextExec(o.executionDay),
     monthInterval: o.rhythm === 'yearly' ? 12 : o.rhythm === 'quarterly' ? 3 : 1,
   }
+  const due = nextDueDate(order)
+  order.nextExecution = due ? localISO(due) : ''
+  return order
 }
 
 // Neue leere Formularzeile.

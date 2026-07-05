@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import CategoryTag from './CategoryTag.jsx'
 import SortTh from './SortTh.jsx'
 import { makeNewOrder, formToOrder, parseAmountDE } from '../lib/orderForm.js'
-import { toMonthly, formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
+import { toMonthly, formatEUR, formatDate, RHYTHM_LABELS, MONTH_NAMES_SHORT } from '../lib/normalize.js'
 import { isOrderActive, monthsRemaining } from '../lib/selectors.js'
 import { personShareMonthly } from '../lib/recurring.js'
 import { accountColor } from '../lib/accountColors.js'
@@ -122,15 +122,33 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                   )}
                 </td>
 
-                {/* Rhythmus */}
+                {/* Rhythmus (+ Fälligkeitsmonat bei jährlich/vierteljährlich) */}
                 <td data-label="Rhythmus">
                   {isEd(o.id, 'rhythm') ? (
-                    <span ref={cellRef}><select autoFocus value={o.rhythm}
-                      onChange={(e) => { set(o.id, 'rhythm', e.target.value); setEdit(null) }}>
-                      {RHYTHMS.map((r) => <option key={r} value={r}>{RHYTHM_LABELS[r]}</option>)}
-                    </select></span>
+                    <span ref={cellRef}>
+                      <div className="due-cell">
+                        <select autoFocus value={o.rhythm}
+                          onChange={(e) => { set(o.id, 'rhythm', e.target.value); if (e.target.value === 'monthly') setEdit(null) }}>
+                          {RHYTHMS.map((r) => <option key={r} value={r}>{RHYTHM_LABELS[r]}</option>)}
+                        </select>
+                        {o.rhythm !== 'monthly' && (
+                          <select value={o.dueMonth || ''} title="Monat der Fälligkeit"
+                            onChange={(e) => { set(o.id, 'dueMonth', e.target.value); setEdit(null) }}>
+                            <option value="">Monat?</option>
+                            {MONTH_NAMES_SHORT.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                          </select>
+                        )}
+                      </div>
+                    </span>
                   ) : (
-                    <Disp id={o.id} field="rhythm">{RHYTHM_LABELS[o.rhythm]}</Disp>
+                    <Disp id={o.id} field="rhythm">
+                      {RHYTHM_LABELS[o.rhythm]}
+                      {o.rhythm !== 'monthly' && (
+                        o.dueMonth
+                          ? <small className="muted" style={{ marginLeft: 5 }}>· {MONTH_NAMES_SHORT[o.dueMonth - 1]}</small>
+                          : <small className="muted" style={{ marginLeft: 5 }} title="Fälligkeitsmonat fehlt – klicken zum Setzen">· Monat?</small>
+                      )}
+                    </Disp>
                   )}
                 </td>
 

@@ -708,6 +708,11 @@ select, .btn {
 .abo-year { font-weight: 700; font-variant-numeric: tabular-nums; }
 .abo-month { font-size: 12px; color: var(--text-muted); }
 
+/* Tag + Fälligkeitsmonat nebeneinander (jährliche/vierteljährliche Posten) */
+.due-cell { display: flex; align-items: center; gap: 5px; }
+.due-cell input[type='number'] { width: 58px; min-width: 58px; }
+.due-cell select { min-width: 74px; }
+
 .split-cell { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
 .split-cell > select { width: 100%; }
 .split-share { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }

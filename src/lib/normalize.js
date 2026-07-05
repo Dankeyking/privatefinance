@@ -15,6 +15,8 @@ export const RHYTHM_LABELS = {
   yearly: 'jährlich',
 }
 
+export const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+
 // Rechnet einen Auftragsbetrag auf monatliche Kosten um.
 // yearly -> /12, quarterly -> /3, monthly -> unverändert.
 export function toMonthly(amount, rhythm) {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { getCategories } from '../lib/categoryStore.js'
 import { makeNewOrder, parseAmountDE } from '../lib/orderForm.js'
+import { MONTH_NAMES_SHORT } from '../lib/normalize.js'
 import { sortRows, nextSortState } from '../lib/sorting.js'
 import SortTh from './SortTh.jsx'
 
@@ -80,7 +81,19 @@ export default function RecurringEditor({ accounts, persons, orders, onChange })
                     <option value="subscription">Abo</option>
                   </select>
                 </td>
-                <td className="num"><input type="number" min="1" max="31" value={o.executionDay} onChange={(e) => set(o.id, 'executionDay', e.target.value)} /></td>
+                <td className="num">
+                  <div className="due-cell">
+                    <input type="number" min="1" max="31" value={o.executionDay} title="Tag im Monat"
+                      onChange={(e) => set(o.id, 'executionDay', e.target.value)} />
+                    {o.rhythm !== 'monthly' && (
+                      <select value={o.dueMonth || ''} title="Monat der Fälligkeit (verankert jährliche/vierteljährliche Posten)"
+                        onChange={(e) => set(o.id, 'dueMonth', e.target.value)}>
+                        <option value="">Monat?</option>
+                        {MONTH_NAMES_SHORT.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                      </select>
+                    )}
+                  </div>
+                </td>
                 <td><input type="date" value={o.endDate || ''} title="Optionales Enddatum (z. B. letzte Rate)" onChange={(e) => set(o.id, 'endDate', e.target.value)} /></td>
                 <td>
                   <div className="split-cell">

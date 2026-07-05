@@ -42,6 +42,7 @@ export function buildClaudeExport(data, overrides = {}) {
     category: effectiveCategoryOf(so, overrides),
     monthlyCost: round(toMonthly(so.amount, so.rhythm)),
     split: so.split || { mode: 'even' },
+    ...(so.dueMonth ? { dueMonth: so.dueMonth } : {}),
     ...(so.endDate ? { endDate: so.endDate, active: isOrderActive(so) } : {}),
   }))
 

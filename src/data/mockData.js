@@ -32,8 +32,8 @@ const standingOrders = [
   // Internet 70 € – 50/50.
   { id: 'so_internet', recipient: 'Internet', amount: 70, rhythm: 'monthly', accountId: 'j_wohnen', category: 'Wohnen', kind: 'fixed', executionDay: 12,
     split: { mode: 'even' } },
-  // Rundfunkbeitrag (GEZ) jährlich – 50/50.
-  { id: 'so_gez', recipient: 'Rundfunkbeitrag (GEZ)', amount: 220.32, rhythm: 'yearly', accountId: 'j_wohnen', category: 'Sonstiges', kind: 'fixed', executionDay: 15,
+  // Rundfunkbeitrag (GEZ) jährlich – 50/50. dueMonth = Fälligkeitsmonat (1-12).
+  { id: 'so_gez', recipient: 'Rundfunkbeitrag (GEZ)', amount: 220.32, rhythm: 'yearly', accountId: 'j_wohnen', category: 'Sonstiges', kind: 'fixed', executionDay: 15, dueMonth: 9,
     split: { mode: 'even' } },
   // Rechtsschutzversicherung 30,10 € – 50/50, vom Konto Wohnung & Versicherungen.
   { id: 'so_rechtsschutz', recipient: 'Rechtsschutzversicherung', amount: 30.10, rhythm: 'monthly', accountId: 'j_wohnen', category: 'Versicherung', kind: 'fixed', executionDay: 15,
@@ -45,7 +45,7 @@ const standingOrders = [
     split: { mode: 'even' } },
   { id: 'so_handy', recipient: 'Handyvertrag', amount: 29.99, rhythm: 'monthly', accountId: 'p_duncan', category: 'Mobilität', kind: 'subscription', executionDay: 1,
     split: { mode: 'single', person: 'Duncan' } },
-  { id: 'so_cloud', recipient: 'iCloud Speicher', amount: 35.88, rhythm: 'yearly', accountId: 'p_duncan', category: 'Technik', kind: 'subscription', executionDay: 10,
+  { id: 'so_cloud', recipient: 'iCloud Speicher', amount: 35.88, rhythm: 'yearly', accountId: 'p_duncan', category: 'Technik', kind: 'subscription', executionDay: 10, dueMonth: 11,
     split: { mode: 'single', person: 'Duncan' } },
   // Kategorie 'Sparen' -> zählt als Rücklage (nicht als Kosten).
   { id: 'so_etf', recipient: 'ETF Sparplan', amount: 200, rhythm: 'monthly', accountId: 'j_gemein', category: 'Sparen', kind: 'fixed', executionDay: 5,

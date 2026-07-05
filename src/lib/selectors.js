@@ -58,6 +58,43 @@ export function monthsRemaining(o, today = new Date()) {
   return Math.max(0, months)
 }
 
+// Nächste Fälligkeit eines Postens – dynamisch berechnet (kein gespeichertes
+// Datum, das veralten kann). `dueMonth` (1–12) verankert jährliche Posten im
+// Jahr bzw. definiert den Quartals-Zyklus. Fallback für alte Daten ohne
+// dueMonth: gespeichertes nextExecution, um ganze Intervalle vorgerollt.
+// Liefert null, wenn (wegen endDate) keine Zahlung mehr ansteht.
+export function nextDueDate(o, today = new Date()) {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const day = Number(o.executionDay) || 1
+  // Tag auf Monatslänge begrenzen (31. im Februar -> 28./29.).
+  const at = (year, monthIndex) =>
+    new Date(year, monthIndex, Math.min(day, new Date(year, monthIndex + 1, 0).getDate()))
+  const step = o.rhythm === 'yearly' ? 12 : o.rhythm === 'quarterly' ? 3 : 1
+
+  let due
+  if (step > 1 && o.dueMonth) {
+    // kleinster Monat des Zyklus in diesem Jahr, dann in Schritten vorwärts
+    let m = (Number(o.dueMonth) - 1) % step
+    due = at(start.getFullYear(), m)
+    while (due < start) {
+      m += step
+      due = at(start.getFullYear(), m)
+    }
+  } else if (step > 1 && o.nextExecution) {
+    due = parseLocalDate(o.nextExecution)
+    while (due && due < start) due = at(due.getFullYear(), due.getMonth() + step)
+  } else {
+    due = at(start.getFullYear(), start.getMonth())
+    if (due < start) due = at(start.getFullYear(), start.getMonth() + 1)
+  }
+
+  if (due && o.endDate) {
+    const end = parseLocalDate(o.endDate)
+    if (end && due > end) return null
+  }
+  return due
+}
+
 // Anstehende Posten: nächste Ausführung innerhalb der nächsten `days` Tage.
 // Liefert sortierte Liste mit daysUntil + Kontoname.
 export function upcomingPayments(data, days = 30, today = new Date()) {
@@ -67,14 +104,18 @@ export function upcomingPayments(data, days = 30, today = new Date()) {
   const horizon = new Date(start)
   horizon.setDate(horizon.getDate() + days)
 
+  const iso = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
   return standingOrders
-    .filter((so) => so.nextExecution && isOrderActive(so, today))
+    .filter((so) => isOrderActive(so, today))
     .map((so) => {
-      const due = parseLocalDate(so.nextExecution)
-      const daysUntil = Math.round((due - start) / 86400000)
+      const due = nextDueDate(so, today)
+      const daysUntil = due ? Math.round((due - start) / 86400000) : null
       const acc = accById[so.accountId]
-      return { ...so, due, daysUntil, account: acc }
+      // nextExecution = dynamisch berechnetes Datum (Anzeige), nicht der ggf. veraltete Speicherstand
+      return { ...so, due, daysUntil, account: acc, nextExecution: due ? iso(due) : so.nextExecution }
     })
-    .filter((x) => x.due >= start && x.due <= horizon)
+    .filter((x) => x.due && x.due >= start && x.due <= horizon)
     .sort((a, b) => a.due - b.due)
 }

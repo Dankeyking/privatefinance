@@ -19,8 +19,12 @@ Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten
   - `goal` = optionales Sparziel (€); Fortschritt = balance/goal auf der „Konten"-Seite.
 - **incomes**: `{ id, name, amount, rhythm, accountId, executionDay }` (landen auf Privatkonten)
 - **standingOrders** (Fixkosten & Abos): `{ id, recipient, amount, rhythm, accountId,
-  category, kind: 'fixed'|'subscription', executionDay, nextExecution, monthInterval, split,
-  endDate }`
+  category, kind: 'fixed'|'subscription', executionDay, dueMonth, nextExecution,
+  monthInterval, split, endDate }`
+  - **dueMonth** (1–12, nur nicht-monatlich) = Fälligkeitsmonat: verankert jährliche
+    Posten im Jahr bzw. definiert den Quartals-Zyklus. Die nächste Fälligkeit wird
+    **dynamisch** berechnet (`nextDueDate` in selectors.js); das gespeicherte
+    `nextExecution` ist nur noch Fallback für alte Daten ohne dueMonth.
   - **endDate** (optional, `YYYY-MM-DD`) = letzte Zahlung, z. B. Ratenkauf oder gekündigtes
     Abo. Nach dem Enddatum zählt der Posten in **keiner** Auswertung mehr mit
     (`isOrderActive`/`activeOrders`/`monthsRemaining` in selectors.js), bleibt aber in den
@@ -61,8 +65,9 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   nicht wieder einbauen.)
 - `src/lib/orderForm.js` — Umwandlung Formularzeile ↔ Posten (`orderToForm`, `formToOrder`,
   `makeNewOrder`). Von „Meine Daten" **und** dem Übersichts-Editor genutzt.
-- `src/lib/selectors.js` — Datum/Kategorie/`upcomingPayments` + Enddatum-Logik
-  (`isOrderActive`, `activeOrders`, `monthsRemaining`).
+- `src/lib/selectors.js` — Datum/Kategorie + Fälligkeit (`nextDueDate` – dynamisch aus
+  rhythm/executionDay/dueMonth, `upcomingPayments`) + Enddatum-Logik (`isOrderActive`,
+  `activeOrders`, `monthsRemaining`).
 - `src/lib/categories.js` — **vordefinierte** Kategorien + Auto-Zuordnung (`KEYWORD_RULES`,
   `autoCategorize`). IDs bleiben stabil (referenziert von `SAVINGS_CATEGORY`/Regeln).
 - `src/lib/categoryStore.js` — **eigene Kategorien** (hinzufügen/umbenennen/farbig machen,
@@ -127,8 +132,10 @@ Charts beim Umschalten neu auf.
 ## Befehle
 - `npm run dev` — Dev-Server (Base `/`).
 - `npm run build` — Production-Build. **Achtung:** `vite.config.js` setzt beim Build
-  `base: '/privatefinance/'` (GitHub Pages). `vite preview` liefert dann unter
-  `/privatefinance/`; zum lokalen Testen im Browser ist `npm run dev` (Base `/`) einfacher.
+  `base: '/privatefinance/'`; das Docker-Image (Deployment) baut mit `--base=/`.
+- **Deployment**: Push auf `main` → GitHub Action baut das Docker-Image und pusht es
+  ins GHCR; gehostet wird selbst (nginx auf Port 8080, hinter Traefik+Authentik).
+  Der frühere GitHub-Pages-Workflow wurde entfernt.
 - `npm run mcp` — MCP-Server (liest die Startdaten aus `mockData.js`).
 - Kein Linter/keine Tests konfiguriert; **Build** ist der Sanity-Check.
 
