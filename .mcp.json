@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "privatefinance": {
+      "command": "node",
+      "args": ["mcp/finance-server.js"]
+    }
+  }
+}

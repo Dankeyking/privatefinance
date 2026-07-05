@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.local
+config.js
+
+# Echte Bankdaten – nie committen
+public/data.json
+
+# Enable-Banking-Schlüssel – nie committen
+*.pem
+
+# Logs / Editor
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# temporäre Screenshots/Skripte aus Tests
+_*.png
+_*.mjs

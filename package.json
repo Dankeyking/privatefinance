@@ -1,0 +1,26 @@
+{
+  "name": "privatefinance",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Manuelles Haushalts-Finanztool – Einnahmen, Fixkosten/Abos & Verteilung je Konto und Person",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "mcp": "node mcp/finance-server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "chart.js": "^4.4.7",
+    "chartjs-chart-sankey": "^0.14.1",
+    "chartjs-chart-treemap": "^3.1.0",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}
