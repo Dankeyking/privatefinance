@@ -6,12 +6,12 @@ export function mergeData(base, manual = {}) {
   if (!base) return base
   const out = { ...base }
 
+  // Konten: manuelle Liste ersetzt die Basis vollständig (Settings/Konten-Seite
+  // speichern immer die komplette Liste) – sonst tauchen gelöschte Konten wieder
+  // auf. Bekannte Basis-Konten liefern dabei fehlende Felder (z. B. currency).
   if (Array.isArray(manual.accounts) && manual.accounts.length) {
     const byId = Object.fromEntries((base.accounts || []).map((a) => [a.id, a]))
-    manual.accounts.forEach((m) => {
-      byId[m.id] = { ...byId[m.id], ...m }
-    })
-    out.accounts = Object.values(byId)
+    out.accounts = manual.accounts.map((m) => ({ ...byId[m.id], ...m }))
   }
   // Einnahmen / Fixkosten & Abos / Umbuchungen: falls manuell gepflegt, ersetzen.
   if (Array.isArray(manual.incomes)) out.incomes = manual.incomes

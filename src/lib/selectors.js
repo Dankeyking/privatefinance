@@ -31,6 +31,33 @@ export function effectiveCategoryOf(item, overrides = {}) {
   return autoCategorize(item.recipient || '', item.description || '')
 }
 
+// --- Enddatum (Raten/Kündigungen) -------------------------------------------
+// Posten können optional ein `endDate` (YYYY-MM-DD) tragen, z. B. Ratenkäufe
+// oder gekündigte Abos. Nach dem Enddatum zählt der Posten in keinen
+// Auswertungen mehr mit (bleibt aber in den Tabellen sichtbar).
+
+export function isOrderActive(o, today = new Date()) {
+  if (!o?.endDate) return true
+  const end = parseLocalDate(o.endDate)
+  if (!end) return true
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  return end >= t
+}
+
+export function activeOrders(standingOrders = [], today = new Date()) {
+  return standingOrders.filter((o) => isOrderActive(o, today))
+}
+
+// Verbleibende Monate (≈ Raten) bis zum Enddatum; null ohne Enddatum.
+export function monthsRemaining(o, today = new Date()) {
+  if (!o?.endDate) return null
+  const end = parseLocalDate(o.endDate)
+  if (!end) return null
+  const months =
+    (end.getFullYear() - today.getFullYear()) * 12 + (end.getMonth() - today.getMonth()) + 1
+  return Math.max(0, months)
+}
+
 // Anstehende Posten: nächste Ausführung innerhalb der nächsten `days` Tage.
 // Liefert sortierte Liste mit daysUntil + Kontoname.
 export function upcomingPayments(data, days = 30, today = new Date()) {
@@ -41,7 +68,7 @@ export function upcomingPayments(data, days = 30, today = new Date()) {
   horizon.setDate(horizon.getDate() + days)
 
   return standingOrders
-    .filter((so) => so.nextExecution)
+    .filter((so) => so.nextExecution && isOrderActive(so, today))
     .map((so) => {
       const due = parseLocalDate(so.nextExecution)
       const daysUntil = Math.round((due - start) / 86400000)

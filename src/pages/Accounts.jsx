@@ -3,8 +3,18 @@ import KpiCard from '../components/KpiCard.jsx'
 import InlineAmount from '../components/InlineAmount.jsx'
 import { formatEUR } from '../lib/normalize.js'
 import { accountColor } from '../lib/accountColors.js'
-import { monthlyByAccount } from '../lib/recurring.js'
+import { monthlyByAccount, monthlyInflowByAccount } from '../lib/recurring.js'
 import { sortRows, nextSortState } from '../lib/sorting.js'
+
+// Prognose: in wie vielen Monaten ist das Sparziel erreicht (bei aktuellem Zufluss)?
+function goalEta(balance, goal, inflow) {
+  const remaining = goal - (balance || 0)
+  if (remaining <= 0 || inflow <= 0) return null
+  const months = Math.ceil(remaining / inflow)
+  const d = new Date()
+  d.setMonth(d.getMonth() + months)
+  return { months, label: d.toLocaleDateString('de-DE', { month: 'short', year: 'numeric' }) }
+}
 
 const SORT_OPTS = [
   { key: 'name', label: 'Name' },
@@ -18,6 +28,7 @@ export default function Accounts({ data, onSaveAccounts }) {
 
   const byAccount = useMemo(() => monthlyByAccount(data), [data])
   const loadById = Object.fromEntries(byAccount.map((a) => [a.account.id, a.total]))
+  const inflowById = useMemo(() => monthlyInflowByAccount(data), [data])
 
   const netWorth = accounts.reduce((s, a) => s + (a.balance || 0), 0)
   const monthlyLoad = byAccount.reduce((s, a) => s + a.total, 0)
@@ -81,6 +92,8 @@ export default function Accounts({ data, onSaveAccounts }) {
           const goal = a.goal || 0
           const pct = goal > 0 ? Math.min(100, Math.round(((a.balance || 0) / goal) * 100)) : 0
           const reached = goal > 0 && (a.balance || 0) >= goal
+          const eta = goal > 0 && !reached ? goalEta(a.balance, goal, inflowById[a.id] || 0) : null
+          const underfunded = a.load > 0 && (a.balance || 0) < a.load
           return (
             <div className="card acct" key={a.id} style={{ '--acct-color': accountColor(a, accounts) }}>
               <div className="acct-type">{a.type === 'joint' ? 'Gemeinsam' : `Privat · ${a.owner || ''}`}</div>
@@ -95,6 +108,12 @@ export default function Accounts({ data, onSaveAccounts }) {
                   Monatslast {formatEUR(a.load)}
                 </div>
               )}
+              {underfunded && (
+                <div className="cover-hint warn">
+                  ⚠ Deckung {Math.round(((a.balance || 0) / a.load) * 100)} % – es fehlen{' '}
+                  {formatEUR(a.load - (a.balance || 0))} für einen Monat
+                </div>
+              )}
               <div className="goal">
                 {goal > 0 ? (
                   <>
@@ -105,6 +124,11 @@ export default function Accounts({ data, onSaveAccounts }) {
                       {reached ? '🎯 Ziel erreicht' : `${pct} %`} · Ziel{' '}
                       <InlineAmount value={a.goal} onChange={(v) => update(a.id, { goal: v })} className="goal-edit" />
                     </div>
+                    {eta && (
+                      <div className="goal-sub muted">
+                        bei {formatEUR(inflowById[a.id] || 0)}/Monat erreicht in ≈ {eta.months} Mon. ({eta.label})
+                      </div>
+                    )}
                   </>
                 ) : (
                   <button className="goal-add" onClick={() => update(a.id, { goal: 100 })}>+ Sparziel setzen</button>

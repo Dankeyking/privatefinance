@@ -4,12 +4,12 @@ import CategoryDonut from '../components/charts/CategoryDonut.jsx'
 import CostTreemap from '../components/charts/CostTreemap.jsx'
 import DragCard from '../components/DragCard.jsx'
 import { categoryColor, categoryLabel } from '../lib/categoryStore.js'
-import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
-import { effectiveCategoryOf } from '../lib/selectors.js'
+import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
+import { effectiveCategoryOf, isOrderActive, monthsRemaining } from '../lib/selectors.js'
 import { monthlyByCategory, personSummary, monthlyByAccount, isSavings } from '../lib/recurring.js'
 import { useDragOrder } from '../lib/layout.js'
 
-const DEFAULT_ORDER = ['donut', 'personBar', 'treemap', 'abo', 'byAccount']
+const DEFAULT_ORDER = ['donut', 'personBar', 'treemap', 'abo', 'ending', 'byAccount']
 
 const splitPersonLabel = (o) => {
   const m = o.split?.mode
@@ -18,8 +18,9 @@ const splitPersonLabel = (o) => {
   return 'anteilig'
 }
 
-export default function Analytics({ data, overrides }) {
+export default function Analytics({ data, overrides, onNavigate }) {
   const [includeSavings, setIncludeSavings] = useState(false)
+  const [selCat, setSelCat] = useState(null) // Kategorie-Drilldown unterm Donut
   const accById = useMemo(() => Object.fromEntries((data.accounts || []).map((a) => [a.id, a])), [data.accounts])
   const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER)
 
@@ -30,11 +31,22 @@ export default function Analytics({ data, overrides }) {
   const donut = useMemo(() => {
     const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
     return {
+      ids: entries.map((e) => e[0]),
       labels: entries.map((e) => categoryLabel(e[0])),
       values: entries.map((e) => Number(e[1].toFixed(2))),
       colors: entries.map((e) => categoryColor(e[0])),
     }
   }, [catTotals])
+
+  // Posten der angeklickten Donut-Kategorie (Drilldown).
+  const drill = useMemo(() => {
+    if (!selCat) return null
+    const rows = (data.standingOrders || [])
+      .filter((o) => isOrderActive(o) && effectiveCategoryOf(o, overrides) === selCat)
+      .map((o) => ({ id: o.id, recipient: o.recipient || '—', monthly: toMonthly(o.amount, o.rhythm) }))
+      .sort((a, b) => b.monthly - a.monthly)
+    return { rows, total: rows.reduce((s, r) => s + r.monthly, 0) }
+  }, [selCat, data.standingOrders, overrides])
 
   const persons = useMemo(() => personSummary(data), [data])
   const personBars = {
@@ -50,10 +62,10 @@ export default function Analytics({ data, overrides }) {
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
 
-  // Treemap: alle Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
+  // Treemap: alle aktiven Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
   const treemapItems = useMemo(() => {
     return (data.standingOrders || [])
-      .filter((o) => !isSavings(o, overrides))
+      .filter((o) => isOrderActive(o) && !isSavings(o, overrides))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
         return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: categoryLabel(cat), color: categoryColor(cat) }
@@ -61,10 +73,10 @@ export default function Analytics({ data, overrides }) {
       .filter((x) => x.value > 0)
   }, [data.standingOrders, overrides])
 
-  // Abo-Radar: Abos nach Jahresbetrag.
+  // Abo-Radar: aktive Abos nach Jahresbetrag.
   const abos = useMemo(() => {
     const rows = (data.standingOrders || [])
-      .filter((o) => o.kind === 'subscription')
+      .filter((o) => o.kind === 'subscription' && isOrderActive(o))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
         const monthly = toMonthly(o.amount, o.rhythm)
@@ -72,11 +84,27 @@ export default function Analytics({ data, overrides }) {
           id: o.id, recipient: o.recipient || '—', monthly, yearly: monthly * 12,
           categoryLabel: categoryLabel(cat), color: categoryColor(cat), rhythm: o.rhythm,
           person: splitPersonLabel(o), account: accById[o.accountId]?.name || '',
+          endDate: o.endDate || '',
         }
       })
       .sort((a, b) => b.yearly - a.yearly)
     return { rows, totalYear: rows.reduce((s, r) => s + r.yearly, 0), max: Math.max(1, ...rows.map((r) => r.yearly)) }
   }, [data.standingOrders, overrides, accById])
+
+  // Auslaufende Posten: alles mit Enddatum – zeigt, wann Budget frei wird.
+  const ending = useMemo(() => {
+    const rows = (data.standingOrders || [])
+      .filter((o) => o.endDate)
+      .map((o) => ({
+        id: o.id, recipient: o.recipient || '—',
+        monthly: toMonthly(o.amount, o.rhythm),
+        endDate: o.endDate, active: isOrderActive(o), left: monthsRemaining(o),
+        account: accById[o.accountId]?.name || '',
+      }))
+      .sort((a, b) => (a.endDate < b.endDate ? -1 : 1))
+    const freed = rows.filter((r) => r.active).reduce((s, r) => s + r.monthly, 0)
+    return { rows, freed }
+  }, [data.standingOrders, accById])
 
   const sections = {
     donut: (
@@ -90,7 +118,34 @@ export default function Analytics({ data, overrides }) {
             Sparen einbeziehen
           </label>
         </div>
-        <CategoryDonut labels={donut.labels} values={donut.values} colors={donut.colors} />
+        <CategoryDonut
+          labels={donut.labels}
+          values={donut.values}
+          colors={donut.colors}
+          onSelect={(i) => setSelCat((cur) => (donut.ids[i] === cur ? null : donut.ids[i]))}
+        />
+        {drill && (
+          <div className="donut-drill">
+            <div className="editor-head">
+              <strong style={{ fontSize: 14 }}>
+                <span className="acct-dot" style={{ background: categoryColor(selCat) }} />
+                {categoryLabel(selCat)} · {formatEUR(drill.total)}/Monat
+              </strong>
+              <button className="btn-del" onClick={() => setSelCat(null)} title="Drilldown schließen">✕</button>
+            </div>
+            {drill.rows.map((r) => (
+              <div className="drill-row" key={r.id}>
+                <span>{r.recipient}</span>
+                <span className="flow-amount">{formatEUR(r.monthly)}</span>
+              </div>
+            ))}
+            <button className="link-btn" style={{ marginTop: 10 }}
+              onClick={() => onNavigate?.('recurring', { category: selCat })}>
+              In „Kosten &amp; Abos" öffnen →
+            </button>
+          </div>
+        )}
+        {!drill && <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Tipp: Klicke ein Segment für die Einzelposten.</p>}
       </div>
     ),
     personBar: (
@@ -118,13 +173,18 @@ export default function Analytics({ data, overrides }) {
         ) : (
           <div>
             {abos.rows.map((r) => (
-              <div className="abo-row" key={r.id}>
+              <div className="abo-row clickable" key={r.id} title="Klicken: in Kosten & Abos öffnen"
+                onClick={() => onNavigate?.('recurring', { search: r.recipient })}>
                 <div className="abo-main">
                   <div className="abo-name">
                     <span className="acct-dot" style={{ background: r.color }} />
                     {r.recipient}
                   </div>
-                  <div className="abo-meta">{r.categoryLabel} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}{r.account ? ` · ${r.account}` : ''}</div>
+                  <div className="abo-meta">
+                    {r.categoryLabel} · {r.person} · {RHYTHM_LABELS[r.rhythm] || r.rhythm}
+                    {r.account ? ` · ${r.account}` : ''}
+                    {r.endDate ? ` · endet ${formatDate(r.endDate)}` : ''}
+                  </div>
                   <div className="abo-track"><div className="abo-fill" style={{ width: `${(r.yearly / abos.max) * 100}%`, background: r.color }} /></div>
                 </div>
                 <div className="abo-fig">
@@ -137,12 +197,54 @@ export default function Analytics({ data, overrides }) {
         )}
       </div>
     ),
+    ending: (
+      <div className="card">
+        <div className="editor-head" style={{ marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>Auslaufende Posten</h2>
+          {ending.freed > 0 && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              wird frei: <strong className="amount pos">{formatEUR(ending.freed)}/Monat</strong>
+            </span>
+          )}
+        </div>
+        {ending.rows.length === 0 ? (
+          <p className="muted">
+            Kein Posten hat ein Enddatum. Tipp: Trage bei Ratenkäufen (z. B. Kühlschrank) oder
+            gekündigten Verträgen unter „Kosten &amp; Abos" in der Spalte <strong>Ende</strong> die
+            letzte Zahlung ein – dann siehst du hier, wann wie viel Budget frei wird.
+          </p>
+        ) : (
+          <div>
+            {ending.rows.map((r) => (
+              <div className="abo-row clickable" key={r.id} title="Klicken: in Kosten & Abos öffnen"
+                onClick={() => onNavigate?.('recurring', { search: r.recipient })}>
+                <div className="abo-main">
+                  <div className="abo-name">
+                    {r.recipient}
+                    {!r.active && <span className="pill ended">beendet</span>}
+                  </div>
+                  <div className="abo-meta">
+                    {r.active ? `endet ${formatDate(r.endDate)} · noch ${r.left} Mon.` : `endete ${formatDate(r.endDate)}`}
+                    {r.account ? ` · ${r.account}` : ''}
+                  </div>
+                </div>
+                <div className="abo-fig">
+                  <div className="abo-year">{formatEUR(r.monthly)}<span className="abo-month"> /Monat</span></div>
+                  {r.active && <div className="abo-month">≈ {formatEUR(r.monthly * r.left)} bis Ende</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ),
     byAccount: (
       <div className="card">
         <h2>Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat, inkl. Sparen)</span></h2>
         <div className="hbars">
           {byAccount.map(({ account, fixed, subscription, savings, total }) => (
-            <div className="hbar-row" key={account.id}>
+            <div className="hbar-row clickable" key={account.id} title="Klicken: Posten dieses Kontos anzeigen"
+              onClick={() => onNavigate?.('recurring', { accountId: account.id })}>
               <div className="hbar-label">{account.name}</div>
               <div className="hbar-track">
                 <div className="hbar-fill fix" style={{ width: `${(fixed / maxAcc) * 100}%` }} title={`Fixkosten ${formatEUR(fixed)}`} />
@@ -161,7 +263,7 @@ export default function Analytics({ data, overrides }) {
       </div>
     ),
   }
-  const fullWidth = { donut: false, personBar: false, treemap: true, abo: true, byAccount: true }
+  const fullWidth = { donut: false, personBar: false, treemap: true, abo: true, ending: true, byAccount: true }
 
   return (
     <div>

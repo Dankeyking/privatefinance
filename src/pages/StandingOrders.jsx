@@ -3,6 +3,7 @@ import CostsTable from '../components/CostsTable.jsx'
 import { SAVINGS_CATEGORY } from '../lib/categories.js'
 import { getCategories } from '../lib/categoryStore.js'
 import { toMonthly, formatEUR } from '../lib/normalize.js'
+import { isOrderActive } from '../lib/selectors.js'
 import { orderToForm, formToOrder, parseAmountDE } from '../lib/orderForm.js'
 import { personsFromAccounts } from '../lib/recurring.js'
 
@@ -24,17 +25,19 @@ function involves(o, person) {
   return Number(o.splitShares?.[person]) > 0
 }
 
-export default function StandingOrders({ data, onSaveOrders }) {
+// `initial` (optional): Vorfilter beim Aufruf von anderen Seiten aus, z. B.
+// Klick auf ein Konto in der Übersicht -> { accountId } (siehe App.navigate).
+export default function StandingOrders({ data, onSaveOrders, initial }) {
   const persons = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
   const accounts = data.accounts || []
   const categories = getCategories()
   const [orders, setOrders] = useState(() => (data.standingOrders || []).map(orderToForm))
 
-  const [fKind, setFKind] = useState('all')
-  const [fAccount, setFAccount] = useState('all')
-  const [fCategory, setFCategory] = useState('all')
-  const [fPerson, setFPerson] = useState('all')
-  const [search, setSearch] = useState('')
+  const [fKind, setFKind] = useState(initial?.kind || 'all')
+  const [fAccount, setFAccount] = useState(initial?.accountId || 'all')
+  const [fCategory, setFCategory] = useState(initial?.category || 'all')
+  const [fPerson, setFPerson] = useState(initial?.person || 'all')
+  const [search, setSearch] = useState(initial?.search || '')
 
   const handleChange = (next) => {
     setOrders(next)
@@ -53,9 +56,10 @@ export default function StandingOrders({ data, onSaveOrders }) {
   }
 
   // Live-Aufschlüsselung (aus dem Entwurf, damit sie sofort mitzieht).
+  // Beendete Posten (Enddatum überschritten) zählen nicht mehr mit.
   const sums = useMemo(() => {
     const acc = { fixed: 0, sub: 0, savings: 0, count: orders.length }
-    orders.forEach((o) => {
+    orders.filter((o) => isOrderActive(o)).forEach((o) => {
       const m = toMonthly(parseAmountDE(o.amount), o.rhythm)
       if (isSav(o)) acc.savings += m
       else if (o.kind === 'subscription') acc.sub += m

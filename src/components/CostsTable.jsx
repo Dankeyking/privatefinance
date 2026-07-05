@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import CategoryTag from './CategoryTag.jsx'
 import SortTh from './SortTh.jsx'
 import { makeNewOrder, formToOrder, parseAmountDE } from '../lib/orderForm.js'
-import { toMonthly, formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
+import { toMonthly, formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
+import { isOrderActive, monthsRemaining } from '../lib/selectors.js'
 import { personShareMonthly } from '../lib/recurring.js'
 import { accountColor } from '../lib/accountColors.js'
 import { categoryLabel } from '../lib/categoryStore.js'
@@ -87,6 +88,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
               <SortTh label="Rhythmus" sortKey="rhythm" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Art" sortKey="kind" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Aufteilung / Monat" sortKey="split" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Ende" sortKey="endDate" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Konto" sortKey="accountId" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Kategorie" sortKey="category" sort={sort} onSort={(k) => onSort(k, false)} />
               <th></th>
@@ -94,7 +96,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
           </thead>
           <tbody>
             {sorted.map((o) => (
-              <tr key={o.id}>
+              <tr key={o.id} className={isOrderActive(o) ? '' : 'row-ended'}>
                 {/* Empfänger */}
                 <td data-label="Empfänger">
                   {isEd(o.id, 'recipient') ? (
@@ -181,6 +183,27 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                   )}
                 </td>
 
+                {/* Enddatum (optional, z. B. letzte Rate) */}
+                <td data-label="Ende">
+                  {isEd(o.id, 'endDate') ? (
+                    <span ref={cellRef}><input autoFocus type="date" value={o.endDate || ''}
+                      onChange={(e) => set(o.id, 'endDate', e.target.value)} /></span>
+                  ) : (
+                    <Disp id={o.id} field="endDate" empty={!o.endDate}>
+                      {o.endDate ? (
+                        isOrderActive(o) ? (
+                          <span>
+                            {formatDate(o.endDate)}
+                            <small className="muted" style={{ marginLeft: 6 }}>noch {monthsRemaining(o)} Mon.</small>
+                          </span>
+                        ) : (
+                          <span className="pill ended">beendet</span>
+                        )
+                      ) : 'offen'}
+                    </Disp>
+                  )}
+                </td>
+
                 {/* Konto */}
                 <td data-label="Konto">
                   {isEd(o.id, 'accountId') ? (
@@ -208,7 +231,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
               </tr>
             ))}
             {visible.length === 0 && (
-              <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 22 }}>
+              <tr><td colSpan={9} className="muted" style={{ textAlign: 'center', padding: 22 }}>
                 {orders.length === 0 ? 'Noch keine Posten – füge unten welche hinzu.' : 'Keine Treffer für diese Filter.'}
               </td></tr>
             )}
