@@ -51,6 +51,12 @@ export function clearAllOverrides() {
   return {}
 }
 
+// Alle Overrides in einem Rutsch ersetzen (z. B. beim Backup-Import).
+export function setAllOverrides(map) {
+  writeAll(map || {})
+  return map || {}
+}
+
 // Effektive Kategorie: Override > vorhandene Kategorie am Item.
 export function effectiveCategory(item, overrides) {
   const ovr = overrides ?? readAll()

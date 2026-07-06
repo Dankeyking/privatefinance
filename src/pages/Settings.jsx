@@ -4,6 +4,7 @@ import SortTh from '../components/SortTh.jsx'
 import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
 import { ACCOUNT_PALETTE } from '../lib/accountColors.js'
 import { sortRows, nextSortState } from '../lib/sorting.js'
+import { downloadBackup, parseBackup, restoreBackup } from '../lib/backup.js'
 
 const RHYTHMS = [
   { id: 'monthly', label: 'monatlich' },
@@ -34,6 +35,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
 
   const [form, setForm] = useState(seed)
   const [saved, setSaved] = useState(false)
+  const [backupError, setBackupError] = useState(null)
   const [acctSort, setAcctSort] = useState({ key: null, dir: 'asc' })
   const [incomeSort, setIncomeSort] = useState({ key: null, dir: 'asc' })
   const [transferSort, setTransferSort] = useState({ key: null, dir: 'asc' })
@@ -104,6 +106,24 @@ export default function Settings({ data, manual, onSave, onReset }) {
     setSaved(false)
   }
 
+  async function handleBackupFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBackupError(null)
+    try {
+      const json = parseBackup(await file.text())
+      if (!window.confirm(
+        'Backup einspielen? Das überschreibt deine aktuellen Konten, Einnahmen, ' +
+        'Fixkosten/Abos, Umbuchungen und Kategorie-Zuordnungen in diesem Browser.',
+      )) return
+      restoreBackup(json)
+      window.location.reload()
+    } catch (err) {
+      setBackupError(err.message || 'Datei konnte nicht gelesen werden.')
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -119,6 +139,31 @@ export default function Settings({ data, manual, onSave, onReset }) {
       <div className="privacy-note">
         🔒 Diese Daten verlassen dein Gerät nicht. Die öffentliche Seite zeigt für alle anderen
         weiterhin nur die Startdaten.
+      </div>
+
+      {/* Datensicherung */}
+      <div className="card mt">
+        <h2>Datensicherung</h2>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Sichert alle eigenen Daten (Konten, Einnahmen, Fixkosten/Abos, Umbuchungen,
+          Kategorie-Zuordnungen) als JSON-Datei – zum Übertragen auf ein anderes Gerät oder
+          als Backup.
+        </p>
+        <div className="settings-actions">
+          <button className="btn" onClick={() => downloadBackup()}>⬇ Backup herunterladen</button>
+          <label className="btn add" style={{ marginTop: 0 }}>
+            ⬆ Backup importieren
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleBackupFile}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+        {backupError && (
+          <p style={{ color: 'var(--neg)', fontSize: 13, marginTop: 6 }}>{backupError}</p>
+        )}
       </div>
 
       {/* Konten */}
