@@ -11,15 +11,7 @@ import { loadData } from './data/dataSource.js'
 import { mergeData } from './lib/merge.js'
 import { downloadClaudeExport } from './lib/claudeExport.js'
 import { ChartJS } from './components/charts/setup.js'
-import {
-  getOverrides,
-  setOverride,
-  clearOverride,
-  clearAllOverrides,
-  getManualData,
-  saveManualData,
-  clearManualData,
-} from './lib/storage.js'
+import { loadManualData, saveManual, saveCategoryOverrides } from './lib/storage.js'
 
 // Design (hell/dunkel): gespeicherte Wahl > Systemeinstellung.
 const THEME_KEY = 'pf_theme'
@@ -37,6 +29,7 @@ export default function App() {
   const [source, setSource] = useState('mock')
   const [overrides, setOverrides] = useState({})
   const [manual, setManual] = useState({})
+  const [manualLoaded, setManualLoaded] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
   const [pageParams, setPageParams] = useState(null)
   const [theme, setTheme] = useState(initialTheme)
@@ -50,8 +43,11 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
-    setOverrides(getOverrides())
-    setManual(getManualData())
+    loadManualData().then(({ manual, categoryOverrides }) => {
+      setManual(manual)
+      setOverrides(categoryOverrides)
+      setManualLoaded(true)
+    })
     loadData().then(({ data, source }) => {
       setBaseData(data)
       setSource(source)
@@ -60,32 +56,39 @@ export default function App() {
 
   const data = useMemo(() => mergeData(baseData, manual), [baseData, manual])
   const hasManual = Boolean(
-    manual && (manual.standingOrders || manual.accounts || manual.incomes),
+    manual && (manual.standingOrders?.length || manual.accounts?.length || manual.incomes?.length),
   )
 
   function handleSetCategory(itemId, categoryId) {
-    setOverrides(setOverride(itemId, categoryId))
+    const next = { ...overrides, [itemId]: categoryId }
+    setOverrides(next)
+    saveCategoryOverrides(next)
   }
   function handleClearOne(itemId) {
-    setOverrides(clearOverride(itemId))
+    const next = { ...overrides }
+    delete next[itemId]
+    setOverrides(next)
+    saveCategoryOverrides(next)
   }
   function handleResetAll() {
-    setOverrides(clearAllOverrides())
+    setOverrides({})
+    saveCategoryOverrides({})
   }
   function handleExport() {
     if (data) downloadClaudeExport(data, overrides)
   }
-  function handleSaveManual(next) {
-    setManual(saveManualData(next))
+  async function handleSaveManual(next) {
+    const saved = await saveManual(next)
+    setManual(saved.manual)
   }
   function handleSaveOrders(orders) {
-    setManual(saveManualData({ ...manual, standingOrders: orders }))
+    return handleSaveManual({ ...manual, standingOrders: orders })
   }
   function handleSaveAccounts(accounts) {
-    setManual(saveManualData({ ...manual, accounts }))
+    return handleSaveManual({ ...manual, accounts })
   }
   function handleResetManual() {
-    setManual(clearManualData())
+    return handleSaveManual({})
   }
   // Navigation, optional mit Parametern (z. B. Vorfilter für „Kosten & Abos":
   // { accountId, category, person, kind, search }).
@@ -95,7 +98,7 @@ export default function App() {
     setNavOpen(false)
   }
 
-  if (!data) {
+  if (!data || !manualLoaded) {
     return (
       <div className="app">
         <div className="content"><p className="muted">Lade Daten …</p></div>
@@ -144,6 +147,7 @@ export default function App() {
           <Settings
             data={data}
             manual={manual}
+            categoryOverrides={overrides}
             onSave={handleSaveManual}
             onReset={handleResetManual}
           />

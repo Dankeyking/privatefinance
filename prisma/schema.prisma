@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id       String @id
+  name     String
+  owner    String
+  type     String
+  balance  Float
+  color    String
+  goal     Float?
+  currency String
+}
+
+model Income {
+  id           String @id
+  name         String
+  amount       Float
+  rhythm       String
+  accountId    String
+  executionDay Int
+}
+
+model StandingOrder {
+  id            String  @id
+  recipient     String
+  amount        Float
+  rhythm        String
+  accountId     String
+  category      String
+  kind          String
+  executionDay  Int
+  dueMonth      Int?
+  endDate       String?
+  split         Json
+  monthInterval Int
+  nextExecution String
+}
+
+model Transfer {
+  id            String @id
+  label         String
+  amount        Float
+  fromAccountId String
+  toAccountId   String
+  rhythm        String
+}
+
+model CategoryOverride {
+  itemId     String @id
+  categoryId String
+}

@@ -16,7 +16,7 @@ const RHYTHM_RANK = { monthly: 0, quarterly: 1, yearly: 2 }
 let idc = 0
 const newId = () => `s${Date.now()}${idc++}`
 
-export default function Settings({ data, manual, onSave, onReset }) {
+export default function Settings({ data, manual, categoryOverrides, onSave, onReset }) {
   const seed = () => ({
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a, i) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
@@ -82,7 +82,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
   const addAccount = (type) =>
     up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0, color: ACCOUNT_PALETTE[form.accounts.length % ACCOUNT_PALETTE.length] }] })
 
-  function save() {
+  async function save() {
     const payload = {
       accounts: form.accounts.map((a) => ({
         ...a, balance: Number(a.balance) || 0, goal: Number(a.goal) || 0, currency: 'EUR',
@@ -97,11 +97,11 @@ export default function Settings({ data, manual, onSave, onReset }) {
         fromAccountId: t.fromAccountId, toAccountId: t.toAccountId, rhythm: t.rhythm,
       })),
     }
-    onSave(payload)
+    await onSave(payload)
     setSaved(true)
   }
-  function reset() {
-    onReset()
+  async function reset() {
+    await onReset()
     setForm(seed())
     setSaved(false)
   }
@@ -117,7 +117,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
         'Backup einspielen? Das überschreibt deine aktuellen Konten, Einnahmen, ' +
         'Fixkosten/Abos, Umbuchungen und Kategorie-Zuordnungen in diesem Browser.',
       )) return
-      restoreBackup(json)
+      await restoreBackup(json)
       window.location.reload()
     } catch (err) {
       setBackupError(err.message || 'Datei konnte nicht gelesen werden.')
@@ -150,7 +150,7 @@ export default function Settings({ data, manual, onSave, onReset }) {
           als Backup.
         </p>
         <div className="settings-actions">
-          <button className="btn" onClick={() => downloadBackup()}>⬇ Backup herunterladen</button>
+          <button className="btn" onClick={() => downloadBackup(manual, categoryOverrides)}>⬇ Backup herunterladen</button>
           <label className="btn add" style={{ marginTop: 0 }}>
             ⬆ Backup importieren
             <input

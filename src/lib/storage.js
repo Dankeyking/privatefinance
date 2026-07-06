@@ -1,96 +1,48 @@
 // =============================================================================
-//  storage.js — Kategorie-Overrides in localStorage
-// =============================================================================
-//  Manuelle Kategorie-Zuweisungen überlagern die Auto-Kategorisierung.
-//  Schlüssel: Item-ID (Standing-Order-ID oder Transaktions-ID) -> Kategorie-ID.
+//  storage.js — Persistenz über die Server-API (Postgres statt localStorage)
 // =============================================================================
 
-const STORAGE_KEY = 'pf_category_overrides'
+async function getJSON(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`)
+  return res.json()
+}
 
-function readAll() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
+async function putJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`)
+  return res.json()
+}
+
+// Liefert { manual: {accounts, incomes, standingOrders, transfers}, categoryOverrides }.
+export function loadManualData() {
+  return getJSON('/api/data')
+}
+
+// Ersetzt Konten/Einnahmen/Fixkosten/Umbuchungen vollständig (wie bisher localStorage setItem).
+export function saveManual(manual) {
+  return putJSON('/api/manual', manual)
+}
+
+// Ersetzt die Kategorie-Overrides vollständig.
+export function saveCategoryOverrides(categoryOverrides) {
+  return putJSON('/api/category-overrides', categoryOverrides)
+}
+
+// Spielt eine Backup-Datei (siehe backup.js) serverseitig ein.
+export async function restoreBackup(backupJson) {
+  const res = await fetch('/api/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(backupJson),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error || `Restore fehlgeschlagen (HTTP ${res.status})`)
   }
-}
-
-function writeAll(map) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map))
-  } catch {
-    /* localStorage nicht verfügbar – still ignorieren */
-  }
-}
-
-// Alle Overrides als { itemId: categoryId } lesen.
-export function getOverrides() {
-  return readAll()
-}
-
-// Einzelnes Override setzen.
-export function setOverride(itemId, categoryId) {
-  const map = readAll()
-  map[itemId] = categoryId
-  writeAll(map)
-  return map
-}
-
-// Einzelnes Override entfernen.
-export function clearOverride(itemId) {
-  const map = readAll()
-  delete map[itemId]
-  writeAll(map)
-  return map
-}
-
-// Alle Overrides zurücksetzen.
-export function clearAllOverrides() {
-  writeAll({})
-  return {}
-}
-
-// Alle Overrides in einem Rutsch ersetzen (z. B. beim Backup-Import).
-export function setAllOverrides(map) {
-  writeAll(map || {})
-  return map || {}
-}
-
-// Effektive Kategorie: Override > vorhandene Kategorie am Item.
-export function effectiveCategory(item, overrides) {
-  const ovr = overrides ?? readAll()
-  return ovr[item.id] || item.category
-}
-
-// --- Manuelle Daten (Konten / Daueraufträge / Beiträge) ----------------------
-// Bleiben nur im Browser (localStorage) und werden über die Basis-Daten
-// (Enable Banking data.json bzw. Mock) gelegt.
-const MANUAL_KEY = 'pf_manual'
-
-export function getManualData() {
-  try {
-    const raw = localStorage.getItem(MANUAL_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-export function saveManualData(obj) {
-  try {
-    localStorage.setItem(MANUAL_KEY, JSON.stringify(obj))
-  } catch {
-    /* ignore */
-  }
-  return obj
-}
-
-export function clearManualData() {
-  try {
-    localStorage.removeItem(MANUAL_KEY)
-  } catch {
-    /* ignore */
-  }
-  return {}
+  return res.json()
 }

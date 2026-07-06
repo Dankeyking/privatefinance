@@ -1,29 +1,29 @@
 // =============================================================================
 //  backup.js — Vollständige Datensicherung (eigene Daten) als JSON exportieren/importieren
 // =============================================================================
-//  Sichert die kompletten localStorage-Daten (manuelle Konten/Einnahmen/Fixkosten/
-//  Umbuchungen + Kategorie-Overrides), damit sie auf einem anderen Gerät oder nach
-//  einem Browser-Reset wiederhergestellt werden können.
+//  Sichert die serverseitig gespeicherten Daten (Konten/Einnahmen/Fixkosten/
+//  Umbuchungen + Kategorie-Overrides), damit sie auf einem anderen System oder
+//  nach einem Reset wiederhergestellt werden können.
 // =============================================================================
 
-import { getManualData, saveManualData, getOverrides, setAllOverrides } from './storage.js'
+import { restoreBackup as restoreBackupOnServer } from './storage.js'
 
 const BACKUP_TYPE = 'privatefinance-backup'
 const BACKUP_VERSION = 1
 
-export function buildBackup() {
+export function buildBackup(manual, categoryOverrides) {
   return {
     app: 'PrivateFinance',
     type: BACKUP_TYPE,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    manual: getManualData(),
-    categoryOverrides: getOverrides(),
+    manual: manual || {},
+    categoryOverrides: categoryOverrides || {},
   }
 }
 
-export function downloadBackup() {
-  const payload = buildBackup()
+export function downloadBackup(manual, categoryOverrides) {
+  const payload = buildBackup(manual, categoryOverrides)
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -46,8 +46,7 @@ export function parseBackup(text) {
   return json
 }
 
+// Spielt eine geparste Backup-Datei serverseitig ein.
 export function restoreBackup(json) {
-  const manual = saveManualData(json.manual || {})
-  const overrides = setAllOverrides(json.categoryOverrides || {})
-  return { manual, overrides }
+  return restoreBackupOnServer(json)
 }
