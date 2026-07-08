@@ -3,6 +3,7 @@ import KpiCard from '../components/KpiCard.jsx'
 import InlineAmount from '../components/InlineAmount.jsx'
 import Icon from '../components/Icon.jsx'
 import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
+import { sortRows, nextSortState } from '../lib/sorting.js'
 
 let idc = 0
 const newId = () => `d${Date.now()}${idc++}`
@@ -16,14 +17,31 @@ const emptyDebt = (accounts) => ({
   rate: 0,
   rhythm: 'monthly',
   accountId: accounts[0]?.id || '',
+  priority: 0,
 })
+
+const SORT_OPTS = [
+  { key: 'priority', label: 'Priorität', numeric: true },
+  { key: 'name', label: 'Name', numeric: false },
+  { key: 'remainingAmount', label: 'Restschuld', numeric: true },
+]
 
 export default function Debts({ data, onSaveDebts }) {
   const accounts = data.accounts || []
-  const [debts, setDebts] = useState(() => (data.debts || []).map((d) => ({ ...d })))
+  const [debts, setDebts] = useState(() => (data.debts || []).map((d) => ({ ...d, priority: d.priority ?? 0 })))
+  const [sort, setSort] = useState({ key: 'priority', dir: 'asc' })
 
   const totalRemaining = debts.reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)
   const monthlyRate = debts.reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)
+
+  const sorted = useMemo(
+    () => sortRows(debts, sort.key, sort.dir, (row, key) => (key === 'name' ? row.name || '' : Number(row[key]) || 0)),
+    [debts, sort],
+  )
+  const toggleSort = (key) => {
+    const opt = SORT_OPTS.find((o) => o.key === key)
+    setSort((s) => nextSortState(s, key, opt?.numeric))
+  }
 
   function persist(next) {
     setDebts(next)
@@ -44,7 +62,7 @@ export default function Debts({ data, onSaveDebts }) {
     <div>
       <div className="page-header">
         <h1>Schulden</h1>
-        <p>Offene Kredite und Schulden im Blick – Restbetrag, Rate und wem du sie schuldest.</p>
+        <p>Offene Kredite und Schulden im Blick – Restbetrag, Rate und wem du sie schuldest. Über die Priorität legst du fest, welche zuerst abbezahlt werden soll (niedrigere Zahl = höhere Priorität).</p>
       </div>
 
       <div className="grid kpis">
@@ -54,6 +72,18 @@ export default function Debts({ data, onSaveDebts }) {
 
       <div className="editor-head mt" style={{ alignItems: 'center' }}>
         <h2 className="section-title" style={{ margin: 0 }}>Alle Schulden</h2>
+        <div className="sort-controls">
+          <span className="muted" style={{ fontSize: 12 }}>Sortieren:</span>
+          {SORT_OPTS.map((o) => (
+            <button
+              key={o.key}
+              className={`sort-chip ${sort.key === o.key ? 'active' : ''}`}
+              onClick={() => toggleSort(o.key)}
+            >
+              {o.label}{sort.key === o.key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+            </button>
+          ))}
+        </div>
         <button className="btn" onClick={add}>
           <Icon name="plus" size={15} /> Neue Schuld
         </button>
@@ -65,7 +95,7 @@ export default function Debts({ data, onSaveDebts }) {
         </div>
       ) : (
         <div className="grid accounts mt">
-          {debts.map((d) => {
+          {sorted.map((d) => {
             const total = Number(d.totalAmount) || 0
             const remaining = Number(d.remainingAmount) || 0
             const paidPct = total > 0 ? Math.min(100, Math.round(((total - remaining) / total) * 100)) : 0
@@ -104,6 +134,15 @@ export default function Debts({ data, onSaveDebts }) {
                 )}
 
                 <div className="filters" style={{ marginTop: 12 }}>
+                  <label>
+                    Priorität
+                    <input
+                      type="number"
+                      style={{ width: 60 }}
+                      value={d.priority ?? 0}
+                      onChange={(e) => update(d.id, { priority: Number(e.target.value) || 0 })}
+                    />
+                  </label>
                   <label>
                     Gesamtbetrag
                     <InlineAmount value={d.totalAmount} onChange={(v) => update(d.id, { totalAmount: v })} />
