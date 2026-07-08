@@ -3,7 +3,7 @@ import KpiCard from '../components/KpiCard.jsx'
 import SankeyFlow from '../components/charts/SankeyFlow.jsx'
 import DragCard from '../components/DragCard.jsx'
 import Icon from '../components/Icon.jsx'
-import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
+import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
 import { upcomingPayments } from '../lib/selectors.js'
 import { accountColor, colorMaps } from '../lib/accountColors.js'
 import { useDragOrder } from '../lib/layout.js'
@@ -14,7 +14,7 @@ import {
   accountFlows,
 } from '../lib/recurring.js'
 
-const DEFAULT_ORDER = ['flow', 'byAccount', 'byPerson', 'upcoming']
+const BASE_ORDER = ['flow', 'byAccount', 'byPerson', 'upcoming']
 
 export default function Overview({ data, onNavigate }) {
   const summary = useMemo(() => householdSummary(data), [data])
@@ -23,6 +23,9 @@ export default function Overview({ data, onNavigate }) {
   const flows = useMemo(() => accountFlows(data), [data])
   const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
+  const debts = data.debts || []
+  // Schulden-Abschnitt nur einblenden, wenn tatsächlich welche eingetragen sind.
+  const DEFAULT_ORDER = debts.length ? [...BASE_ORDER, 'debts'] : BASE_ORDER
   const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER)
 
   // Ausgewählter Fluss (Kontopaar): Klick in Liste ODER Sankey hebt beides hervor.
@@ -189,6 +192,39 @@ export default function Overview({ data, onNavigate }) {
           </ul>
         )}
       </div>
+    ),
+    debts: (
+      <>
+        <h2 className="section-title">Schulden</h2>
+        <div className="card clickable" onClick={() => onNavigate?.('debts')} title="Klicken: Schulden bearbeiten">
+          <div className="grid kpis" style={{ marginBottom: debts.length ? 14 : 0 }}>
+            <KpiCard
+              label="Restschulden gesamt"
+              value={debts.reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)}
+              tone="neg"
+              icon="debt"
+            />
+            <KpiCard
+              label="Rate gesamt / Monat"
+              value={debts.reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)}
+              tone="neg"
+            />
+          </div>
+          <ul className="upcoming">
+            {debts.map((d) => (
+              <li key={d.id}>
+                <div className="up-main">
+                  <span className="up-recipient">{d.name}{d.creditor && ` · ${d.creditor}`}</span>
+                  <span className="up-amount">{formatEUR(d.remainingAmount)}</span>
+                </div>
+                <div className="up-sub muted">
+                  Rate {formatEUR(d.rate)} {RHYTHM_LABELS[d.rhythm] || d.rhythm}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </>
     ),
   }
 
