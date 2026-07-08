@@ -227,6 +227,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                   {isEd(o.id, 'accountId') ? (
                     <span ref={cellRef}><select autoFocus value={o.accountId}
                       onChange={(e) => { set(o.id, 'accountId', e.target.value); setEdit(null) }}>
+                      <option value="">– Konto wählen –</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select></span>
                   ) : (
