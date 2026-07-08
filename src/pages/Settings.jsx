@@ -16,7 +16,7 @@ const RHYTHM_RANK = { monthly: 0, quarterly: 1, yearly: 2 }
 let idc = 0
 const newId = () => `s${Date.now()}${idc++}`
 
-export default function Settings({ data, manual, categoryOverrides, onSave, onReset }) {
+export default function Settings({ data, manual, categoryOverrides, onSave, onReset, onNavigate }) {
   const seed = () => ({
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a, i) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
@@ -164,6 +164,17 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
         {backupError && (
           <p style={{ color: 'var(--neg)', fontSize: 13, marginTop: 6 }}>{backupError}</p>
         )}
+      </div>
+
+      {/* Schulden */}
+      <div className="card mt">
+        <h2>Schulden</h2>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          Kredite und Schulden mit Restbetrag, Rate und Gläubiger verwalten. Eine eigene Übersicht
+          dafür erscheint automatisch in der Navigation und auf der Startseite, sobald du die erste
+          Schuld eingetragen hast.
+        </p>
+        <button className="btn" onClick={() => onNavigate?.('debts')}>Schulden verwalten</button>
       </div>
 
       {/* Konten */}
