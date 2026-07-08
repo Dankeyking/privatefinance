@@ -71,3 +71,17 @@ model CategoryOverride {
 
   @@index([groupId])
 }
+
+model Debt {
+  id              String  @id
+  groupId         String  @default("familie")
+  name            String
+  creditor        String
+  totalAmount     Float
+  remainingAmount Float
+  rate            Float
+  rhythm          String
+  accountId       String?
+
+  @@index([groupId])
+}
