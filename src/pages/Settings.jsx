@@ -244,6 +244,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
                   </td>
                   <td>
                     <select value={i.accountId} onChange={(e) => setRow('incomes', i.id, 'accountId', e.target.value)}>
+                      <option value="">– Konto wählen –</option>
                       {personalAccts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </td>
@@ -293,11 +294,13 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
                   <td className="num"><input type="text" inputMode="decimal" value={t.amount} placeholder="0,00" onChange={(e) => setRow('transfers', t.id, 'amount', e.target.value)} /></td>
                   <td>
                     <select value={t.fromAccountId} onChange={(e) => setRow('transfers', t.id, 'fromAccountId', e.target.value)}>
+                      <option value="">– Konto wählen –</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </td>
                   <td>
                     <select value={t.toAccountId} onChange={(e) => setRow('transfers', t.id, 'toAccountId', e.target.value)}>
+                      <option value="">– Konto wählen –</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </td>
