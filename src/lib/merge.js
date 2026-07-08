@@ -17,6 +17,7 @@ export function mergeData(base, manual = {}) {
   if (Array.isArray(manual.incomes)) out.incomes = manual.incomes
   if (Array.isArray(manual.standingOrders)) out.standingOrders = manual.standingOrders
   if (Array.isArray(manual.transfers)) out.transfers = manual.transfers
+  if (Array.isArray(manual.debts)) out.debts = manual.debts
 
   return out
 }
