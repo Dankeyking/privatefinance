@@ -83,6 +83,7 @@ model Debt {
   rhythm          String
   accountId       String?
   priority        Int     @default(0)
+  priorityUnknown Boolean @default(false)
 
   @@index([groupId])
 }
