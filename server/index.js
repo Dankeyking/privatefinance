@@ -20,15 +20,16 @@ function resolveGroup(req) {
 }
 
 async function loadManual(groupId) {
-  const [accounts, incomes, standingOrders, transfers, overrides] = await Promise.all([
+  const [accounts, incomes, standingOrders, transfers, overrides, debts] = await Promise.all([
     prisma.account.findMany({ where: { groupId } }),
     prisma.income.findMany({ where: { groupId } }),
     prisma.standingOrder.findMany({ where: { groupId } }),
     prisma.transfer.findMany({ where: { groupId } }),
     prisma.categoryOverride.findMany({ where: { groupId } }),
+    prisma.debt.findMany({ where: { groupId } }),
   ])
   const categoryOverrides = Object.fromEntries(overrides.map((o) => [o.itemId, o.categoryId]))
-  return { manual: { accounts, incomes, standingOrders, transfers }, categoryOverrides }
+  return { manual: { accounts, incomes, standingOrders, transfers, debts }, categoryOverrides }
 }
 
 // Full-Replace innerhalb der eigenen Gruppe, analog zum bisherigen localStorage setItem-Verhalten.
@@ -37,10 +38,12 @@ async function replaceManual(tx, groupId, manual = {}) {
   await tx.income.deleteMany({ where: { groupId } })
   await tx.standingOrder.deleteMany({ where: { groupId } })
   await tx.transfer.deleteMany({ where: { groupId } })
+  await tx.debt.deleteMany({ where: { groupId } })
   if (manual.accounts?.length) await tx.account.createMany({ data: manual.accounts.map((a) => ({ ...a, groupId })) })
   if (manual.incomes?.length) await tx.income.createMany({ data: manual.incomes.map((i) => ({ ...i, groupId })) })
   if (manual.standingOrders?.length) await tx.standingOrder.createMany({ data: manual.standingOrders.map((s) => ({ ...s, groupId })) })
   if (manual.transfers?.length) await tx.transfer.createMany({ data: manual.transfers.map((t) => ({ ...t, groupId })) })
+  if (manual.debts?.length) await tx.debt.createMany({ data: manual.debts.map((d) => ({ ...d, groupId })) })
 }
 
 async function replaceCategoryOverrides(tx, groupId, categoryOverrides = {}) {
