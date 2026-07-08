@@ -9,6 +9,7 @@ datasource db {
 
 model Account {
   id       String @id
+  groupId  String @default("familie")
   name     String
   owner    String
   type     String
@@ -16,19 +17,25 @@ model Account {
   color    String
   goal     Float?
   currency String
+
+  @@index([groupId])
 }
 
 model Income {
   id           String @id
+  groupId      String @default("familie")
   name         String
   amount       Float
   rhythm       String
   accountId    String
   executionDay Int
+
+  @@index([groupId])
 }
 
 model StandingOrder {
   id            String  @id
+  groupId       String  @default("familie")
   recipient     String
   amount        Float
   rhythm        String
@@ -41,18 +48,26 @@ model StandingOrder {
   split         Json
   monthInterval Int
   nextExecution String
+
+  @@index([groupId])
 }
 
 model Transfer {
   id            String @id
+  groupId       String @default("familie")
   label         String
   amount        Float
   fromAccountId String
   toAccountId   String
   rhythm        String
+
+  @@index([groupId])
 }
 
 model CategoryOverride {
   itemId     String @id
+  groupId    String @default("familie")
   categoryId String
+
+  @@index([groupId])
 }
