@@ -87,3 +87,19 @@ model Debt {
 
   @@index([groupId])
 }
+
+// Eigene Kategorien (isCustom=true) und Label-/Farb-Overrides vordefinierter
+// Kategorien (isCustom=false) – vorher im Browser-localStorage, jetzt pro
+// Gruppe in der DB. id ist NICHT global eindeutig (vordefinierte Kategorie-IDs
+// aus categories.js sind über alle Gruppen hinweg gleich), daher zusammengesetzter
+// Primärschlüssel aus id+groupId.
+model Category {
+  id       String
+  groupId  String  @default("familie")
+  isCustom Boolean @default(false)
+  label    String?
+  color    String?
+
+  @@id([id, groupId])
+  @@index([groupId])
+}
