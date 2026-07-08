@@ -77,7 +77,7 @@ export default function StandingOrders({ data, onSaveOrders, initial }) {
         <h1>Kosten &amp; Abos</h1>
         <p>
           Fixkosten, Abos und Sparen <strong>anlegen, bearbeiten und aufteilen</strong>. Änderungen
-          werden automatisch gespeichert (nur in diesem Browser) und fließen sofort in alle
+          werden automatisch gespeichert und fließen sofort in alle
           Auswertungen ein.
         </p>
       </div>
