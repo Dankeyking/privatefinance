@@ -82,6 +82,7 @@ model Debt {
   rate            Float
   rhythm          String
   accountId       String?
+  priority        Int     @default(0)
 
   @@index([groupId])
 }
