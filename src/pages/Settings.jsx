@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import RecurringEditor from '../components/RecurringEditor.jsx'
 import SortTh from '../components/SortTh.jsx'
 import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
@@ -15,6 +15,8 @@ const RHYTHM_RANK = { monthly: 0, quarterly: 1, yearly: 2 }
 
 let idc = 0
 const newId = () => `s${Date.now()}${idc++}`
+
+const AUTOSAVE_DELAY = 800
 
 export default function Settings({ data, manual, categoryOverrides, onSave, onReset, onNavigate }) {
   const seed = () => ({
@@ -34,7 +36,8 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
   })
 
   const [form, setForm] = useState(seed)
-  const [saved, setSaved] = useState(false)
+  // 'idle' (noch nie geändert) | 'pending' (Änderung wartet auf Auto-Save) | 'saving' | 'saved'
+  const [saveStatus, setSaveStatus] = useState('idle')
   const [backupError, setBackupError] = useState(null)
   const [acctSort, setAcctSort] = useState({ key: null, dir: 'asc' })
   const [incomeSort, setIncomeSort] = useState({ key: null, dir: 'asc' })
@@ -70,7 +73,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
     [form.transfers, transferSort, form.accounts],
   )
 
-  const up = (patch) => { setForm((f) => ({ ...f, ...patch })); setSaved(false) }
+  const up = (patch) => { setForm((f) => ({ ...f, ...patch })); setSaveStatus('pending') }
   const setRow = (key, id, field, value) =>
     up({ [key]: form[key].map((r) => (r.id === id ? { ...r, [field]: value } : r)) })
   const delRow = (key, id) => up({ [key]: form[key].filter((r) => r.id !== id) })
@@ -82,28 +85,45 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
   const addAccount = (type) =>
     up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0, color: ACCOUNT_PALETTE[form.accounts.length % ACCOUNT_PALETTE.length] }] })
 
-  async function save() {
-    const payload = {
-      accounts: form.accounts.map((a) => ({
+  function buildPayload(f) {
+    return {
+      accounts: f.accounts.map((a) => ({
         ...a, balance: Number(a.balance) || 0, goal: Number(a.goal) || 0, currency: 'EUR',
         owner: a.type === 'personal' ? (a.owner || a.name || 'Ich') : (a.owner || 'Gemeinsam'),
       })),
-      incomes: form.incomes.map((i) => ({
+      incomes: f.incomes.map((i) => ({
         ...i, amount: Number(i.amount) || 0, executionDay: Number(i.executionDay) || 1,
       })),
-      standingOrders: form.orders.map((o) => formToOrder(o, persons)),
-      transfers: form.transfers.map((t) => ({
+      standingOrders: f.orders.map((o) => formToOrder(o, persons)),
+      transfers: f.transfers.map((t) => ({
         id: t.id, label: t.label, amount: parseAmountDE(t.amount),
         fromAccountId: t.fromAccountId, toAccountId: t.toAccountId, rhythm: t.rhythm,
       })),
     }
-    await onSave(payload)
-    setSaved(true)
   }
+
+  // Automatisches Speichern: Änderungen werden gesammelt und nach kurzer
+  // Pause (kein weiterer Tastendruck) in einem Rutsch gespeichert – vermeidet
+  // eine Server-Anfrage pro Tastendruck.
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    setSaveStatus('saving')
+    const timer = setTimeout(async () => {
+      await onSave(buildPayload(form))
+      setSaveStatus('saved')
+    }, AUTOSAVE_DELAY)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form])
+
   async function reset() {
     await onReset()
     setForm(seed())
-    setSaved(false)
+    setSaveStatus('idle')
   }
 
   async function handleBackupFile(e) {
@@ -115,7 +135,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
       const json = parseBackup(await file.text())
       if (!window.confirm(
         'Backup einspielen? Das überschreibt deine aktuellen Konten, Einnahmen, ' +
-        'Fixkosten/Abos, Umbuchungen und Kategorie-Zuordnungen in diesem Browser.',
+        'Fixkosten/Abos, Umbuchungen und Kategorie-Zuordnungen.',
       )) return
       await restoreBackup(json)
       window.location.reload()
@@ -131,14 +151,14 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
         <p>
           Konten (inkl. Farbe), Einnahmen, Fixkosten/Abos und Umbuchungen selbst pflegen. Pro Posten
           legst du die <strong>Aufteilung</strong> fest (wer zahlt welchen Anteil) und das
-          Abbuchungskonto – daraus berechnet die App Kosten je Person und den Geldfluss. Alles bleibt
-          <strong> nur in deinem Browser</strong>.
+          Abbuchungskonto – daraus berechnet die App Kosten je Person und den Geldfluss. Änderungen
+          werden automatisch gespeichert.
         </p>
       </div>
 
       <div className="privacy-note">
-        🔒 Diese Daten verlassen dein Gerät nicht. Die öffentliche Seite zeigt für alle anderen
-        weiterhin nur die Startdaten.
+        🔒 Diese Daten sind durch deinen Login geschützt und nur für dich sichtbar (bzw. für alle,
+        die sich dieselbe Gruppe teilen).
       </div>
 
       {/* Datensicherung */}
@@ -322,9 +342,9 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
       </div>
 
       <div className="settings-actions">
-        <button className="btn-primary" onClick={save}>Speichern</button>
         <button className="btn" onClick={reset}>Auf Startdaten zurücksetzen</button>
-        {saved && <span className="saved-hint">✓ Gespeichert (nur in diesem Browser)</span>}
+        {saveStatus === 'saving' && <span className="saved-hint muted">Wird gespeichert …</span>}
+        {saveStatus === 'saved' && <span className="saved-hint">✓ Gespeichert</span>}
       </div>
     </div>
   )
