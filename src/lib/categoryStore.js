@@ -1,44 +1,53 @@
 // =============================================================================
 //  categoryStore.js — benutzerdefinierte Kategorien (hinzufügen/bearbeiten)
 // =============================================================================
-//  Ergänzt die vordefinierten Kategorien (categories.js) um eigene, im Browser
-//  gespeicherte Kategorien sowie Label-/Farb-Änderungen an beliebigen Kategorien.
-//  IDs vordefinierter Kategorien bleiben stabil (KEYWORD_RULES/SAVINGS_CATEGORY
-//  referenzieren sie) — editierbar sind nur Label und Farbe.
+//  Ergänzt die vordefinierten Kategorien (categories.js) um eigene, serverseitig
+//  (Postgres, pro Gruppe) gespeicherte Kategorien sowie Label-/Farb-Änderungen
+//  an beliebigen Kategorien. IDs vordefinierter Kategorien bleiben stabil
+//  (KEYWORD_RULES/SAVINGS_CATEGORY referenzieren sie) — editierbar sind nur
+//  Label und Farbe.
+//
+//  hydrateCategories() wird einmal beim App-Start mit den vom Server geladenen
+//  Zeilen aufgerufen, bevor irgendeine Komponente rendert (siehe App.jsx) —
+//  alle Getter unten lesen danach synchron aus dem In-Memory-Zustand. Jede
+//  Mutation aktualisiert diesen Zustand sofort und speichert im Hintergrund
+//  auf dem Server.
 // =============================================================================
 
 import { CATEGORIES as DEFAULT_CATEGORIES, FALLBACK_CATEGORY } from './categories.js'
+import { saveCategories } from './storage.js'
 
-const CUSTOM_KEY = 'pf_categories_custom'
-const OVERRIDES_KEY = 'pf_categories_overrides'
+let custom = [] // [{id, label, color}]
+let overrides = {} // { [id]: {label?, color?} }
 
-function readJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
-  }
+export function hydrateCategories(rows = []) {
+  custom = rows.filter((r) => r.isCustom).map(({ id, label, color }) => ({ id, label, color }))
+  overrides = Object.fromEntries(
+    rows.filter((r) => !r.isCustom).map((r) => [r.id, { ...(r.label != null && { label: r.label }), ...(r.color != null && { color: r.color }) }]),
+  )
 }
-function writeJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    /* localStorage nicht verfügbar – still ignorieren */
-  }
+
+function toRows() {
+  const customRows = custom.map((c) => ({ ...c, isCustom: true }))
+  const overrideRows = Object.entries(overrides).map(([id, patch]) => ({ id, isCustom: false, ...patch }))
+  return [...customRows, ...overrideRows]
+}
+
+function persist() {
+  saveCategories(toRows()).catch((e) => console.error('Kategorien konnten nicht gespeichert werden', e))
 }
 
 function getCustom() {
-  return readJSON(CUSTOM_KEY, [])
+  return custom
 }
 function getOverrides() {
-  return readJSON(OVERRIDES_KEY, {})
+  return overrides
 }
 
 // Alle Kategorien (vordefiniert + eigene), mit Label-/Farb-Änderungen angewandt.
 export function getCategories() {
-  const overrides = getOverrides()
-  return [...DEFAULT_CATEGORIES, ...getCustom()].map((c) => ({ ...c, ...(overrides[c.id] || {}) }))
+  const ov = getOverrides()
+  return [...DEFAULT_CATEGORIES, ...getCustom()].map((c) => ({ ...c, ...(ov[c.id] || {}) }))
 }
 
 export function isCustomCategory(id) {
@@ -58,26 +67,25 @@ export function categoryLabel(id) {
 let idc = 0
 export function addCategory(label, color) {
   const id = `cat_${Date.now()}${idc++}`
-  const custom = getCustom()
   custom.push({ id, label: (label || '').trim() || 'Neue Kategorie', color: color || '#64748b' })
-  writeJSON(CUSTOM_KEY, custom)
+  persist()
   return id
 }
 
 // Label/Farbe ändern — funktioniert für vordefinierte UND eigene Kategorien.
 export function updateCategory(id, patch) {
-  const overrides = getOverrides()
-  overrides[id] = { ...overrides[id], ...patch }
-  writeJSON(OVERRIDES_KEY, overrides)
+  const inCustom = custom.find((c) => c.id === id)
+  if (inCustom) Object.assign(inCustom, patch)
+  else overrides[id] = { ...overrides[id], ...patch }
+  persist()
 }
 
 // Nur eigene Kategorien können vollständig entfernt werden (Standard-Kategorien
 // bleiben erhalten, da Schlüsselwort-Regeln und die Sparen-Erkennung sie referenzieren).
 export function removeCategory(id) {
   if (!isCustomCategory(id)) return false
-  writeJSON(CUSTOM_KEY, getCustom().filter((c) => c.id !== id))
-  const overrides = getOverrides()
+  custom = custom.filter((c) => c.id !== id)
   delete overrides[id]
-  writeJSON(OVERRIDES_KEY, overrides)
+  persist()
   return true
 }
