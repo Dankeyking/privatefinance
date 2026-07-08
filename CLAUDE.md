@@ -70,10 +70,13 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   `activeOrders`, `monthsRemaining`).
 - `src/lib/categories.js` — **vordefinierte** Kategorien + Auto-Zuordnung (`KEYWORD_RULES`,
   `autoCategorize`). IDs bleiben stabil (referenziert von `SAVINGS_CATEGORY`/Regeln).
-- `src/lib/categoryStore.js` — **eigene Kategorien** (hinzufügen/umbenennen/farbig machen,
-  `localStorage`). `getCategories()` liefert vordefiniert+eigene gemergt; `categoryColor`/
-  `categoryLabel` für Anzeige. Standard-Kategorien nicht löschbar (nur Label/Farbe editierbar),
-  eigene voll löschbar. UI-Komponenten rufen `getCategories()` direkt auf (kein Prop-Drilling).
+- `src/lib/categoryStore.js` — **eigene Kategorien** (hinzufügen/umbenennen/farbig machen),
+  seit 2026-07-08 serverseitig (Postgres, `Category`-Tabelle, pro Gruppe) statt `localStorage`.
+  `hydrateCategories()` befüllt beim App-Start einmalig den In-Memory-Zustand; alle Getter
+  (`getCategories()`, `categoryColor`/`categoryLabel`) bleiben synchron, Mutationen speichern
+  im Hintergrund über `saveCategories()` (`storage.js`). Standard-Kategorien nicht löschbar
+  (nur Label/Farbe editierbar), eigene voll löschbar. UI-Komponenten rufen `getCategories()`
+  direkt auf (kein Prop-Drilling).
 - `src/lib/sorting.js` — generische Spalten-Sortierung (`sortRows`, `nextSortState`) für
   Tabellen in „Meine Daten"/„Konten"/`RecurringEditor`.
 - `src/lib/layout.js` — `useDragOrder(pageKey, defaultOrder)`-Hook: Drag-&-Drop-Reihenfolge von
