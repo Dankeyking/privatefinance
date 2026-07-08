@@ -13,6 +13,7 @@ import { mergeData } from './lib/merge.js'
 import { downloadClaudeExport } from './lib/claudeExport.js'
 import { ChartJS } from './components/charts/setup.js'
 import { loadManualData, saveManual, saveCategoryOverrides } from './lib/storage.js'
+import { hydrateCategories } from './lib/categoryStore.js'
 
 // Design (hell/dunkel): gespeicherte Wahl > Systemeinstellung.
 const THEME_KEY = 'pf_theme'
@@ -44,7 +45,8 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
-    loadManualData().then(({ manual, categoryOverrides }) => {
+    loadManualData().then(({ manual, categoryOverrides, categories }) => {
+      hydrateCategories(categories)
       setManual(manual)
       setOverrides(categoryOverrides)
       setManualLoaded(true)
@@ -92,7 +94,9 @@ export default function App() {
     return handleSaveManual({ ...manual, debts })
   }
   function handleResetManual() {
-    return handleSaveManual({})
+    // Explizit alle Felder leeren (Server lässt ein Feld nur dann unangetastet,
+    // wenn es im Payload komplett fehlt statt als leeres Array vorzuliegen).
+    return handleSaveManual({ accounts: [], incomes: [], standingOrders: [], transfers: [], debts: [] })
   }
   // Navigation, optional mit Parametern (z. B. Vorfilter für „Kosten & Abos":
   // { accountId, category, person, kind, search }).
