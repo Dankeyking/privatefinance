@@ -59,7 +59,6 @@ export default function App() {
   const hasManual = Boolean(
     manual && (manual.standingOrders?.length || manual.accounts?.length || manual.incomes?.length),
   )
-  const hasDebts = Boolean(manual?.debts?.length)
 
   function handleSetCategory(itemId, categoryId) {
     const next = { ...overrides, [itemId]: categoryId }
@@ -125,7 +124,6 @@ export default function App() {
         onNavigate={navigate}
         source={source}
         hasManual={hasManual}
-        hasDebts={hasDebts}
         onExport={handleExport}
         open={navOpen}
         onClose={() => setNavOpen(false)}
