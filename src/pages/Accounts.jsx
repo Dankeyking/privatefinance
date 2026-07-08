@@ -99,10 +99,13 @@ export default function Accounts({ data, onSaveAccounts }) {
               <div className="acct-type">{a.type === 'joint' ? 'Gemeinsam' : `Privat · ${a.owner || ''}`}</div>
               <div className="acct-name">{a.name}</div>
               <InlineAmount
-                className="acct-balance"
+                className={`acct-balance ${(a.balance || 0) < 0 ? 'neg' : ''}`}
                 value={a.balance}
                 onChange={(v) => update(a.id, { balance: v })}
               />
+              {(a.balance || 0) < 0 && (
+                <div className="cover-hint warn">⚠ Konto im Minus</div>
+              )}
               {a.load > 0 && (
                 <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                   Monatslast {formatEUR(a.load)}
