@@ -4,6 +4,7 @@ import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Accounts from './pages/Accounts.jsx'
+import Debts from './pages/Debts.jsx'
 import Import from './pages/Import.jsx'
 import Categories from './pages/Categories.jsx'
 import Settings from './pages/Settings.jsx'
@@ -58,6 +59,7 @@ export default function App() {
   const hasManual = Boolean(
     manual && (manual.standingOrders?.length || manual.accounts?.length || manual.incomes?.length),
   )
+  const hasDebts = Boolean(manual?.debts?.length)
 
   function handleSetCategory(itemId, categoryId) {
     const next = { ...overrides, [itemId]: categoryId }
@@ -86,6 +88,9 @@ export default function App() {
   }
   function handleSaveAccounts(accounts) {
     return handleSaveManual({ ...manual, accounts })
+  }
+  function handleSaveDebts(debts) {
+    return handleSaveManual({ ...manual, debts })
   }
   function handleResetManual() {
     return handleSaveManual({})
@@ -120,6 +125,7 @@ export default function App() {
         onNavigate={navigate}
         source={source}
         hasManual={hasManual}
+        hasDebts={hasDebts}
         onExport={handleExport}
         open={navOpen}
         onClose={() => setNavOpen(false)}
@@ -134,6 +140,7 @@ export default function App() {
         )}
         {page === 'analytics' && <Analytics data={data} overrides={overrides} onNavigate={navigate} />}
         {page === 'accounts' && <Accounts data={data} onSaveAccounts={handleSaveAccounts} />}
+        {page === 'debts' && <Debts data={data} onSaveDebts={handleSaveDebts} />}
         {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}
         {page === 'categories' && (
           <Categories
@@ -150,6 +157,7 @@ export default function App() {
             categoryOverrides={overrides}
             onSave={handleSaveManual}
             onReset={handleResetManual}
+            onNavigate={navigate}
           />
         )}
       </main>
