@@ -244,9 +244,7 @@ export default function Overview({ data, onNavigate }) {
         <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" icon="plus" />
         <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" icon="minus" />
         <KpiCard label="Sparen / Monat" value={summary.savings} icon="budget" hint={`Sparquote ${summary.savingsRate.toFixed(0)} %`} />
-        {summary.debtRepayment > 0 && (
-          <KpiCard label="Schulden-Tilgung / Monat" value={summary.debtRepayment} tone="neg" icon="debt" />
-        )}
+        <KpiCard label="Schulden-Tilgung / Monat" value={summary.debtRepayment} tone="neg" icon="debt" />
         <KpiCard
           label="Überschuss / Monat"
           value={summary.surplus}
