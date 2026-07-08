@@ -18,7 +18,7 @@ async function putJSON(url, body) {
   return res.json()
 }
 
-// Liefert { manual: {accounts, incomes, standingOrders, transfers}, categoryOverrides }.
+// Liefert { manual: {accounts, incomes, standingOrders, transfers, debts}, categoryOverrides, categories }.
 export function loadManualData() {
   return getJSON('/api/data')
 }
@@ -31,6 +31,11 @@ export function saveManual(manual) {
 // Ersetzt die Kategorie-Overrides vollständig.
 export function saveCategoryOverrides(categoryOverrides) {
   return putJSON('/api/category-overrides', categoryOverrides)
+}
+
+// Ersetzt eigene Kategorien + Label-/Farb-Overrides vollständig.
+export function saveCategories(categories) {
+  return putJSON('/api/categories', categories)
 }
 
 // Spielt eine Backup-Datei (siehe backup.js) serverseitig ein.
