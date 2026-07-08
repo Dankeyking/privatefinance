@@ -214,13 +214,15 @@ export function accountFlows(data) {
   }
 }
 
-// Haushalts-Summe: Einkommen, Fixkosten/Abos (ohne Sparen), Sparen, Überschuss.
-//  totalCosts   = echte Ausgaben (Fixkosten + Abos)
-//  savings      = Sparen (Rücklagen; kein „Kosten")
-//  surplus      = Einkommen − Kosten − Sparen (frei verfügbar)
+// Haushalts-Summe: Einkommen, Fixkosten/Abos (ohne Sparen), Sparen, Schulden-Tilgung, Überschuss.
+//  totalCosts     = echte Ausgaben (Fixkosten + Abos)
+//  savings        = Sparen (Rücklagen; kein „Kosten")
+//  debtRepayment  = monatliche Rate aller Schulden mit bekannter Reihenfolge (siehe Debts-Seite;
+//                   Schulden mit "Reihenfolge noch unklar" zählen bewusst nicht mit)
+//  surplus        = Einkommen − Kosten − Sparen − Schulden-Tilgung (frei verfügbar)
 //  availableWithoutSavings = Einkommen − Kosten (verfügbar, wenn man nicht sparen würde)
 export function householdSummary(data) {
-  const { standingOrders = [], incomes = [] } = data
+  const { standingOrders = [], incomes = [], debts = [] } = data
   let totalCosts = 0
   let savings = 0
   activeOrders(standingOrders).forEach((o) => {
@@ -229,11 +231,15 @@ export function householdSummary(data) {
     else totalCosts += m
   })
   const totalIncome = incomes.reduce((s, i) => s + toMonthly(i.amount, i.rhythm), 0)
+  const debtRepayment = debts
+    .filter((d) => !d.priorityUnknown)
+    .reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)
   return {
     totalIncome,
     totalCosts,
     savings,
-    surplus: totalIncome - totalCosts - savings,
+    debtRepayment,
+    surplus: totalIncome - totalCosts - savings - debtRepayment,
     availableWithoutSavings: totalIncome - totalCosts,
     savingsRate: totalIncome > 0 ? (savings / totalIncome) * 100 : 0,
   }
