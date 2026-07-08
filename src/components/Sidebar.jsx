@@ -1,33 +1,38 @@
 import Icon from './Icon.jsx'
 
 // Navigation in Gruppen: Dashboard, Planen (Daten pflegen), Auswerten, Verwaltung.
-const NAV_GROUPS = [
-  {
-    label: null,
-    items: [{ id: 'overview', label: 'Übersicht', icon: 'overview' }],
-  },
-  {
-    label: 'Planen',
-    items: [
-      { id: 'accounts', label: 'Konten', icon: 'cash' },
-      { id: 'recurring', label: 'Kosten & Abos', icon: 'standing' },
-    ],
-  },
-  {
-    label: 'Auswerten',
-    items: [{ id: 'analytics', label: 'Analyse', icon: 'analytics' }],
-  },
-  {
-    label: 'Daten',
-    items: [
-      { id: 'import', label: 'CSV-Import', icon: 'export' },
-      { id: 'categories', label: 'Kategorien', icon: 'categories' },
-      { id: 'settings', label: 'Meine Daten', icon: 'settings' },
-    ],
-  },
-]
+// "Schulden" wird nur eingeblendet, wenn tatsächlich welche eingetragen sind (siehe hasDebts).
+function buildNavGroups(hasDebts) {
+  return [
+    {
+      label: null,
+      items: [{ id: 'overview', label: 'Übersicht', icon: 'overview' }],
+    },
+    {
+      label: 'Planen',
+      items: [
+        { id: 'accounts', label: 'Konten', icon: 'cash' },
+        { id: 'recurring', label: 'Kosten & Abos', icon: 'standing' },
+        ...(hasDebts ? [{ id: 'debts', label: 'Schulden', icon: 'debt' }] : []),
+      ],
+    },
+    {
+      label: 'Auswerten',
+      items: [{ id: 'analytics', label: 'Analyse', icon: 'analytics' }],
+    },
+    {
+      label: 'Daten',
+      items: [
+        { id: 'import', label: 'CSV-Import', icon: 'export' },
+        { id: 'categories', label: 'Kategorien', icon: 'categories' },
+        { id: 'settings', label: 'Meine Daten', icon: 'settings' },
+      ],
+    },
+  ]
+}
 
-export default function Sidebar({ page, onNavigate, source, hasManual, onExport, open, onClose, theme, onToggleTheme }) {
+export default function Sidebar({ page, onNavigate, source, hasManual, hasDebts, onExport, open, onClose, theme, onToggleTheme }) {
+  const navGroups = buildNavGroups(hasDebts)
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
@@ -36,7 +41,7 @@ export default function Sidebar({ page, onNavigate, source, hasManual, onExport,
         <button className="sidebar-close" onClick={onClose} aria-label="Menü schließen">✕</button>
       </div>
       <nav className="nav">
-        {NAV_GROUPS.map((g, gi) => (
+        {navGroups.map((g, gi) => (
           <div className="nav-group" key={gi}>
             {g.label && <div className="nav-group-label">{g.label}</div>}
             {g.items.map((item) => (
