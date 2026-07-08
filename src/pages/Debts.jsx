@@ -18,6 +18,7 @@ const emptyDebt = (accounts) => ({
   rhythm: 'monthly',
   accountId: accounts[0]?.id || '',
   priority: 0,
+  priorityUnknown: false,
 })
 
 const SORT_OPTS = [
@@ -32,7 +33,9 @@ export default function Debts({ data, onSaveDebts }) {
   const [sort, setSort] = useState({ key: 'priority', dir: 'asc' })
 
   const totalRemaining = debts.reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)
-  const monthlyRate = debts.reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)
+  const monthlyRate = debts
+    .filter((d) => !d.priorityUnknown)
+    .reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)
 
   const sorted = useMemo(
     () => sortRows(debts, sort.key, sort.dir, (row, key) => (key === 'name' ? row.name || '' : Number(row[key]) || 0)),
@@ -67,7 +70,7 @@ export default function Debts({ data, onSaveDebts }) {
 
       <div className="grid kpis">
         <KpiCard label="Restschulden gesamt" value={totalRemaining} tone="neg" hint={`${debts.length} Eintrag${debts.length === 1 ? '' : 'e'}`} />
-        <KpiCard label="Rate gesamt / Monat" value={monthlyRate} tone="neg" />
+        <KpiCard label="Rate gesamt / Monat" value={monthlyRate} tone="neg" hint="ohne Schulden mit unklarer Reihenfolge" />
       </div>
 
       <div className="editor-head mt" style={{ alignItems: 'center' }}>
@@ -140,8 +143,18 @@ export default function Debts({ data, onSaveDebts }) {
                       type="number"
                       style={{ width: 60 }}
                       value={d.priority ?? 0}
+                      disabled={d.priorityUnknown}
                       onChange={(e) => update(d.id, { priority: Number(e.target.value) || 0 })}
                     />
+                  </label>
+                  <label title="Diese Schuld nicht in die monatliche Rate/Kosten der Übersicht einrechnen, solange die Reihenfolge noch nicht feststeht">
+                    <input
+                      type="checkbox"
+                      style={{ width: 'auto' }}
+                      checked={!!d.priorityUnknown}
+                      onChange={(e) => update(d.id, { priorityUnknown: e.target.checked })}
+                    />
+                    Reihenfolge noch unklar
                   </label>
                   <label>
                     Gesamtbetrag
