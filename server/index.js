@@ -13,11 +13,29 @@ const BACKUP_TYPE = 'privatefinance-backup'
 // Elisa und Duncan (all seine Accounts) teilen sich die Haushaltsdaten,
 // jeder andere Authentik-Nutzer bekommt seine eigene, isolierte Gruppe.
 const SHARED_USERS = ['elisa', 'wesseler', 'akadmin']
-function resolveGroup(req) {
+// Nur für die lokale Entwicklung ohne Authentik: DEV_USER=wesseler setzen.
+// In Produktion ist die Variable nicht gesetzt.
+const DEV_USER = process.env.DEV_USER
+
+function currentUser(req) {
   const username = req.headers['x-authentik-username']
-  if (!username) return 'familie'
+  return (typeof username === 'string' && username.trim()) || DEV_USER || null
+}
+
+function resolveGroup(req) {
+  const username = currentUser(req)
   return SHARED_USERS.includes(username) ? 'familie' : username
 }
+
+// Ohne angemeldeten Authentik-Nutzer gibt es keine Daten. Früher fiel eine
+// Anfrage ohne Header auf die Familien-Daten zurück – das hätte jeder bekommen,
+// der die App am Authentik-Login vorbei direkt im LAN aufruft.
+app.use('/api', (req, res, next) => {
+  if (!currentUser(req)) {
+    return res.status(401).json({ error: 'Nicht angemeldet – bitte über https://finance.wesseler.uk öffnen.' })
+  }
+  next()
+})
 
 async function loadManual(groupId) {
   const [accounts, incomes, standingOrders, transfers, overrides, debts, categories] = await Promise.all([
