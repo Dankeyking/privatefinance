@@ -3,11 +3,11 @@
 Kurzbriefing für Claude. Ziel: das Projekt sofort verstehen, ohne das Modell neu herzuleiten.
 
 ## Was das ist
-Ein **rein manuelles** Haushalts-Finanztool (React + Vite, reines Frontend, kein Backend,
+Ein **rein manuelles** Haushalts-Finanztool (React + Vite, Express-API + Prisma/Postgres,
 keine Bankanbindung). Nutzer pflegen **Einnahmen, Fixkosten und Abos** selbst; die App
 berechnet daraus **Kosten je Konto**, **Kosten je Person** und den **Geldfluss zwischen den
-Konten**. UI durchgehend **auf Deutsch**. Eigene Daten liegen **nur im Browser**
-(`localStorage`), niemals auf einem Server.
+Konten**. UI durchgehend **auf Deutsch**. Die Daten liegen in Postgres, getrennt je
+Authentik-Nutzer (`groupId`); Duncan und Elisa teilen die Gruppe `familie`.
 
 ## Datenmodell (das Herzstück)
 Alle Daten hängen an diesen Arrays (siehe `src/data/mockData.js` als Startdaten):
@@ -83,7 +83,7 @@ die Sankey) und `rows` (einzeln, mit `kind`, für die Tabelle).
   Dashboard-Karten, pro Seite in `localStorage` (`pf_layout_<page>`) gespeichert.
 - `src/lib/merge.js` — legt manuelle Browser-Daten über die Startdaten. Konten: die
   manuelle Liste **ersetzt** die Basis (gelöschte Konten bleiben gelöscht).
-- `src/lib/storage.js` — `localStorage` (Kategorie-Overrides + manuelle Daten).
+- `src/lib/storage.js` — Persistenz über die Server-API (`/api/data`, `/api/manual`, …).
 - `src/lib/claudeExport.js` — analyse-fertiger JSON-Export für Claude.
 - `src/lib/csvImport.js` — CSV-Umsätze parsen (Trennzeichen-Erkennung, deutsche
   Zahlen/Datum), Spalten-Auto-Mapping, `detectRecurring` (Gruppierung nach Empfänger,
@@ -139,9 +139,32 @@ Charts beim Umschalten neu auf.
 - **Deployment**: Push auf `main` → GitHub Action baut das Docker-Image und pusht es
   ins GHCR; gehostet wird selbst (nginx auf Port 8080, hinter Traefik+Authentik).
   Der frühere GitHub-Pages-Workflow wurde entfernt.
-- `npm run mcp` — MCP-Server (liest die Startdaten aus `mockData.js`).
+- `npm run server` — Express-API + Auslieferung von `dist/` (braucht `DATABASE_URL`;
+  ohne Authentik `DEV_USER=wesseler` setzen).
+- `npm run mcp` — MCP-Server gegen die API (`FINANCE_API_URL`, `FINANCE_API_TOKEN`).
 - Kein Linter/keine Tests konfiguriert; **Build** ist der Sanity-Check.
+
+## Server & MCP (`server/index.js`, `mcp/finance-server.js`)
+- **Auth**: Browser über Authentik-Header `x-authentik-username`; nicht-interaktive
+  Clients über Token (`FINANCE_API_TOKEN`) als `X-Api-Key`/`Bearer`. Ohne gesetztes
+  Token ist der Token-Weg aus. `FINANCE_TRUSTED_PROXIES` (optional) beschränkt, von
+  welchen IPs der Authentik-Header geglaubt wird – nötig, weil der Container im
+  Netzmodus `host` auch direkt auf Port 8080 erreichbar ist.
+- **Zwei Mounts** mit denselben Routen: `/api` (Header **oder** Token) und `/token-api`
+  (**nur** Token, Authentik-Header wird ignoriert – dieser Pfad darf am Proxy von der
+  Anmeldung ausgenommen werden).
+- **Zwei Schreibwege**: die Oberfläche ersetzt ganze Listen (`PUT /api/manual`, Full
+  Replace je vorhandenem Schlüssel); Automatisierung ändert einzelne Datensätze über
+  `POST|PATCH|DELETE /api/items/<sammlung>` (`accounts`, `incomes`, `standing-orders`,
+  `transfers`, `debts`). PATCH ist partiell.
+- Abgeleitete Felder (`monthInterval`, `nextExecution`, Auto-Kategorie, Split-Defaults)
+  setzt **der Server** – mit denselben Funktionen aus `src/lib`, die auch die Oberfläche
+  nutzt. Neue Pflichtfelder gehören deshalb in `COLLECTIONS` in `server/index.js`.
+- Beim Ändern von `category` löscht der Server ein evtl. vorhandenes
+  `CategoryOverride` für denselben Posten (sonst überstimmt es die neue Kategorie).
+- Der MCP-Server hat **keinen** DB-Zugriff; er spricht ausschließlich die HTTP-API an.
 
 ## Datenschutz
 Die Startdaten in `mockData.js` sind echte Beispieldaten des Nutzers und **im Repo sichtbar**
-(bewusst so gewählt). Echte Nutzereingaben in der App bleiben im `localStorage`.
+(bewusst so gewählt). Die echten Eingaben liegen in der selbst gehosteten Postgres-Instanz
+hinter Authentik – niemals im Repo. Tokens/Zugangsdaten nur über Umgebungsvariablen.
