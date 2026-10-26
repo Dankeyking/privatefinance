@@ -2,7 +2,11 @@
   "mcpServers": {
     "privatefinance": {
       "command": "node",
-      "args": ["mcp/finance-server.js"]
+      "args": ["mcp/finance-server.js"],
+      "env": {
+        "FINANCE_API_URL": "${FINANCE_API_URL:-http://apps:8080/api}",
+        "FINANCE_API_TOKEN": "${FINANCE_API_TOKEN}"
+      }
     }
   }
 }
