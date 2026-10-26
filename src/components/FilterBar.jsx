@@ -19,7 +19,10 @@ import {
 // Zustandsquelle für die Bildschirmbreite gibt.
 
 // Die Bedienelemente selbst – einmal geschrieben, zweimal eingehängt.
-function Controls({ data, filter, onChange, idPrefix }) {
+// `only` grenzt ein, was gezeigt wird: in der Leiste stehen nur Person und
+// Art, weil man die ständig umschaltet. Konto, Kategorie und Suche füllten
+// sonst vier Zeilen über dem Inhalt; sie liegen in derselben Schublade.
+function Controls({ data, filter, onChange, idPrefix, only = 'all' }) {
   const persons = personsFromAccounts(data.accounts || [])
   const accounts = data.accounts || []
   const categories = getCategories()
@@ -27,7 +30,7 @@ function Controls({ data, filter, onChange, idPrefix }) {
 
   return (
     <>
-      {persons.length > 0 && (
+      {only !== 'rest' && persons.length > 0 && (
         <div className="filterbar-group">
           <span className="filterbar-label">Person</span>
           <button type="button" className={`chip ${filter.person === 'all' ? 'on' : ''}`}
@@ -39,6 +42,7 @@ function Controls({ data, filter, onChange, idPrefix }) {
         </div>
       )}
 
+      {only !== 'rest' && (
       <div className="filterbar-group">
         <span className="filterbar-label">Art</span>
         {KIND_OPTIONS.map((k) => (
@@ -46,6 +50,10 @@ function Controls({ data, filter, onChange, idPrefix }) {
             aria-pressed={filter.kind === k.id} onClick={() => set({ kind: k.id })}>{k.label}</button>
         ))}
       </div>
+      )}
+
+      {only !== 'quick' && (
+      <>
 
       <div className="filterbar-group">
         <label className="filterbar-label" htmlFor={`${idPrefix}-account`}>Konto</label>
@@ -70,8 +78,19 @@ function Controls({ data, filter, onChange, idPrefix }) {
         <input id={`${idPrefix}-search`} className="chip chip-input" value={filter.search}
           placeholder="Empfänger …" onChange={(e) => set({ search: e.target.value })} />
       </div>
+      </>
+      )}
     </>
   )
+}
+
+// Wie viele der Bedingungen hinter „Weitere Filter" sind gesetzt?
+function restCount(filter) {
+  let n = 0
+  if (filter.accountId !== 'all') n++
+  if (filter.category !== 'all') n++
+  if (filter.search.trim()) n++
+  return n
 }
 
 export default function FilterBar({ data, value, onChange }) {
@@ -101,7 +120,12 @@ export default function FilterBar({ data, value, onChange }) {
   return (
     <>
       <div className="filterbar" role="group" aria-label="Ansicht filtern">
-        <Controls data={data} filter={filter} onChange={onChange} idPrefix="fb" />
+        <Controls data={data} filter={filter} onChange={onChange} idPrefix="fb" only="quick" />
+        <button type="button" className={`chip chip-filter ${restCount(filter) ? 'on' : ''}`}
+          onClick={() => setOpen(true)} aria-expanded={open}>
+          Weitere Filter
+          {restCount(filter) > 0 && <span className="chip-badge">{restCount(filter)}</span>}
+        </button>
         {!empty && (
           <button type="button" className="chip chip-reset" onClick={() => onChange(EMPTY_FILTER)}>
             Filter zurücksetzen
@@ -138,7 +162,12 @@ export default function FilterBar({ data, value, onChange }) {
               <button type="button" className="btn" onClick={close}>Fertig</button>
             </div>
             <div className="sheet-body">
-              <Controls data={data} filter={filter} onChange={onChange} idPrefix="fs" />
+              {/* Person und Art stehen am Rechner schon in der Leiste; dort
+                  blendet CSS diesen Teil aus, am Handy ist er der Hauptteil. */}
+              <div className="sheet-quick">
+                <Controls data={data} filter={filter} onChange={onChange} idPrefix="fsq" only="quick" />
+              </div>
+              <Controls data={data} filter={filter} onChange={onChange} idPrefix="fs" only="rest" />
             </div>
           </div>
         </>
