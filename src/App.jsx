@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
+import BottomNav from './components/BottomNav.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
 import Analytics from './pages/Analytics.jsx'
@@ -163,6 +164,8 @@ export default function App() {
           />
         )}
       </main>
+
+      <BottomNav page={page} onNavigate={navigate} onMore={() => setNavOpen(true)} />
     </div>
   )
 }
