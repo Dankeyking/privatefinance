@@ -3,6 +3,8 @@ import IncomeExpenseBar from '../components/charts/IncomeExpenseBar.jsx'
 import CategoryDonut from '../components/charts/CategoryDonut.jsx'
 import CostTreemap from '../components/charts/CostTreemap.jsx'
 import DragCard from '../components/DragCard.jsx'
+import FilterBar from '../components/FilterBar.jsx'
+import { applyOverviewFilter, EMPTY_FILTER } from '../lib/overviewFilter.js'
 import { categoryColor, categoryLabel } from '../lib/categoryStore.js'
 import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
 import { effectiveCategoryOf, isOrderActive, monthsRemaining } from '../lib/selectors.js'
@@ -21,12 +23,17 @@ const splitPersonLabel = (o) => {
 export default function Analytics({ data, overrides, onNavigate }) {
   const [includeSavings, setIncludeSavings] = useState(false)
   const [selCat, setSelCat] = useState(null) // Kategorie-Drilldown unterm Donut
-  const accById = useMemo(() => Object.fromEntries((data.accounts || []).map((a) => [a.id, a])), [data.accounts])
+
+  // Dieselbe Filterleiste wie auf der Übersicht: Alle Auswertungen zeigen
+  // denselben Ausschnitt, statt dass jede Seite eigene Regeln hat.
+  const [filter, setFilter] = useState(EMPTY_FILTER)
+  const view = useMemo(() => applyOverviewFilter(data, filter), [data, filter])
+  const accById = useMemo(() => Object.fromEntries((view.accounts || []).map((a) => [a.id, a])), [view.accounts])
   const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER)
 
   const catTotals = useMemo(
-    () => monthlyByCategory(data, overrides, { excludeSavings: !includeSavings }),
-    [data, overrides, includeSavings],
+    () => monthlyByCategory(view, overrides, { excludeSavings: !includeSavings }),
+    [view, overrides, includeSavings],
   )
   const donut = useMemo(() => {
     const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
@@ -41,14 +48,14 @@ export default function Analytics({ data, overrides, onNavigate }) {
   // Posten der angeklickten Donut-Kategorie (Drilldown).
   const drill = useMemo(() => {
     if (!selCat) return null
-    const rows = (data.standingOrders || [])
+    const rows = (view.standingOrders || [])
       .filter((o) => isOrderActive(o) && effectiveCategoryOf(o, overrides) === selCat)
       .map((o) => ({ id: o.id, recipient: o.recipient || '—', monthly: toMonthly(o.amount, o.rhythm) }))
       .sort((a, b) => b.monthly - a.monthly)
     return { rows, total: rows.reduce((s, r) => s + r.monthly, 0) }
-  }, [selCat, data.standingOrders, overrides])
+  }, [selCat, view.standingOrders, overrides])
 
-  const persons = useMemo(() => personSummary(data), [data])
+  const persons = useMemo(() => personSummary(view), [view])
   const personBars = {
     labels: persons.map((p) => p.person),
     income: persons.map((p) => Number(p.income.toFixed(2))),
@@ -56,26 +63,26 @@ export default function Analytics({ data, overrides, onNavigate }) {
   }
 
   const byAccount = useMemo(
-    () => monthlyByAccount(data).filter((a) => a.total > 0).sort((a, b) => b.total - a.total),
-    [data],
+    () => monthlyByAccount(view).filter((a) => a.total > 0).sort((a, b) => b.total - a.total),
+    [view],
   )
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
 
   // Treemap: alle aktiven Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
   const treemapItems = useMemo(() => {
-    return (data.standingOrders || [])
+    return (view.standingOrders || [])
       .filter((o) => isOrderActive(o) && !isSavings(o, overrides))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
         return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: categoryLabel(cat), color: categoryColor(cat) }
       })
       .filter((x) => x.value > 0)
-  }, [data.standingOrders, overrides])
+  }, [view.standingOrders, overrides])
 
   // Abo-Radar: aktive Abos nach Jahresbetrag.
   const abos = useMemo(() => {
-    const rows = (data.standingOrders || [])
+    const rows = (view.standingOrders || [])
       .filter((o) => o.kind === 'subscription' && isOrderActive(o))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
@@ -89,11 +96,11 @@ export default function Analytics({ data, overrides, onNavigate }) {
       })
       .sort((a, b) => b.yearly - a.yearly)
     return { rows, totalYear: rows.reduce((s, r) => s + r.yearly, 0), max: Math.max(1, ...rows.map((r) => r.yearly)) }
-  }, [data.standingOrders, overrides, accById])
+  }, [view.standingOrders, overrides, accById])
 
   // Auslaufende Posten: alles mit Enddatum – zeigt, wann Budget frei wird.
   const ending = useMemo(() => {
-    const rows = (data.standingOrders || [])
+    const rows = (view.standingOrders || [])
       .filter((o) => o.endDate)
       .map((o) => ({
         id: o.id, recipient: o.recipient || '—',
@@ -104,7 +111,7 @@ export default function Analytics({ data, overrides, onNavigate }) {
       .sort((a, b) => (a.endDate < b.endDate ? -1 : 1))
     const freed = rows.filter((r) => r.active).reduce((s, r) => s + r.monthly, 0)
     return { rows, freed }
-  }, [data.standingOrders, accById])
+  }, [view.standingOrders, accById])
 
   const sections = {
     donut: (
@@ -276,6 +283,8 @@ export default function Analytics({ data, overrides, onNavigate }) {
           {isCustom && <button className="btn" onClick={reset}>Layout zurücksetzen</button>}
         </div>
       </div>
+
+      <FilterBar data={data} value={filter} onChange={setFilter} />
 
       <div className="drag-grid">
         {order.map((id) => (

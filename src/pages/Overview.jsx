@@ -30,6 +30,11 @@ export default function Overview({ data, onNavigate }) {
   const flows = useMemo(() => accountFlows(view), [view])
   const upcoming = useMemo(() => upcomingPayments(view, 30), [view])
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
+  // Bezugsgröße für die Balken auf den Kontokacheln: das teuerste Konto ist voll.
+  const maxAccountTotal = useMemo(
+    () => byAccount.reduce((m, a) => Math.max(m, a.total), 0),
+    [byAccount],
+  )
   const debts = data.debts || []
   // Schulden-Abschnitt nur einblenden, wenn tatsächlich welche eingetragen sind.
   const DEFAULT_ORDER = debts.length ? [...BASE_ORDER, 'debts'] : BASE_ORDER
@@ -113,6 +118,12 @@ export default function Overview({ data, onNavigate }) {
               <div className="acct-balance">
                 {formatEUR(total)}
                 <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}> / Monat</span>
+              </div>
+              <div className="acct-bar" aria-hidden="true">
+                <span style={{
+                  width: `${maxAccountTotal > 0 ? Math.max(2, (total / maxAccountTotal) * 100) : 0}%`,
+                  background: accountColor(account, data.accounts),
+                }} />
               </div>
               <div className="muted" style={{ fontSize: 12 }}>{formatEUR(total * 12)} / Jahr</div>
               {total > 0 && (
