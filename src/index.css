@@ -1151,3 +1151,22 @@ body { transition: background-color 180ms ease, color 180ms ease; }
 @media (prefers-reduced-motion: reduce) {
   .acct-bar > span { transition: none; }
 }
+
+/* --- Korrektur: kein Querscrollen auf dem Handy ---------------------------- */
+@media (max-width: 860px) {
+  /* Das Raster forderte minmax(380px, 1fr) — auf einem 375-px-Schirm ragen die
+     Karten damit über den Rand und werden rechts abgeschnitten.
+     minmax(0, 1fr) erlaubt der Spalte, schmaler als ihr Inhalt zu werden. */
+  .drag-grid { grid-template-columns: minmax(0, 1fr); }
+  .drag-card { padding-left: 0; min-width: 0; }
+  .drag-card > * { min-width: 0; }
+  /* Der Ziehgriff kostet 22 px Breite und funktioniert mit dem Finger ohnehin
+     nicht — die Reihenfolge ändert man am Rechner. */
+  .drag-handle { display: none; }
+
+  /* Die Filterleiste scrollte seitlich. Bei vier Gruppen heißt das: der
+     Kontofilter liegt weit außerhalb des Bildes. Umbrechen ist richtig. */
+  .filterbar { flex-wrap: wrap; overflow-x: visible; gap: 7px; }
+  .filterbar-group { flex: 0 1 auto; min-width: 0; }
+  .chip-select, .chip-input { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+}
