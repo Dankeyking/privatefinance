@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import KpiCard from '../components/KpiCard.jsx'
 import InlineAmount from '../components/InlineAmount.jsx'
 import Icon from '../components/Icon.jsx'
 import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
@@ -33,6 +32,8 @@ export default function Debts({ data, onSaveDebts }) {
   const [sort, setSort] = useState({ key: 'priority', dir: 'asc' })
 
   const totalRemaining = debts.reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)
+  // Ursprungssumme für die Tilgungsquote; 0, solange niemand sie gepflegt hat.
+  const totalStart = debts.reduce((s, d) => s + (Number(d.totalAmount) || 0), 0)
   const monthlyRate = debts
     .filter((d) => !d.priorityUnknown)
     .reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)
@@ -68,9 +69,35 @@ export default function Debts({ data, onSaveDebts }) {
         <p>Offene Kredite und Schulden im Blick – Restbetrag, Rate und wem du sie schuldest. Über die Priorität legst du fest, welche zuerst abbezahlt werden soll (niedrigere Zahl = höhere Priorität).</p>
       </div>
 
-      <div className="grid kpis">
-        <KpiCard label="Restschulden gesamt" value={totalRemaining} tone="neg" hint={`${debts.length} Eintrag${debts.length === 1 ? '' : 'e'}`} />
-        <KpiCard label="Rate gesamt / Monat" value={monthlyRate} tone="neg" hint="ohne Schulden mit unklarer Reihenfolge" />
+      <div className="bento">
+        <section className="bento-hero warn" aria-label="Restschulden gesamt">
+          <div className="bento-hero-label">Restschulden gesamt</div>
+          <div className="bento-hero-value">{formatEUR(totalRemaining)}</div>
+          <p className="bento-hero-sub">
+            {debts.length} Eintrag{debts.length === 1 ? '' : 'e'}
+            {monthlyRate > 0 && <> · bei {formatEUR(monthlyRate)} Rate im Monat
+              {totalRemaining > 0 && <> noch rund {Math.ceil(totalRemaining / monthlyRate)} Monate</>}</>}
+          </p>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Rate gesamt / Monat</div>
+          <div className="bento-value">{formatEUR(monthlyRate)}</div>
+          <div className="bento-hint">ohne Schulden mit unklarer Reihenfolge</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Getilgt</div>
+          <div className="bento-value">
+            {totalStart > 0 ? `${Math.max(0, Math.round((1 - totalRemaining / totalStart) * 100))} %` : '–'}
+          </div>
+          <div className="bento-bar">
+            <span style={{
+              width: totalStart > 0 ? `${Math.min(100, Math.max(0, (1 - totalRemaining / totalStart) * 100))}%` : '0%',
+              background: 'var(--warn)',
+            }} />
+          </div>
+        </div>
       </div>
 
       <div className="editor-head mt" style={{ alignItems: 'center' }}>

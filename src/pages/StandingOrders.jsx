@@ -93,42 +93,53 @@ export default function StandingOrders({ data, onSaveOrders, initial }) {
           </div>
         </div>
 
-        <div className="filters">
-          <label>
-            Art
-            <select value={fKind} onChange={(e) => setFKind(e.target.value)}>
-              {KIND_OPTS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
-            </select>
-          </label>
-          <label>
-            Konto
-            <select value={fAccount} onChange={(e) => setFAccount(e.target.value)}>
+        {/* Wenige Optionen werden zu Chips (Zustand ohne Aufklappen sichtbar),
+            lange Listen wie Konten und Kategorien bleiben Auswahlfelder. */}
+        <div className="filterbar">
+          <div className="filterbar-group">
+            <span className="filterbar-label">Art</span>
+            {KIND_OPTS.map((k) => (
+              <button type="button" key={k.id} className={`chip ${fKind === k.id ? 'on' : ''}`}
+                aria-pressed={fKind === k.id} onClick={() => setFKind(k.id)}>{k.label}</button>
+            ))}
+          </div>
+
+          {persons.length > 0 && (
+            <div className="filterbar-group">
+              <span className="filterbar-label">Person</span>
+              <button type="button" className={`chip ${fPerson === 'all' ? 'on' : ''}`}
+                aria-pressed={fPerson === 'all'} onClick={() => setFPerson('all')}>Alle</button>
+              {persons.map((p) => (
+                <button type="button" key={p} className={`chip ${fPerson === p ? 'on' : ''}`}
+                  aria-pressed={fPerson === p} onClick={() => setFPerson(p)}>{p}</button>
+              ))}
+            </div>
+          )}
+
+          <div className="filterbar-group">
+            <label className="filterbar-label" htmlFor="so-account">Konto</label>
+            <select id="so-account" className="chip chip-select" value={fAccount} onChange={(e) => setFAccount(e.target.value)}>
               <option value="all">Alle Konten</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
-          </label>
-          <label>
-            Kategorie
-            <select value={fCategory} onChange={(e) => setFCategory(e.target.value)}>
+          </div>
+
+          <div className="filterbar-group">
+            <label className="filterbar-label" htmlFor="so-category">Kategorie</label>
+            <select id="so-category" className="chip chip-select" value={fCategory} onChange={(e) => setFCategory(e.target.value)}>
               <option value="all">Alle Kategorien</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
-          </label>
-          {persons.length > 0 && (
-            <label>
-              Person
-              <select value={fPerson} onChange={(e) => setFPerson(e.target.value)}>
-                <option value="all">Alle</option>
-                {persons.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </label>
-          )}
-          <label>
-            Suche
-            <input value={search} placeholder="Empfänger…" onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 140 }} />
-          </label>
+          </div>
+
+          <div className="filterbar-group">
+            <label className="filterbar-label" htmlFor="so-search">Suche</label>
+            <input id="so-search" className="chip chip-input" value={search} placeholder="Empfänger…"
+              onChange={(e) => setSearch(e.target.value)} />
+          </div>
+
           {filtered && (
-            <button className="btn" onClick={() => { setFKind('all'); setFAccount('all'); setFCategory('all'); setFPerson('all'); setSearch('') }}>
+            <button type="button" className="chip chip-reset" onClick={() => { setFKind('all'); setFAccount('all'); setFCategory('all'); setFPerson('all'); setSearch('') }}>
               Filter zurücksetzen
             </button>
           )}

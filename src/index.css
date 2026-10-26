@@ -1118,3 +1118,22 @@ body { transition: background-color 180ms ease, color 180ms ease; }
 @media (prefers-reduced-motion: reduce) {
   .bottomnav button:active { transform: none; }
 }
+
+/* --- Angleichung der übrigen Seiten --------------------------------------- */
+.chip-input {
+  min-width: 150px; color: var(--text); background: var(--input-bg);
+}
+.chip-input::placeholder { color: var(--text-muted); }
+
+/* Warn-Variante der Hero-Kachel (Schulden). */
+.bento-hero.warn { background: #3b2a08; }
+[data-theme='dark'] .bento-hero.warn { background: #2a1f0d; }
+.bento-hero.warn .bento-hero-label,
+.bento-hero.warn .bento-hero-sub { color: #e9c680; }
+.bento-hero.warn .bento-hero-value { color: #fbbf24; }
+
+/* Beträge überall mit Tabellenziffern: Spalten fluchten, Zahlen springen beim
+   Filtern nicht mehr in der Breite. */
+.num, .amount, .kpi-value, .acct-balance, .flow-amount, .up-amount {
+  font-variant-numeric: tabular-nums;
+}
