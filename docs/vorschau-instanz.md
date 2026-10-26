@@ -28,16 +28,19 @@ In `/opt/apps/docker-compose.yml` neben den bestehenden Dienst:
       DATABASE_URL: "<derselbe Wert wie bei privatefinance>"
       PORT: "8081"
       FINANCE_TRUSTED_PROXIES: "127.0.0.1,::1"
-    command: sh -c "node server/index.js"
 ```
 
 Zwei Dinge daran sind wichtig:
 
 - **`PORT: 8081`.** Der bestehende Dienst hört im Netzmodus `host` auf 8080;
   ohne eigenen Port kollidieren beide.
-- **`command` ohne `prisma db push`.** Das Schema ist unverändert, und die
-  Produktion pflegt es bereits. Ein zweiter Dienst, der beim Start am Schema
-  arbeitet, ist unnötiges Risiko.
+- **Kein eigenes `command`.** Der Startbefehl des Images führt `prisma db push`
+  aus, und das wird hier gebraucht: Der Branch legt eine neue Tabelle an
+  (`Preference`, die Reihenfolge der Abschnitte je Benutzer). Die Produktion
+  kennt sie noch nicht, also muss die Vorschau sie anlegen. Der Zusatz ist rein
+  additiv und rührt keine bestehende Tabelle an. Falls der Push unterbleibt,
+  läuft die Vorschau trotzdem – dann lässt sich die Anordnung nur nicht
+  speichern.
 
 Starten:
 
