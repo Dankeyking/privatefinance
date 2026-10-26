@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { getCategories } from '../lib/categoryStore.js'
-import { formatEUR, RHYTHM_LABELS } from '../lib/normalize.js'
+import { formatEUR, RHYTHM_LABELS, toMonthly } from '../lib/normalize.js'
 import { formToOrder, newOrderId } from '../lib/orderForm.js'
 import { personsFromAccounts } from '../lib/recurring.js'
 import {
@@ -100,6 +100,11 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
   }
 
   const includeCount = items.filter((i) => i.include).length
+  // Was die Auswahl monatlich bedeutet – die eine Zahl, die vor dem
+  // Übernehmen zählt.
+  const selectedMonthly = items
+    .filter((i) => i.include)
+    .reduce((s, i) => s + toMonthly(Number(i.amount) || 0, i.rhythm), 0)
 
   return (
     <div>
@@ -164,6 +169,34 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
         </div>
       )}
 
+      {items.length > 0 && (
+        <div className="bento">
+          <section className="bento-hero" aria-label="Ausgewählte Posten">
+            <div className="bento-hero-label">Auswahl kostet im Monat</div>
+            <div className="bento-hero-value">{formatEUR(selectedMonthly)}</div>
+            <p className="bento-hero-sub">
+              {includeCount} von {items.length} erkannten Posten ausgewählt
+              {txCount > 0 && <> · aus {txCount} Buchungen</>}. Jährliche Posten sind durch
+              zwölf geteilt.
+            </p>
+          </section>
+
+          <div className="bento-tile">
+            <div className="bento-label">Erkannt</div>
+            <div className="bento-value">{items.length}</div>
+            <div className="bento-hint">wiederkehrende Muster</div>
+          </div>
+
+          <div className="bento-tile">
+            <div className="bento-label">Ausgewählt</div>
+            <div className="bento-value">{includeCount}</div>
+            <div className="bento-bar">
+              <span style={{ width: `${items.length ? (includeCount / items.length) * 100 : 0}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Vorschläge */}
       {parsed && (
         <div className="card mt">
@@ -176,7 +209,7 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
           ) : (
             <>
               <div className="table-wrap">
-                <table>
+                <table className="resp-table">
                   <thead>
                     <tr>
                       <th><input type="checkbox" checked={includeCount === items.length}
@@ -188,31 +221,31 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
                   <tbody>
                     {items.map((i) => (
                       <tr key={i.id} className={i.include ? '' : 'muted'}>
-                        <td><input type="checkbox" checked={i.include} onChange={(e) => setItem(i.id, 'include', e.target.checked)} /></td>
-                        <td><input value={i.recipient} onChange={(e) => setItem(i.id, 'recipient', e.target.value)} /></td>
-                        <td className="num"><input type="number" value={i.amount} onChange={(e) => setItem(i.id, 'amount', e.target.value)} /></td>
-                        <td>
+                        <td data-label="Übernehmen"><input type="checkbox" checked={i.include} onChange={(e) => setItem(i.id, 'include', e.target.checked)} /></td>
+                        <td data-label="Empfänger"><input value={i.recipient} onChange={(e) => setItem(i.id, 'recipient', e.target.value)} /></td>
+                        <td className="num" data-label="Betrag"><input type="number" value={i.amount} onChange={(e) => setItem(i.id, 'amount', e.target.value)} /></td>
+                        <td data-label="Rhythmus">
                           <select value={i.rhythm} onChange={(e) => setItem(i.id, 'rhythm', e.target.value)}>
                             {RHYTHMS.map((r) => <option key={r} value={r}>{RHYTHM_LABELS[r]}</option>)}
                           </select>
                         </td>
-                        <td>
+                        <td data-label="Art">
                           <select value={i.kind} onChange={(e) => setItem(i.id, 'kind', e.target.value)}>
                             <option value="fixed">Fixkosten</option>
                             <option value="subscription">Abo</option>
                           </select>
                         </td>
-                        <td>
+                        <td data-label="Kategorie">
                           <select value={i.category} onChange={(e) => setItem(i.id, 'category', e.target.value)}>
                             {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                           </select>
                         </td>
-                        <td>
+                        <td data-label="Konto">
                           <select value={i.accountId} onChange={(e) => setItem(i.id, 'accountId', e.target.value)}>
                             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                           </select>
                         </td>
-                        <td>
+                        <td data-label="Aufteilung">
                           <div className="split-cell">
                             <select value={i.splitMode} onChange={(e) => setItem(i.id, 'splitMode', e.target.value)}>
                               <option value="even">Gleich (alle)</option>

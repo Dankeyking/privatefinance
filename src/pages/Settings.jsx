@@ -161,6 +161,45 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
         die sich dieselbe Gruppe teilen).
       </div>
 
+      {/* Was hier eigentlich liegt – vier Zahlen statt nur Tabellen. */}
+      <div className="bento">
+        <section className="bento-hero" aria-label="Umfang deiner Daten">
+          <div className="bento-hero-label">Gepflegte Posten</div>
+          <div className="bento-hero-value">
+            {form.accounts.length + form.incomes.length + (data.standingOrders || []).length + form.transfers.length}
+          </div>
+          <p className="bento-hero-sub">
+            Alles, was dieses Dashboard rechnet, steht hier – und nur hier.
+          </p>
+          <div className="bento-hero-split">
+            <div className="bento-person">
+              <span className="bento-person-name">Konten</span>
+              <span className="bento-person-value">{form.accounts.length}</span>
+            </div>
+            <div className="bento-person">
+              <span className="bento-person-name">Einnahmen</span>
+              <span className="bento-person-value">{form.incomes.length}</span>
+            </div>
+            <div className="bento-person">
+              <span className="bento-person-name">Umbuchungen</span>
+              <span className="bento-person-value">{form.transfers.length}</span>
+            </div>
+          </div>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Fixkosten &amp; Abos</div>
+          <div className="bento-value">{(data.standingOrders || []).length}</div>
+          <div className="bento-hint">bearbeitest du unter Kosten &amp; Abos</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Schulden</div>
+          <div className="bento-value">{(data.debts || []).length}</div>
+          <div className="bento-hint">eigene Seite</div>
+        </div>
+      </div>
+
       {/* Datensicherung */}
       <div className="card mt">
         <h2>Datensicherung</h2>
@@ -201,7 +240,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
       <div className="card mt">
         <h2>Konten</h2>
         <div className="table-wrap">
-          <table>
+          <table className="resp-table">
             <thead>
               <tr>
                 <th>Farbe</th>
@@ -216,18 +255,18 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
             <tbody>
               {sortedAccounts.map((a) => (
                 <tr key={a.id}>
-                  <td><input type="color" className="color-input" value={a.color || '#3b82f6'} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
-                  <td><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
-                  <td><input value={a.owner} placeholder={a.type === 'personal' ? 'z. B. Elisa' : 'Gemeinsam'} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
-                  <td>
+                  <td data-label="Farbe"><input type="color" className="color-input" value={a.color || '#3b82f6'} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
+                  <td data-label="Name"><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
+                  <td data-label="Inhaber"><input value={a.owner} placeholder={a.type === 'personal' ? 'z. B. Elisa' : 'Gemeinsam'} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
+                  <td data-label="Typ">
                     <select value={a.type} onChange={(e) => setRow('accounts', a.id, 'type', e.target.value)}>
                       <option value="joint">Gemeinsam</option>
                       <option value="personal">Privat</option>
                     </select>
                   </td>
-                  <td className="num"><input type="number" value={a.balance} onChange={(e) => setRow('accounts', a.id, 'balance', e.target.value)} /></td>
-                  <td className="num"><input type="number" value={a.goal} placeholder="—" onChange={(e) => setRow('accounts', a.id, 'goal', e.target.value)} /></td>
-                  <td className="num"><button className="btn-del" onClick={() => delRow('accounts', a.id)}>✕</button></td>
+                  <td className="num" data-label="Saldo (€)"><input type="number" value={a.balance} onChange={(e) => setRow('accounts', a.id, 'balance', e.target.value)} /></td>
+                  <td className="num" data-label="Sparziel (€)"><input type="number" value={a.goal} placeholder="—" onChange={(e) => setRow('accounts', a.id, 'goal', e.target.value)} /></td>
+                  <td className="num" data-label=""><button className="btn-del" onClick={() => delRow('accounts', a.id)}>✕</button></td>
                 </tr>
               ))}
             </tbody>
@@ -241,7 +280,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
       <div className="card mt">
         <h2>Einnahmen</h2>
         <div className="table-wrap">
-          <table>
+          <table className="resp-table">
             <thead>
               <tr>
                 <SortTh label="Bezeichnung" sortKey="name" sort={incomeSort} onSort={(k) => setIncomeSort((s) => nextSortState(s, k, false))} />
@@ -255,21 +294,21 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
             <tbody>
               {sortedIncomes.map((i) => (
                 <tr key={i.id}>
-                  <td><input value={i.name} onChange={(e) => setRow('incomes', i.id, 'name', e.target.value)} /></td>
-                  <td className="num"><input type="number" value={i.amount} onChange={(e) => setRow('incomes', i.id, 'amount', e.target.value)} /></td>
-                  <td>
+                  <td data-label="Bezeichnung"><input value={i.name} onChange={(e) => setRow('incomes', i.id, 'name', e.target.value)} /></td>
+                  <td className="num" data-label="Betrag"><input type="number" value={i.amount} onChange={(e) => setRow('incomes', i.id, 'amount', e.target.value)} /></td>
+                  <td data-label="Rhythmus">
                     <select value={i.rhythm} onChange={(e) => setRow('incomes', i.id, 'rhythm', e.target.value)}>
                       {RHYTHMS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Konto">
                     <select value={i.accountId} onChange={(e) => setRow('incomes', i.id, 'accountId', e.target.value)}>
                       <option value="">– Konto wählen –</option>
                       {personalAccts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </td>
-                  <td className="num"><input type="number" min="1" max="31" value={i.executionDay} onChange={(e) => setRow('incomes', i.id, 'executionDay', e.target.value)} /></td>
-                  <td className="num"><button className="btn-del" onClick={() => delRow('incomes', i.id)}>✕</button></td>
+                  <td className="num" data-label="Tag"><input type="number" min="1" max="31" value={i.executionDay} onChange={(e) => setRow('incomes', i.id, 'executionDay', e.target.value)} /></td>
+                  <td className="num" data-label=""><button className="btn-del" onClick={() => delRow('incomes', i.id)}>✕</button></td>
                 </tr>
               ))}
               {form.incomes.length === 0 && (
@@ -296,7 +335,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
       <div className="card mt">
         <h2>Umbuchungen <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Überträge zwischen Konten, z. B. Sparen)</span></h2>
         <div className="table-wrap">
-          <table>
+          <table className="resp-table">
             <thead>
               <tr>
                 <SortTh label="Bezeichnung" sortKey="label" sort={transferSort} onSort={(k) => setTransferSort((s) => nextSortState(s, k, false))} />
@@ -310,26 +349,26 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
             <tbody>
               {sortedTransfers.map((t) => (
                 <tr key={t.id}>
-                  <td><input value={t.label} placeholder="z. B. Sparen Urlaub" onChange={(e) => setRow('transfers', t.id, 'label', e.target.value)} /></td>
-                  <td className="num"><input type="text" inputMode="decimal" value={t.amount} placeholder="0,00" onChange={(e) => setRow('transfers', t.id, 'amount', e.target.value)} /></td>
-                  <td>
+                  <td data-label="Bezeichnung"><input value={t.label} placeholder="z. B. Sparen Urlaub" onChange={(e) => setRow('transfers', t.id, 'label', e.target.value)} /></td>
+                  <td className="num" data-label="Betrag"><input type="text" inputMode="decimal" value={t.amount} placeholder="0,00" onChange={(e) => setRow('transfers', t.id, 'amount', e.target.value)} /></td>
+                  <td data-label="von">
                     <select value={t.fromAccountId} onChange={(e) => setRow('transfers', t.id, 'fromAccountId', e.target.value)}>
                       <option value="">– Konto wählen –</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="nach">
                     <select value={t.toAccountId} onChange={(e) => setRow('transfers', t.id, 'toAccountId', e.target.value)}>
                       <option value="">– Konto wählen –</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Rhythmus">
                     <select value={t.rhythm} onChange={(e) => setRow('transfers', t.id, 'rhythm', e.target.value)}>
                       {RHYTHMS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                     </select>
                   </td>
-                  <td className="num"><button className="btn-del" onClick={() => delRow('transfers', t.id)}>✕</button></td>
+                  <td className="num" data-label=""><button className="btn-del" onClick={() => delRow('transfers', t.id)}>✕</button></td>
                 </tr>
               ))}
               {form.transfers.length === 0 && (

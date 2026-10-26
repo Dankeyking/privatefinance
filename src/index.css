@@ -1065,6 +1065,9 @@ tr.clickable td { transition: background 0.12s; }
   transition: background 0.14s ease, transform 0.14s cubic-bezier(0.23, 1, 0.32, 1);
 }
 .bento-person:hover { background: rgba(255, 255, 255, 0.15); }
+/* Auf der Kontenseite sind die Felder nur Anzeige, kein Knopf. */
+div.bento-person { cursor: default; }
+div.bento-person:hover { background: rgba(255, 255, 255, 0.09); }
 .bento-person-name {
   display: block; font-size: 11px; color: var(--sidebar-text);
   text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
