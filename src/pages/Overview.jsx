@@ -8,7 +8,7 @@ import { upcomingPayments } from '../lib/selectors.js'
 import { accountColor, colorMaps } from '../lib/accountColors.js'
 import { useDragOrder } from '../lib/layout.js'
 import FilterBar from '../components/FilterBar.jsx'
-import { applyOverviewFilter, EMPTY_FILTER, isEmptyFilter } from '../lib/overviewFilter.js'
+import { applyFilter, isEmptyFilter, normalizeFilter } from '../lib/viewFilter.js'
 import {
   householdSummary,
   monthlyByAccount,
@@ -18,16 +18,46 @@ import {
 
 const BASE_ORDER = ['flow', 'byAccount', 'byPerson', 'upcoming']
 
-export default function Overview({ data, onNavigate }) {
-  // Der Filter wirkt auf alle Abschnitte zugleich: Wir filtern die Posten
-  // einmal und geben den Selektoren eine Kopie der Daten.
-  const [filter, setFilter] = useState(EMPTY_FILTER)
-  const view = useMemo(() => applyOverviewFilter(data, filter), [data, filter])
+export default function Overview({
+  data, overrides, onNavigate, filter, onFilterChange, prefs, onSavePreference,
+}) {
+  // Der Filter wirkt auf alle Abschnitte zugleich: Wir filtern Posten,
+  // Einnahmen und Schulden einmal und geben den Selektoren eine Kopie.
+  const view = useMemo(() => applyFilter(data, filter, overrides), [data, filter, overrides])
+  const filtered = !isEmptyFilter(filter)
+  // Ist eine Person gewählt, rechnet die Seite in deren Anteilen – nicht in
+  // den vollen Beträgen der Posten, an denen sie beteiligt ist.
+  const person = normalizeFilter(filter).person
+  const onePerson = person === 'all' ? null : person
+  // Ohne Filter gehören auch Konten ohne Posten in die Liste (dass ein Konto
+  // nichts trägt, ist eine Aussage). Mit Filter wären das nur noch leere
+  // Kacheln, die die eine gesuchte zudecken.
+  const byAccount = useMemo(() => {
+    const all = monthlyByAccount(view, onePerson)
+    return filtered ? all.filter((a) => a.total > 0) : all
+  }, [view, filtered, onePerson])
+  const allPersons = useMemo(() => personSummary(view), [view])
+  const persons = onePerson ? allPersons.filter((p) => p.person === onePerson) : allPersons
+  const flows = useMemo(() => accountFlows(view, onePerson), [view, onePerson])
 
-  const summary = useMemo(() => householdSummary(view), [view])
-  const byAccount = useMemo(() => monthlyByAccount(view), [view])
-  const persons = useMemo(() => personSummary(view), [view])
-  const flows = useMemo(() => accountFlows(view), [view])
+  // Die Haushaltssumme fragt „was kostet der Haushalt". Bei Personenfilter ist
+  // die richtige Frage „was kostet es diese Person" – das ist ihr Anteil, dem
+  // ihr eigenes Einkommen gegenübersteht.
+  const household = useMemo(() => householdSummary(view), [view])
+  const summary = useMemo(() => {
+    const row = onePerson ? allPersons.find((p) => p.person === onePerson) : null
+    if (!row) return household
+    const surplus = row.income - row.costs - row.savings - household.debtRepayment
+    return {
+      totalIncome: row.income,
+      totalCosts: row.costs,
+      savings: row.savings,
+      debtRepayment: household.debtRepayment,
+      surplus,
+      availableWithoutSavings: row.income - row.costs,
+      savingsRate: row.income > 0 ? (row.savings / row.income) * 100 : 0,
+    }
+  }, [onePerson, allPersons, household])
   const upcoming = useMemo(() => upcomingPayments(view, 30), [view])
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
   // Bezugsgröße für die Balken auf den Kontokacheln: das teuerste Konto ist voll.
@@ -35,10 +65,10 @@ export default function Overview({ data, onNavigate }) {
     () => byAccount.reduce((m, a) => Math.max(m, a.total), 0),
     [byAccount],
   )
-  const debts = data.debts || []
+  const debts = view.debts || []
   // Schulden-Abschnitt nur einblenden, wenn tatsächlich welche eingetragen sind.
   const DEFAULT_ORDER = debts.length ? [...BASE_ORDER, 'debts'] : BASE_ORDER
-  const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER)
+  const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER, prefs, onSavePreference)
 
   // Ausgewählter Fluss (Kontopaar): Klick in Liste ODER Sankey hebt beides hervor.
   const [selFlow, setSelFlow] = useState(null) // { from, to } | null
@@ -106,7 +136,8 @@ export default function Overview({ data, onNavigate }) {
     ),
     byAccount: (
       <>
-        <h2 className="section-title">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(monatlich aufs Konto buchen)</span></h2>
+        <h2 className="section-title">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>
+          ({onePerson ? `Anteil ${onePerson}, monatlich` : 'monatlich aufs Konto buchen'})</span></h2>
         <div className="grid accounts">
           {byAccount.map(({ account, fixed, subscription, savings, reserve, total }) => (
             <div className={`card acct clickable ${account.type}`} key={account.id}
@@ -258,7 +289,7 @@ export default function Overview({ data, onNavigate }) {
         </button>
       </div>
 
-      <FilterBar data={data} value={filter} onChange={setFilter} />
+      <FilterBar data={data} value={filter} onChange={onFilterChange} />
 
       <div className="bento">
         <section className="bento-hero" aria-label="Überschuss pro Monat">
@@ -266,9 +297,13 @@ export default function Overview({ data, onNavigate }) {
           <div className={`bento-hero-value ${summary.surplus >= 0 ? '' : 'neg'}`}>
             {formatEUR(summary.surplus)}
           </div>
+          {/* Die Summe ist genau die Rechnung hinter dem Überschuss: Sparen und
+              Tilgung gehören dazu, sonst geht die Zahl oben nicht auf. */}
           <p className="bento-hero-sub">
-            {formatEUR(summary.totalIncome)} Einnahmen abzüglich {formatEUR(summary.totalCosts)} Fixkosten,
-            Abos und Sparraten{isEmptyFilter(filter) ? '' : ' (gefiltert)'}.
+            {formatEUR(summary.totalIncome)} Einnahmen abzüglich{' '}
+            {formatEUR(summary.totalCosts + summary.savings + summary.debtRepayment)}{' '}
+            {onePerson ? `– ${onePerson}s Anteil an ` : 'für '}
+            Fixkosten, Abos, Sparen und Tilgung{filtered && !onePerson ? ' (gefiltert)' : ''}.
           </p>
           <div className="bento-hero-split">
             {persons.map((p) => (

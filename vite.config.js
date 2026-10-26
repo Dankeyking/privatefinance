@@ -11,5 +11,11 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5173,
     open: true,
+    // Die App holt ihre Daten über /api; ohne Weiterleitung bleibt der
+    // Dev-Server bei „Lade Daten …" stehen, weil der Aufruf ins Leere geht.
+    // Ziel ist der eigene Server (npm start) auf 8080.
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8080', changeOrigin: true },
+    },
   },
 }))

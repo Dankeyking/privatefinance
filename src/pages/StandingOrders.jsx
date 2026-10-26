@@ -1,59 +1,32 @@
 import { useMemo, useState } from 'react'
 import CostsTable from '../components/CostsTable.jsx'
+import FilterBar from '../components/FilterBar.jsx'
 import { SAVINGS_CATEGORY } from '../lib/categories.js'
-import { getCategories } from '../lib/categoryStore.js'
 import { toMonthly, formatEUR } from '../lib/normalize.js'
 import { isOrderActive } from '../lib/selectors.js'
 import { orderToForm, formToOrder, parseAmountDE } from '../lib/orderForm.js'
 import { personsFromAccounts } from '../lib/recurring.js'
-
-const KIND_OPTS = [
-  { id: 'all', label: 'Alle Arten' },
-  { id: 'fixed', label: 'Fixkosten' },
-  { id: 'subscription', label: 'Abos' },
-  { id: 'savings', label: 'Sparen' },
-]
+import { orderMatches, isEmptyFilter, normalizeFilter } from '../lib/viewFilter.js'
 
 // Sparen = Kategorie „Sparen" (unabhängig von Fixkosten/Abo).
 const isSav = (o) => o.category === SAVINGS_CATEGORY
 
-// Ist eine Person an einem Posten beteiligt (gemäß Aufteilung)?
-function involves(o, person) {
-  const mode = o.splitMode || 'even'
-  if (mode === 'even') return true
-  if (mode === 'single') return o.splitPerson === person
-  return Number(o.splitShares?.[person]) > 0
-}
-
-// `initial` (optional): Vorfilter beim Aufruf von anderen Seiten aus, z. B.
-// Klick auf ein Konto in der Übersicht -> { accountId } (siehe App.navigate).
-export default function StandingOrders({ data, onSaveOrders, initial }) {
+// Der Filter kommt aus App.jsx und ist derselbe wie auf Übersicht, Schulden
+// und Analyse; diese Seite hatte vorher eine zweite, eigene Filterlogik.
+export default function StandingOrders({
+  data, overrides, onSaveOrders, filter, onFilterChange, onNavigate,
+}) {
   const persons = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
-  const accounts = data.accounts || []
-  const categories = getCategories()
   const [orders, setOrders] = useState(() => (data.standingOrders || []).map(orderToForm))
-
-  const [fKind, setFKind] = useState(initial?.kind || 'all')
-  const [fAccount, setFAccount] = useState(initial?.accountId || 'all')
-  const [fCategory, setFCategory] = useState(initial?.category || 'all')
-  const [fPerson, setFPerson] = useState(initial?.person || 'all')
-  const [search, setSearch] = useState(initial?.search || '')
 
   const handleChange = (next) => {
     setOrders(next)
     onSaveOrders?.(next.map((o) => formToOrder(o, persons)))
   }
 
-  const predicate = (o) => {
-    if (fKind === 'savings' && !isSav(o)) return false
-    if (fKind === 'fixed' && (isSav(o) || (o.kind || 'fixed') !== 'fixed')) return false
-    if (fKind === 'subscription' && (isSav(o) || o.kind !== 'subscription')) return false
-    if (fAccount !== 'all' && o.accountId !== fAccount) return false
-    if (fCategory !== 'all' && o.category !== fCategory) return false
-    if (fPerson !== 'all' && !involves(o, fPerson)) return false
-    if (search.trim() && !(o.recipient || '').toLowerCase().includes(search.trim().toLowerCase())) return false
-    return true
-  }
+  // Die Tabelle arbeitet mit der Formularform der Posten; orderMatches nimmt
+  // beide Formen (siehe splitOf in viewFilter.js).
+  const predicate = (o) => orderMatches(o, filter, overrides)
 
   // Live-Aufschlüsselung (aus dem Entwurf, damit sie sofort mitzieht).
   // Beendete Posten (Enddatum überschritten) zählen nicht mehr mit.
@@ -69,7 +42,10 @@ export default function StandingOrders({ data, onSaveOrders, initial }) {
   }, [orders])
 
   const visibleCount = orders.filter(predicate).length
-  const filtered = fKind !== 'all' || fAccount !== 'all' || fCategory !== 'all' || fPerson !== 'all' || search.trim()
+  const filtered = !isEmptyFilter(filter)
+  // Die Art „Schulden" gibt es in der Leiste, weil sie auch für die Schulden
+  // gilt. Hier leert sie die Tabelle — dann lieber sagen, wohin man muss.
+  const debtOnly = normalizeFilter(filter).kind === 'debt'
 
   return (
     <div>
@@ -93,65 +69,25 @@ export default function StandingOrders({ data, onSaveOrders, initial }) {
           </div>
         </div>
 
-        {/* Wenige Optionen werden zu Chips (Zustand ohne Aufklappen sichtbar),
-            lange Listen wie Konten und Kategorien bleiben Auswahlfelder. */}
-        <div className="filterbar">
-          <div className="filterbar-group">
-            <span className="filterbar-label">Art</span>
-            {KIND_OPTS.map((k) => (
-              <button type="button" key={k.id} className={`chip ${fKind === k.id ? 'on' : ''}`}
-                aria-pressed={fKind === k.id} onClick={() => setFKind(k.id)}>{k.label}</button>
-            ))}
-          </div>
+        <FilterBar data={data} value={filter} onChange={onFilterChange} />
 
-          {persons.length > 0 && (
-            <div className="filterbar-group">
-              <span className="filterbar-label">Person</span>
-              <button type="button" className={`chip ${fPerson === 'all' ? 'on' : ''}`}
-                aria-pressed={fPerson === 'all'} onClick={() => setFPerson('all')}>Alle</button>
-              {persons.map((p) => (
-                <button type="button" key={p} className={`chip ${fPerson === p ? 'on' : ''}`}
-                  aria-pressed={fPerson === p} onClick={() => setFPerson(p)}>{p}</button>
-              ))}
-            </div>
-          )}
-
-          <div className="filterbar-group">
-            <label className="filterbar-label" htmlFor="so-account">Konto</label>
-            <select id="so-account" className="chip chip-select" value={fAccount} onChange={(e) => setFAccount(e.target.value)}>
-              <option value="all">Alle Konten</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </div>
-
-          <div className="filterbar-group">
-            <label className="filterbar-label" htmlFor="so-category">Kategorie</label>
-            <select id="so-category" className="chip chip-select" value={fCategory} onChange={(e) => setFCategory(e.target.value)}>
-              <option value="all">Alle Kategorien</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
-          </div>
-
-          <div className="filterbar-group">
-            <label className="filterbar-label" htmlFor="so-search">Suche</label>
-            <input id="so-search" className="chip chip-input" value={search} placeholder="Empfänger…"
-              onChange={(e) => setSearch(e.target.value)} />
-          </div>
-
-          {filtered && (
-            <button type="button" className="chip chip-reset" onClick={() => { setFKind('all'); setFAccount('all'); setFCategory('all'); setFPerson('all'); setSearch('') }}>
-              Filter zurücksetzen
+        {debtOnly ? (
+          <p className="muted" style={{ padding: '18px 0' }}>
+            Die Art „Schulden" ist ausgewählt – Kredite und Schulden stehen auf
+            ihrer eigenen Seite.{' '}
+            <button className="link-btn" onClick={() => onNavigate?.('debts')}>
+              Zu den Schulden
             </button>
-          )}
-        </div>
-
-        <CostsTable
-          accounts={data.accounts}
-          persons={persons}
-          orders={orders}
-          onChange={handleChange}
-          filter={predicate}
-        />
+          </p>
+        ) : (
+          <CostsTable
+            accounts={data.accounts}
+            persons={persons}
+            orders={orders}
+            onChange={handleChange}
+            filter={predicate}
+          />
+        )}
         <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
           Tipp: <strong>Auf eine Zelle klicken</strong>, um sie zu bearbeiten. Alles mit der
           <strong> Kategorie „Sparen"</strong> zählt als Rücklage (nicht als Kosten) und erscheint

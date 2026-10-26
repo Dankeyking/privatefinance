@@ -4,7 +4,7 @@ import CategoryDonut from '../components/charts/CategoryDonut.jsx'
 import CostTreemap from '../components/charts/CostTreemap.jsx'
 import DragCard from '../components/DragCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
-import { applyOverviewFilter, EMPTY_FILTER } from '../lib/overviewFilter.js'
+import { applyFilter } from '../lib/viewFilter.js'
 import { categoryColor, categoryLabel } from '../lib/categoryStore.js'
 import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
 import { effectiveCategoryOf, isOrderActive, monthsRemaining } from '../lib/selectors.js'
@@ -20,16 +20,17 @@ const splitPersonLabel = (o) => {
   return 'anteilig'
 }
 
-export default function Analytics({ data, overrides, onNavigate }) {
+export default function Analytics({
+  data, overrides, onNavigate, filter, onFilterChange, prefs, onSavePreference,
+}) {
   const [includeSavings, setIncludeSavings] = useState(false)
   const [selCat, setSelCat] = useState(null) // Kategorie-Drilldown unterm Donut
 
   // Dieselbe Filterleiste wie auf der Übersicht: Alle Auswertungen zeigen
   // denselben Ausschnitt, statt dass jede Seite eigene Regeln hat.
-  const [filter, setFilter] = useState(EMPTY_FILTER)
-  const view = useMemo(() => applyOverviewFilter(data, filter), [data, filter])
+  const view = useMemo(() => applyFilter(data, filter, overrides), [data, filter, overrides])
   const accById = useMemo(() => Object.fromEntries((view.accounts || []).map((a) => [a.id, a])), [view.accounts])
-  const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER)
+  const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER, prefs, onSavePreference)
 
   const catTotals = useMemo(
     () => monthlyByCategory(view, overrides, { excludeSavings: !includeSavings }),
@@ -284,7 +285,7 @@ export default function Analytics({ data, overrides, onNavigate }) {
         </div>
       </div>
 
-      <FilterBar data={data} value={filter} onChange={setFilter} />
+      <FilterBar data={data} value={filter} onChange={onFilterChange} />
 
       <div className="drag-grid">
         {order.map((id) => (

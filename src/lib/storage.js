@@ -51,3 +51,21 @@ export async function restoreBackup(backupJson) {
   }
   return res.json()
 }
+
+// Persönliche Ansichtseinstellungen (Reihenfolge der Abschnitte). Fehler sind
+// hier nicht schlimm: dann bleibt die Standardanordnung stehen.
+export async function loadPreferences() {
+  try {
+    return await getJSON('/api/preferences')
+  } catch {
+    return {}
+  }
+}
+
+export async function savePreference(key, value) {
+  try {
+    await putJSON(`/api/preferences/${encodeURIComponent(key)}`, { value })
+  } catch {
+    /* ignore */
+  }
+}
