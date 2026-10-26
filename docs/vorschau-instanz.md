@@ -48,14 +48,42 @@ Starten:
 cd /opt/apps && docker compose up -d privatefinance-v2
 ```
 
+### Ohne die Datenbank-Adresse abzutippen
+
+Wer den `DATABASE_URL`-Wert nicht aus dem bestehenden Dienst herauskopieren
+will, startet die Vorschau stattdessen direkt und übernimmt die Variable aus
+dem laufenden Container:
+
+```bash
+DB=$(docker inspect privatefinance -f '{{range .Config.Env}}{{println .}}{{end}}' | grep '^DATABASE_URL=')
+docker run -d --name privatefinance-v2 --restart unless-stopped --network host   -e "$DB" -e PORT=8081 -e FINANCE_TRUSTED_PROXIES=127.0.0.1,::1   ghcr.io/dankeyking/privatefinance:redesign-v2
+```
+
+Der Container steht dann nicht in der Compose-Datei; abgeräumt wird er mit
+`docker rm -f privatefinance-v2`.
+
 ## 3. Erreichbar machen
 
-Genauso wie seinerzeit `finance.wesseler.uk`, nur auf Port 8081:
+Der sicherste Weg ist, das Bestehende zu kopieren statt neu zu schreiben —
+`finance.wesseler.uk` funktioniert ja:
 
-1. DNS-Eintrag für `finance-v2.wesseler.uk` auf denselben Host.
-2. Traefik-Router in der Datei-Konfiguration, Ziel `http://127.0.0.1:8081`.
-3. In Authentik eine Anwendung samt Proxy-Provider für die neue Domain,
-   damit auch die Vorschau hinter eurer Anmeldung liegt.
+1. **DNS:** Eintrag für `finance-v2.wesseler.uk` auf denselben Host wie
+   `finance.wesseler.uk`.
+2. **Traefik:** den vorhandenen Router samt Service für `finance.wesseler.uk`
+   in der Datei-Konfiguration duplizieren. Im Duplikat ändern sich genau drei
+   Dinge: die Schlüssel (`finance` → `finance-v2`), die Host-Regel auf
+   `finance-v2.wesseler.uk` und die Ziel-URL auf `http://127.0.0.1:8081`.
+   Cert-Resolver, Entrypoints und die Authentik-Middleware bleiben, wie sie
+   sind.
+3. **Authentik:** den Proxy-Provider von `finance.wesseler.uk` duplizieren,
+   External Host auf `https://finance-v2.wesseler.uk` setzen, eine Anwendung
+   damit verknüpfen und sie **demselben Outpost** zuweisen wie die bestehende.
+   Der letzte Schritt wird gern vergessen; ohne ihn antwortet die neue Domain
+   mit einem Authentik-Fehler statt mit der Anmeldung.
+
+Prüfen, bevor die Domain steht: `curl -s -o /dev/null -w '%{http_code}
+'
+http://127.0.0.1:8081/` muss 200 liefern.
 
 ## Hinweis: beide Instanzen teilen eine Datenbank
 
