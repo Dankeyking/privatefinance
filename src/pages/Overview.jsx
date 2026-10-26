@@ -7,6 +7,8 @@ import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normaliz
 import { upcomingPayments } from '../lib/selectors.js'
 import { accountColor, colorMaps } from '../lib/accountColors.js'
 import { useDragOrder } from '../lib/layout.js'
+import FilterBar from '../components/FilterBar.jsx'
+import { applyOverviewFilter, EMPTY_FILTER, isEmptyFilter } from '../lib/overviewFilter.js'
 import {
   householdSummary,
   monthlyByAccount,
@@ -17,11 +19,16 @@ import {
 const BASE_ORDER = ['flow', 'byAccount', 'byPerson', 'upcoming']
 
 export default function Overview({ data, onNavigate }) {
-  const summary = useMemo(() => householdSummary(data), [data])
-  const byAccount = useMemo(() => monthlyByAccount(data), [data])
-  const persons = useMemo(() => personSummary(data), [data])
-  const flows = useMemo(() => accountFlows(data), [data])
-  const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
+  // Der Filter wirkt auf alle Abschnitte zugleich: Wir filtern die Posten
+  // einmal und geben den Selektoren eine Kopie der Daten.
+  const [filter, setFilter] = useState(EMPTY_FILTER)
+  const view = useMemo(() => applyOverviewFilter(data, filter), [data, filter])
+
+  const summary = useMemo(() => householdSummary(view), [view])
+  const byAccount = useMemo(() => monthlyByAccount(view), [view])
+  const persons = useMemo(() => personSummary(view), [view])
+  const flows = useMemo(() => accountFlows(view), [view])
+  const upcoming = useMemo(() => upcomingPayments(view, 30), [view])
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
   const debts = data.debts || []
   // Schulden-Abschnitt nur einblenden, wenn tatsächlich welche eingetragen sind.
@@ -240,18 +247,54 @@ export default function Overview({ data, onNavigate }) {
         </button>
       </div>
 
-      <div className="grid kpis">
-        <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" icon="plus" />
-        <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" icon="minus" />
-        <KpiCard label="Sparen / Monat" value={summary.savings} icon="budget" hint={`Sparquote ${summary.savingsRate.toFixed(0)} %`} />
-        <KpiCard label="Schulden-Tilgung / Monat" value={summary.debtRepayment} tone="neg" icon="debt" />
-        <KpiCard
-          label="Überschuss / Monat"
-          value={summary.surplus}
-          tone={summary.surplus >= 0 ? 'pos' : 'neg'}
-          icon="check"
-          hint={`ohne Sparen: ${formatEUR(summary.availableWithoutSavings)}`}
-        />
+      <FilterBar data={data} value={filter} onChange={setFilter} />
+
+      <div className="bento">
+        <section className="bento-hero" aria-label="Überschuss pro Monat">
+          <div className="bento-hero-label">Überschuss im Monat</div>
+          <div className={`bento-hero-value ${summary.surplus >= 0 ? '' : 'neg'}`}>
+            {formatEUR(summary.surplus)}
+          </div>
+          <p className="bento-hero-sub">
+            {formatEUR(summary.totalIncome)} Einnahmen abzüglich {formatEUR(summary.totalCosts)} Fixkosten,
+            Abos und Sparraten{isEmptyFilter(filter) ? '' : ' (gefiltert)'}.
+          </p>
+          <div className="bento-hero-split">
+            {persons.map((p) => (
+              <button type="button" className="bento-person" key={p.person}
+                onClick={() => onNavigate?.('recurring', { person: p.person })}>
+                <span className="bento-person-name">{p.person}</span>
+                <span className="bento-person-value">{formatEUR(p.costs + p.savings)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Einnahmen</div>
+          <div className="bento-value">{formatEUR(summary.totalIncome)}</div>
+          <div className="bento-bar"><span style={{ width: '100%', background: 'var(--pos)' }} /></div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Fixkosten &amp; Abos</div>
+          <div className="bento-value">{formatEUR(summary.totalCosts)}</div>
+          <div className="bento-bar">
+            <span style={{ width: `${Math.min(100, summary.totalIncome ? (summary.totalCosts / summary.totalIncome) * 100 : 0)}%` }} />
+          </div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">davon Sparen</div>
+          <div className="bento-value">{formatEUR(summary.savings)}</div>
+          <div className="bento-hint">Sparquote {summary.savingsRate.toFixed(0)} %</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Schulden-Tilgung</div>
+          <div className="bento-value">{formatEUR(summary.debtRepayment)}</div>
+          <div className="bento-hint">ohne Sparen frei: {formatEUR(summary.availableWithoutSavings)}</div>
+        </div>
       </div>
 
       <div className="editor-head mt" style={{ alignItems: 'baseline' }}>
