@@ -2,7 +2,7 @@ name: Build and publish Docker image
 
 on:
   push:
-    branches: [main]
+    branches: [main, redesign-v2]
   workflow_dispatch:
 
 env:
@@ -30,11 +30,22 @@ jobs:
       - name: Lowercase image name
         run: echo "IMAGE_NAME_LC=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
+      # Nur main darf :latest bewegen. Jeder andere Branch bekommt ein eigenes
+      # Tag, damit eine Vorschau-Instanz daneben laufen kann, ohne die
+      # Produktion zu überschreiben.
+      - name: Tags bestimmen
+        run: |
+          PREFIX="${{ env.REGISTRY }}/${IMAGE_NAME_LC}"
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "TAGS=${PREFIX}:latest,${PREFIX}:${{ github.sha }}" >> "$GITHUB_ENV"
+          else
+            SLUG=$(echo '${{ github.ref_name }}' | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+            echo "TAGS=${PREFIX}:${SLUG}" >> "$GITHUB_ENV"
+          fi
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ github.sha }}
+          tags: ${{ env.TAGS }}
