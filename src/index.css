@@ -1139,11 +1139,23 @@ body { transition: background-color 180ms ease, color 180ms ease; }
   body { transition: none; }
 }
 
+/* Am Handy zählt der erste Bildschirm. Der Erklärtext ist Hilfe für den
+   ersten Besuch, nicht für den täglichen Blick, und kostete drei Zeilen;
+   ohne ihn passt der Knopf neben den Titel statt in eine eigene Zeile.
+   Zusammen rücken die Kacheln rund 90 px nach oben. */
+@media (max-width: 640px) {
+  .page-header { margin-bottom: 16px; }
+  .page-header p { display: none; }
+  .page-header.with-actions { flex-wrap: nowrap; align-items: center; gap: 10px; }
+  .page-header.with-actions > div { min-width: 0; }
+  .btn.header-action { flex: 0 0 auto; }
+}
+
 /* --- Handy ----------------------------------------------------------------- */
 @media (max-width: 860px) {
   .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
   .bento-hero { grid-column: 1 / -1; grid-row: auto; padding: 20px; min-height: 0; }
-  .bento-hero-value { font-size: 40px; }
+  .bento-hero-value { font-size: 34px; }
   .bento-tile { padding: 16px; border-radius: 18px; }
   .bento-value { font-size: 21px; }
   .filterbar {
@@ -1242,3 +1254,7 @@ body { transition: background-color 180ms ease, color 180ms ease; }
   .filterbar-compact { display: flex; }
 }
 
+
+/* Der Knopf, der das Flussdiagramm am Handy hereinholt. Volle Breite, damit
+   er als Schalter für den Abschnitt lesbar ist und nicht wie eine Fußnote. */
+.chart-toggle { width: 100%; justify-content: center; margin-bottom: 14px; }

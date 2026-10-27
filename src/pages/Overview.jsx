@@ -7,6 +7,7 @@ import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normaliz
 import { upcomingPayments } from '../lib/selectors.js'
 import { accountColor, colorMaps } from '../lib/accountColors.js'
 import { useDragOrder } from '../lib/layout.js'
+import { useMedia } from '../lib/useMedia.js'
 import FilterBar from '../components/FilterBar.jsx'
 import { applyFilter, isEmptyFilter, normalizeFilter } from '../lib/viewFilter.js'
 import {
@@ -71,6 +72,14 @@ export default function Overview({
   const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER, prefs, onSavePreference)
 
   // Ausgewählter Fluss (Kontopaar): Klick in Liste ODER Sankey hebt beides hervor.
+  // Am Handy ist das Sankey unlesbar: zehn Beschriftungen werden in eine
+  // Flaeche von rund 313 x 320 px gemalt und liegen uebereinander. Dieselbe
+  // Information steht darunter als Liste, also wird es dort nur auf Wunsch
+  // gezeichnet. 860 px fuer den Zieh-Hinweis, weil dort die Griffe wegfallen.
+  const schmal = useMedia('(max-width: 640px)')
+  const handyLayout = useMedia('(max-width: 860px)')
+  const [zeigeDiagramm, setZeigeDiagramm] = useState(false)
+
   const [selFlow, setSelFlow] = useState(null) // { from, to } | null
   const flowMatches = (f) => selFlow && f.from === selFlow.from && f.to === selFlow.to
   const toggleFlow = (f) => setSelFlow(flowMatches(f) ? null : { from: f.from, to: f.to })
@@ -87,14 +96,26 @@ export default function Overview({
             </p>
           ) : (
             <div>
-              <SankeyFlow
-                flows={flows.flows}
-                nodeColors={flows.nodeColors}
-                columns={flows.columns}
-                labels={flows.labels}
-                selected={selFlow}
-                onSelect={setSelFlow}
-              />
+              {schmal && (
+                <button
+                  type="button"
+                  className="btn chart-toggle"
+                  aria-expanded={zeigeDiagramm}
+                  onClick={() => setZeigeDiagramm((v) => !v)}
+                >
+                  {zeigeDiagramm ? 'Diagramm ausblenden' : 'Diagramm anzeigen'}
+                </button>
+              )}
+              {(!schmal || zeigeDiagramm) && (
+                <SankeyFlow
+                  flows={flows.flows}
+                  nodeColors={flows.nodeColors}
+                  columns={flows.columns}
+                  labels={flows.labels}
+                  selected={selFlow}
+                  onSelect={setSelFlow}
+                />
+              )}
               <div>
                 <div className="flow-list">
                   {flows.rows.map((f, i) => (
@@ -343,10 +364,15 @@ export default function Overview({
         </div>
       </div>
 
+      {/* Ohne den Hinweis bliebe am Handy eine leere Zeile mit Abstand stehen. */}
+      {(!handyLayout || isCustom) && (
       <div className="editor-head mt" style={{ alignItems: 'baseline' }}>
-        <span className="muted" style={{ fontSize: 12 }}>Ziehe die Griffe (⠿), um Abschnitte umzusortieren.</span>
+        {!handyLayout && (
+          <span className="muted" style={{ fontSize: 12 }}>Ziehe die Griffe (⠿), um Abschnitte umzusortieren.</span>
+        )}
         {isCustom && <button className="btn" onClick={reset}>Layout zurücksetzen</button>}
       </div>
+      )}
       <div className="drag-grid mt">
         {order.map((id) => (
           <DragCard key={id} id={id} api={api} full>
