@@ -397,6 +397,42 @@ api.put('/categories', wrap(async (req, res) => {
   res.json(await loadManual(groupId))
 }))
 
+// --- Persönliche Ansichtseinstellungen --------------------------------------
+// Pro Benutzer, nicht pro Gruppe (siehe Kommentar am Preference-Modell). Die
+// Tabelle ist jung: läuft eine Instanz noch ohne `prisma db push`, fehlt sie.
+// Das darf die Seite nicht lahmlegen, darum wird ein Fehler hier geschluckt
+// und die Anordnung bleibt eben die Standardanordnung.
+const prefUser = (req) => currentUser(req) || 'anonymous'
+
+api.get('/preferences', wrap(async (req, res) => {
+  try {
+    const rows = await prisma.preference.findMany({ where: { userId: prefUser(req) } })
+    res.json(Object.fromEntries(rows.map((r) => [r.key, r.value])))
+  } catch (err) {
+    console.warn('Einstellungen nicht lesbar:', err.message)
+    res.json({})
+  }
+}))
+
+api.put('/preferences/:key', wrap(async (req, res) => {
+  const key = String(req.params.key || '').slice(0, 64)
+  if (!key) throw badRequest('Kein Schlüssel angegeben.')
+  const value = req.body?.value
+  if (value === undefined) throw badRequest('Kein Wert angegeben.')
+  const userId = prefUser(req)
+  try {
+    await prisma.preference.upsert({
+      where: { userId_key: { userId, key } },
+      update: { value },
+      create: { userId, key, value },
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    console.warn('Einstellung nicht speicherbar:', err.message)
+    res.status(503).json({ error: 'Einstellung konnte nicht gespeichert werden.' })
+  }
+}))
+
 api.post('/restore', wrap(async (req, res) => {
   const backup = req.body
   if (!backup || backup.type !== BACKUP_TYPE || typeof backup.manual !== 'object') {

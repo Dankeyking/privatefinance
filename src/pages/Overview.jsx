@@ -7,6 +7,9 @@ import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normaliz
 import { upcomingPayments } from '../lib/selectors.js'
 import { accountColor, colorMaps } from '../lib/accountColors.js'
 import { useDragOrder } from '../lib/layout.js'
+import { useMedia } from '../lib/useMedia.js'
+import FilterBar from '../components/FilterBar.jsx'
+import { applyFilter, isEmptyFilter, normalizeFilter } from '../lib/viewFilter.js'
 import {
   householdSummary,
   monthlyByAccount,
@@ -16,19 +19,68 @@ import {
 
 const BASE_ORDER = ['flow', 'byAccount', 'byPerson', 'upcoming']
 
-export default function Overview({ data, onNavigate }) {
-  const summary = useMemo(() => householdSummary(data), [data])
-  const byAccount = useMemo(() => monthlyByAccount(data), [data])
-  const persons = useMemo(() => personSummary(data), [data])
-  const flows = useMemo(() => accountFlows(data), [data])
-  const upcoming = useMemo(() => upcomingPayments(data, 30), [data])
+export default function Overview({
+  data, overrides, onNavigate, filter, onFilterChange, prefs, onSavePreference,
+}) {
+  // Der Filter wirkt auf alle Abschnitte zugleich: Wir filtern Posten,
+  // Einnahmen und Schulden einmal und geben den Selektoren eine Kopie.
+  const view = useMemo(() => applyFilter(data, filter, overrides), [data, filter, overrides])
+  const filtered = !isEmptyFilter(filter)
+  // Ist eine Person gewählt, rechnet die Seite in deren Anteilen – nicht in
+  // den vollen Beträgen der Posten, an denen sie beteiligt ist.
+  const person = normalizeFilter(filter).person
+  const onePerson = person === 'all' ? null : person
+  // Ohne Filter gehören auch Konten ohne Posten in die Liste (dass ein Konto
+  // nichts trägt, ist eine Aussage). Mit Filter wären das nur noch leere
+  // Kacheln, die die eine gesuchte zudecken.
+  const byAccount = useMemo(() => {
+    const all = monthlyByAccount(view, onePerson)
+    return filtered ? all.filter((a) => a.total > 0) : all
+  }, [view, filtered, onePerson])
+  const allPersons = useMemo(() => personSummary(view), [view])
+  const persons = onePerson ? allPersons.filter((p) => p.person === onePerson) : allPersons
+  const flows = useMemo(() => accountFlows(view, onePerson), [view, onePerson])
+
+  // Die Haushaltssumme fragt „was kostet der Haushalt". Bei Personenfilter ist
+  // die richtige Frage „was kostet es diese Person" – das ist ihr Anteil, dem
+  // ihr eigenes Einkommen gegenübersteht.
+  const household = useMemo(() => householdSummary(view), [view])
+  const summary = useMemo(() => {
+    const row = onePerson ? allPersons.find((p) => p.person === onePerson) : null
+    if (!row) return household
+    const surplus = row.income - row.costs - row.savings - household.debtRepayment
+    return {
+      totalIncome: row.income,
+      totalCosts: row.costs,
+      savings: row.savings,
+      debtRepayment: household.debtRepayment,
+      surplus,
+      availableWithoutSavings: row.income - row.costs,
+      savingsRate: row.income > 0 ? (row.savings / row.income) * 100 : 0,
+    }
+  }, [onePerson, allPersons, household])
+  const upcoming = useMemo(() => upcomingPayments(view, 30), [view])
   const acctColorByName = useMemo(() => colorMaps(data.accounts).byName, [data.accounts])
-  const debts = data.debts || []
+  // Bezugsgröße für die Balken auf den Kontokacheln: das teuerste Konto ist voll.
+  const maxAccountTotal = useMemo(
+    () => byAccount.reduce((m, a) => Math.max(m, a.total), 0),
+    [byAccount],
+  )
+  const debts = view.debts || []
   // Schulden-Abschnitt nur einblenden, wenn tatsächlich welche eingetragen sind.
   const DEFAULT_ORDER = debts.length ? [...BASE_ORDER, 'debts'] : BASE_ORDER
-  const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER)
+  const { order, api, reset, isCustom } = useDragOrder('overview', DEFAULT_ORDER, prefs, onSavePreference)
 
   // Ausgewählter Fluss (Kontopaar): Klick in Liste ODER Sankey hebt beides hervor.
+  // Am Handy ist das Sankey unlesbar: zehn Beschriftungen werden in eine
+  // Flaeche von rund 313 x 320 px gemalt und liegen uebereinander. Dieselbe
+  // Information steht darunter als Liste, also wird es dort nur auf Wunsch
+  // gezeichnet. 860 px fuer den Zieh-Hinweis, weil dort die Griffe wegfallen.
+  const schmal = useMedia('(max-width: 640px)')
+  const handyLayout = useMedia('(max-width: 860px)')
+  const [zeigeDiagramm, setZeigeDiagramm] = useState(false)
+  const [alleAnstehend, setAlleAnstehend] = useState(false)
+
   const [selFlow, setSelFlow] = useState(null) // { from, to } | null
   const flowMatches = (f) => selFlow && f.from === selFlow.from && f.to === selFlow.to
   const toggleFlow = (f) => setSelFlow(flowMatches(f) ? null : { from: f.from, to: f.to })
@@ -45,14 +97,26 @@ export default function Overview({ data, onNavigate }) {
             </p>
           ) : (
             <div>
-              <SankeyFlow
-                flows={flows.flows}
-                nodeColors={flows.nodeColors}
-                columns={flows.columns}
-                labels={flows.labels}
-                selected={selFlow}
-                onSelect={setSelFlow}
-              />
+              {schmal && (
+                <button
+                  type="button"
+                  className="btn chart-toggle"
+                  aria-expanded={zeigeDiagramm}
+                  onClick={() => setZeigeDiagramm((v) => !v)}
+                >
+                  {zeigeDiagramm ? 'Diagramm ausblenden' : 'Diagramm anzeigen'}
+                </button>
+              )}
+              {(!schmal || zeigeDiagramm) && (
+                <SankeyFlow
+                  flows={flows.flows}
+                  nodeColors={flows.nodeColors}
+                  columns={flows.columns}
+                  labels={flows.labels}
+                  selected={selFlow}
+                  onSelect={setSelFlow}
+                />
+              )}
               <div>
                 <div className="flow-list">
                   {flows.rows.map((f, i) => (
@@ -94,7 +158,33 @@ export default function Overview({ data, onNavigate }) {
     ),
     byAccount: (
       <>
-        <h2 className="section-title">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>(monatlich aufs Konto buchen)</span></h2>
+        <h2 className="section-title">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>
+          ({onePerson ? `Anteil ${onePerson}, monatlich` : 'monatlich aufs Konto buchen'})</span></h2>
+        {handyLayout ? (
+          /* Am Handy eine Liste statt 13 Karten: die Karte braucht 204 px,
+             die Zeile 60. Dieselben Zahlen, nur ohne Balken und Jahreswert. */
+          <ul className="cm-list">
+            {byAccount.map(({ account, fixed, subscription, savings, total }) => (
+              <li key={account.id}>
+                <button type="button" className="cm-row"
+                  onClick={() => onNavigate?.('recurring', { accountId: account.id })}>
+                  <span className="cm-dot" style={{ background: accountColor(account, data.accounts) }} />
+                  <span className="cm-text">
+                    <span className="cm-name">{account.name}</span>
+                    <span className="cm-sub">
+                      {[
+                        fixed > 0 && `Fixkosten ${formatEUR(fixed)}`,
+                        subscription > 0 && `Abos ${formatEUR(subscription)}`,
+                        savings > 0 && `Sparen ${formatEUR(savings)}`,
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  <span className="cm-amount">{formatEUR(total)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
         <div className="grid accounts">
           {byAccount.map(({ account, fixed, subscription, savings, reserve, total }) => (
             <div className={`card acct clickable ${account.type}`} key={account.id}
@@ -106,6 +196,12 @@ export default function Overview({ data, onNavigate }) {
               <div className="acct-balance">
                 {formatEUR(total)}
                 <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}> / Monat</span>
+              </div>
+              <div className="acct-bar" aria-hidden="true">
+                <span style={{
+                  width: `${maxAccountTotal > 0 ? Math.max(2, (total / maxAccountTotal) * 100) : 0}%`,
+                  background: accountColor(account, data.accounts),
+                }} />
               </div>
               <div className="muted" style={{ fontSize: 12 }}>{formatEUR(total * 12)} / Jahr</div>
               {total > 0 && (
@@ -125,6 +221,7 @@ export default function Overview({ data, onNavigate }) {
             </div>
           ))}
         </div>
+        )}
       </>
     ),
     byPerson: (
@@ -174,7 +271,7 @@ export default function Overview({ data, onNavigate }) {
           <p className="muted">Keine Posten mit Ausführungstag in den nächsten 30 Tagen.</p>
         ) : (
           <ul className="upcoming">
-            {upcoming.map((u) => (
+            {(handyLayout && !alleAnstehend ? upcoming.slice(0, 8) : upcoming).map((u) => (
               <li key={u.id} className="clickable" title="Klicken: Posten in Kosten & Abos öffnen"
                 onClick={() => onNavigate?.('recurring', { search: u.recipient })}>
                 <div className="up-main">
@@ -190,6 +287,14 @@ export default function Overview({ data, onNavigate }) {
               </li>
             ))}
           </ul>
+        )}
+        {/* 30 Posten sind am Handy 2.485 px. Die ersten acht decken
+            die naechsten Tage ab; der Rest auf Wunsch. */}
+        {handyLayout && upcoming.length > 8 && (
+          <button type="button" className="btn cm-add"
+            onClick={() => setAlleAnstehend((v) => !v)}>
+            {alleAnstehend ? 'Weniger anzeigen' : `Alle ${upcoming.length} anzeigen`}
+          </button>
         )}
       </div>
     ),
@@ -240,24 +345,69 @@ export default function Overview({ data, onNavigate }) {
         </button>
       </div>
 
-      <div className="grid kpis">
-        <KpiCard label="Einnahmen / Monat" value={summary.totalIncome} tone="pos" icon="plus" />
-        <KpiCard label="Fixkosten & Abos / Monat" value={summary.totalCosts} tone="neg" icon="minus" />
-        <KpiCard label="Sparen / Monat" value={summary.savings} icon="budget" hint={`Sparquote ${summary.savingsRate.toFixed(0)} %`} />
-        <KpiCard label="Schulden-Tilgung / Monat" value={summary.debtRepayment} tone="neg" icon="debt" />
-        <KpiCard
-          label="Überschuss / Monat"
-          value={summary.surplus}
-          tone={summary.surplus >= 0 ? 'pos' : 'neg'}
-          icon="check"
-          hint={`ohne Sparen: ${formatEUR(summary.availableWithoutSavings)}`}
-        />
+      <FilterBar data={data} value={filter} onChange={onFilterChange} />
+
+      <div className="bento">
+        <section className="bento-hero" aria-label="Überschuss pro Monat">
+          <div className="bento-hero-label">Überschuss im Monat</div>
+          <div className={`bento-hero-value ${summary.surplus >= 0 ? '' : 'neg'}`}>
+            {formatEUR(summary.surplus)}
+          </div>
+          {/* Die Summe ist genau die Rechnung hinter dem Überschuss: Sparen und
+              Tilgung gehören dazu, sonst geht die Zahl oben nicht auf. */}
+          <p className="bento-hero-sub">
+            {formatEUR(summary.totalIncome)} Einnahmen abzüglich{' '}
+            {formatEUR(summary.totalCosts + summary.savings + summary.debtRepayment)}{' '}
+            {onePerson ? `– ${onePerson}s Anteil an ` : 'für '}
+            Fixkosten, Abos, Sparen und Tilgung{filtered && !onePerson ? ' (gefiltert)' : ''}.
+          </p>
+          <div className="bento-hero-split">
+            {persons.map((p) => (
+              <button type="button" className="bento-person" key={p.person}
+                onClick={() => onNavigate?.('recurring', { person: p.person })}>
+                <span className="bento-person-name">{p.person}</span>
+                <span className="bento-person-value">{formatEUR(p.costs + p.savings)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Einnahmen</div>
+          <div className="bento-value">{formatEUR(summary.totalIncome)}</div>
+          <div className="bento-bar"><span style={{ width: '100%', background: 'var(--pos)' }} /></div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Fixkosten &amp; Abos</div>
+          <div className="bento-value">{formatEUR(summary.totalCosts)}</div>
+          <div className="bento-bar">
+            <span style={{ width: `${Math.min(100, summary.totalIncome ? (summary.totalCosts / summary.totalIncome) * 100 : 0)}%` }} />
+          </div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">davon Sparen</div>
+          <div className="bento-value">{formatEUR(summary.savings)}</div>
+          <div className="bento-hint">Sparquote {summary.savingsRate.toFixed(0)} %</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Schulden-Tilgung</div>
+          <div className="bento-value">{formatEUR(summary.debtRepayment)}</div>
+          <div className="bento-hint">ohne Sparen frei: {formatEUR(summary.availableWithoutSavings)}</div>
+        </div>
       </div>
 
+      {/* Ohne den Hinweis bliebe am Handy eine leere Zeile mit Abstand stehen. */}
+      {(!handyLayout || isCustom) && (
       <div className="editor-head mt" style={{ alignItems: 'baseline' }}>
-        <span className="muted" style={{ fontSize: 12 }}>Ziehe die Griffe (⠿), um Abschnitte umzusortieren.</span>
+        {!handyLayout && (
+          <span className="muted" style={{ fontSize: 12 }}>Ziehe die Griffe (⠿), um Abschnitte umzusortieren.</span>
+        )}
         {isCustom && <button className="btn" onClick={reset}>Layout zurücksetzen</button>}
       </div>
+      )}
       <div className="drag-grid mt">
         {order.map((id) => (
           <DragCard key={id} id={id} api={api} full>

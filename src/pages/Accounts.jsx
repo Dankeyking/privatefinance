@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import KpiCard from '../components/KpiCard.jsx'
 import InlineAmount from '../components/InlineAmount.jsx'
 import { formatEUR } from '../lib/normalize.js'
 import { accountColor } from '../lib/accountColors.js'
@@ -30,7 +29,22 @@ export default function Accounts({ data, onSaveAccounts }) {
   const loadById = Object.fromEntries(byAccount.map((a) => [a.account.id, a.total]))
   const inflowById = useMemo(() => monthlyInflowByAccount(data), [data])
 
-  const netWorth = accounts.reduce((s, a) => s + (a.balance || 0), 0)
+  // „Gesamtvermögen" war die bloße Summe aller Salden: fremdes Geld
+  // eingerechnet, Schulden ignoriert. Beides wird hier benannt.
+  const gross = accounts.reduce((s, a) => s + (a.balance || 0), 0)
+  const debtTotal = (data.debts || []).reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)
+  const net = gross - debtTotal
+  // Wem gehört was: Privatkonten zählen auf ihren Inhaber, gemeinsame Konten
+  // auf „Gemeinsam". Ein gemeinsames Konto auf zwei Köpfe aufzuteilen wäre
+  // geraten – wir wissen nicht, wem welcher Euro darauf gehört.
+  const byOwner = useMemo(() => {
+    const map = {}
+    accounts.forEach((a) => {
+      const key = a.type === 'joint' ? 'Gemeinsam' : (a.owner || a.name || 'Ohne Inhaber')
+      map[key] = (map[key] || 0) + (a.balance || 0)
+    })
+    return Object.entries(map).sort((x, y) => y[1] - x[1])
+  }, [accounts])
   const monthlyLoad = byAccount.reduce((s, a) => s + a.total, 0)
   const withGoal = accounts.filter((a) => (a.goal || 0) > 0)
   const goalTotal = withGoal.reduce((s, a) => s + a.goal, 0)
@@ -59,15 +73,46 @@ export default function Accounts({ data, onSaveAccounts }) {
         <p>Aktuelle Kontostände, monatliche Last je Konto und Fortschritt zu deinen Sparzielen. Klicke auf einen Betrag, um ihn zu aktualisieren.</p>
       </div>
 
-      <div className="grid kpis">
-        <KpiCard label="Gesamtvermögen" value={netWorth} tone={netWorth >= 0 ? 'pos' : 'neg'} hint={`${accounts.length} Konten`} />
-        <KpiCard label="Monatslast gesamt" value={monthlyLoad} tone="neg" />
+      <div className="bento">
+        <section className="bento-hero" aria-label="Vermögen abzüglich Schulden">
+          <div className="bento-hero-label">Vermögen minus Schulden</div>
+          <div className={`bento-hero-value ${net >= 0 ? '' : 'neg'}`}>{formatEUR(net)}</div>
+          <p className="bento-hero-sub">
+            {formatEUR(gross)} auf {accounts.length} Konten
+            {debtTotal > 0 && <> abzüglich {formatEUR(debtTotal)} Restschulden</>}. Die Salden
+            trägst du selbst nach – sie stimmen nur so gut wie der letzte Abgleich.
+          </p>
+          <div className="bento-hero-split">
+            {byOwner.map(([owner, sum]) => (
+              <div className="bento-person" key={owner}>
+                <span className="bento-person-name">{owner}</span>
+                <span className="bento-person-value">{formatEUR(sum)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Monatslast gesamt</div>
+          <div className="bento-value">{formatEUR(monthlyLoad)}</div>
+          <div className="bento-hint">was monatlich auf alle Konten soll</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Restschulden</div>
+          <div className="bento-value">{formatEUR(debtTotal)}</div>
+          <div className="bento-hint">{(data.debts || []).length} Eintrag{(data.debts || []).length === 1 ? '' : 'e'}</div>
+        </div>
+
         {withGoal.length > 0 && (
-          <KpiCard
-            label="Sparziele erreicht"
-            value={goalSaved}
-            hint={`von ${formatEUR(goalTotal)} · ${goalTotal > 0 ? Math.round((goalSaved / goalTotal) * 100) : 0} %`}
-          />
+          <div className="bento-tile">
+            <div className="bento-label">Sparziele erreicht</div>
+            <div className="bento-value">{formatEUR(goalSaved)}</div>
+            <div className="bento-bar">
+              <span style={{ width: `${goalTotal > 0 ? Math.min(100, (goalSaved / goalTotal) * 100) : 0}%`, background: 'var(--pos)' }} />
+            </div>
+            <div className="bento-hint">von {formatEUR(goalTotal)}</div>
+          </div>
         )}
       </div>
 

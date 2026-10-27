@@ -62,15 +62,21 @@ export function personShareMonthly(cost, person, persons) {
 // Monatslast je Konto, aufgeteilt nach Fixkosten / Abos / Sparen.
 // `reserve` = monatlicher Anteil aus nicht-monatlichen Posten (jährlich/12,
 // vierteljährlich/3). `total` = Betrag, der monatlich aufs Konto soll.
-export function monthlyByAccount(data) {
+//
+// Mit `person` zählt nur der Anteil dieser Person statt des vollen Betrags.
+// Ohne das zeigte ein Filter auf „Duncan" die ganze Miete von 1.570 € statt
+// seiner 850 € — die Zahl stimmte dann für niemanden.
+export function monthlyByAccount(data, person = null) {
   const { accounts = [], standingOrders = [] } = data
+  const persons = personsFromAccounts(accounts)
   const slot = Object.fromEntries(
     accounts.map((a) => [a.id, { account: a, fixed: 0, subscription: 0, savings: 0, reserve: 0, total: 0 }]),
   )
   activeOrders(standingOrders).forEach((o) => {
     const s = slot[o.accountId]
     if (!s) return
-    const m = toMonthly(o.amount, o.rhythm)
+    const m = person ? personShareMonthly(o, person, persons) : toMonthly(o.amount, o.rhythm)
+    if (m <= 0) return
     if (isSavings(o)) s.savings += m
     else if (o.kind === 'subscription') s.subscription += m
     else s.fixed += m
@@ -126,10 +132,13 @@ export function incomeByPerson(data) {
 //     auf dessen Abbuchungskonto (kind 'kosten').
 //  2) explizite Umbuchungen — vom Nutzer gepflegte Überträge zwischen zwei
 //     Konten (kind 'umbuchung'), z. B. Sparen aufs Urlaubskonto.
-export function accountFlows(data) {
+// Mit `person` bleiben nur die Flüsse dieser Person übrig: ihre Anteile an den
+// Posten und die Umbuchungen von ihren eigenen Konten.
+export function accountFlows(data, person = null) {
   const { accounts = [], standingOrders = [], transfers = [] } = data
   const byId = accountsById(accounts)
-  const persons = personsFromAccounts(accounts)
+  const allPersons = personsFromAccounts(accounts)
+  const persons = person ? allPersons.filter((p) => p === person) : allPersons
   // Heimatkonto je Person (erstes Privatkonto mit diesem Inhaber).
   const homeByPerson = {}
   accounts
@@ -145,7 +154,9 @@ export function accountFlows(data) {
     const debit = byId[o.accountId]
     if (!debit) return
     persons.forEach((p) => {
-      const share = personShareMonthly(o, p, persons)
+      // Die Aufteilung bezieht sich immer auf alle Personen, auch wenn nur
+      // eine angezeigt wird — sonst bekäme „even" plötzlich den ganzen Betrag.
+      const share = personShareMonthly(o, p, allPersons)
       if (share <= 0) return
       const home = homeByPerson[p]
       if (!home || home.id === debit.id) return
@@ -160,6 +171,8 @@ export function accountFlows(data) {
     const from = byId[t.fromAccountId]
     const to = byId[t.toAccountId]
     if (!from || !to || from.id === to.id) return
+    // Bei Personenfilter nur Umbuchungen von einem eigenen Konto dieser Person.
+    if (person && !(from.type === 'personal' && ownerOf(from) === person)) return
     const amt = toMonthly(t.amount, t.rhythm || 'monthly')
     if (amt <= 0) return
     const key = `${from.name}||${to.name}`

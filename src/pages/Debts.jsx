@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import KpiCard from '../components/KpiCard.jsx'
 import InlineAmount from '../components/InlineAmount.jsx'
 import Icon from '../components/Icon.jsx'
+import FilterBar from '../components/FilterBar.jsx'
+import { debtMatches, isEmptyFilter, normalizeFilter } from '../lib/viewFilter.js'
 import { formatEUR, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
 import { sortRows, nextSortState } from '../lib/sorting.js'
 
@@ -27,19 +28,33 @@ const SORT_OPTS = [
   { key: 'remainingAmount', label: 'Restschuld', numeric: true },
 ]
 
-export default function Debts({ data, onSaveDebts }) {
+export default function Debts({ data, onSaveDebts, filter, onFilterChange, onNavigate }) {
   const accounts = data.accounts || []
+  // `debts` ist der vollständige Bestand und bleibt es auch beim Filtern:
+  // gespeichert wird immer die ganze Liste. Gefiltert wird nur, was man sieht –
+  // sonst würde ein gesetzter Filter die ausgeblendeten Schulden löschen.
   const [debts, setDebts] = useState(() => (data.debts || []).map((d) => ({ ...d, priority: d.priority ?? 0 })))
   const [sort, setSort] = useState({ key: 'priority', dir: 'asc' })
 
-  const totalRemaining = debts.reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)
-  const monthlyRate = debts
+  const filtered = !isEmptyFilter(filter)
+  const visible = useMemo(
+    () => debts.filter((d) => debtMatches(d, filter, accounts)),
+    [debts, filter, accounts],
+  )
+  // Die Kennzahlen oben beziehen sich auf das, was man sieht.
+  const totalRemaining = visible.reduce((s, d) => s + (Number(d.remainingAmount) || 0), 0)
+  // Ursprungssumme für die Tilgungsquote; 0, solange niemand sie gepflegt hat.
+  const totalStart = visible.reduce((s, d) => s + (Number(d.totalAmount) || 0), 0)
+  const monthlyRate = visible
     .filter((d) => !d.priorityUnknown)
     .reduce((s, d) => s + toMonthly(Number(d.rate) || 0, d.rhythm), 0)
+  // Eine Kostenart ausgewählt? Dann gehören Schulden nicht dazu.
+  const kind = normalizeFilter(filter).kind
+  const costKindOnly = kind !== 'all' && kind !== 'debt'
 
   const sorted = useMemo(
-    () => sortRows(debts, sort.key, sort.dir, (row, key) => (key === 'name' ? row.name || '' : Number(row[key]) || 0)),
-    [debts, sort],
+    () => sortRows(visible, sort.key, sort.dir, (row, key) => (key === 'name' ? row.name || '' : Number(row[key]) || 0)),
+    [visible, sort],
   )
   const toggleSort = (key) => {
     const opt = SORT_OPTS.find((o) => o.key === key)
@@ -68,9 +83,38 @@ export default function Debts({ data, onSaveDebts }) {
         <p>Offene Kredite und Schulden im Blick – Restbetrag, Rate und wem du sie schuldest. Über die Priorität legst du fest, welche zuerst abbezahlt werden soll (niedrigere Zahl = höhere Priorität).</p>
       </div>
 
-      <div className="grid kpis">
-        <KpiCard label="Restschulden gesamt" value={totalRemaining} tone="neg" hint={`${debts.length} Eintrag${debts.length === 1 ? '' : 'e'}`} />
-        <KpiCard label="Rate gesamt / Monat" value={monthlyRate} tone="neg" hint="ohne Schulden mit unklarer Reihenfolge" />
+      <FilterBar data={data} value={filter} onChange={onFilterChange} />
+
+      <div className="bento">
+        <section className="bento-hero warn" aria-label="Restschulden gesamt">
+          <div className="bento-hero-label">Restschulden gesamt</div>
+          <div className="bento-hero-value">{formatEUR(totalRemaining)}</div>
+          <p className="bento-hero-sub">
+            {visible.length} Eintrag{visible.length === 1 ? '' : 'e'}
+            {filtered && <> von {debts.length}</>}
+            {monthlyRate > 0 && <> · bei {formatEUR(monthlyRate)} Rate im Monat
+              {totalRemaining > 0 && <> noch rund {Math.ceil(totalRemaining / monthlyRate)} Monate</>}</>}
+          </p>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Rate gesamt / Monat</div>
+          <div className="bento-value">{formatEUR(monthlyRate)}</div>
+          <div className="bento-hint">ohne Schulden mit unklarer Reihenfolge</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Getilgt</div>
+          <div className="bento-value">
+            {totalStart > 0 ? `${Math.max(0, Math.round((1 - totalRemaining / totalStart) * 100))} %` : '–'}
+          </div>
+          <div className="bento-bar">
+            <span style={{
+              width: totalStart > 0 ? `${Math.min(100, Math.max(0, (1 - totalRemaining / totalStart) * 100))}%` : '0%',
+              background: 'var(--warn)',
+            }} />
+          </div>
+        </div>
       </div>
 
       <div className="editor-head mt" style={{ alignItems: 'center' }}>
@@ -92,9 +136,23 @@ export default function Debts({ data, onSaveDebts }) {
         </button>
       </div>
 
-      {debts.length === 0 ? (
+      {costKindOnly ? (
         <div className="card mt">
-          <p className="muted">Noch keine Schulden eingetragen. Klicke oben auf „Neue Schuld", um eine anzulegen.</p>
+          <p className="muted">
+            Die Art „{kind === 'fixed' ? 'Fixkosten' : kind === 'subscription' ? 'Abos' : 'Sparen'}" ist
+            ausgewählt – Schulden sind davon ausgenommen. Setze die Art auf „Alles" oder „Schulden".{' '}
+            <button className="link-btn" onClick={() => onNavigate?.('recurring')}>
+              Zu Kosten &amp; Abos
+            </button>
+          </p>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="card mt">
+          <p className="muted">
+            {filtered
+              ? 'Keine Schuld passt zum Filter.'
+              : 'Noch keine Schulden eingetragen. Klicke oben auf „Neue Schuld", um eine anzulegen.'}
+          </p>
         </div>
       ) : (
         <div className="grid accounts mt">

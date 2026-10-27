@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CATEGORIES, KEYWORD_RULES, SAVINGS_CATEGORY } from '../lib/categories.js'
+import { monthlyByCategory } from '../lib/recurring.js'
+import { formatEUR } from '../lib/normalize.js'
 import { getCategories, categoryLabel, addCategory, updateCategory, removeCategory, isCustomCategory } from '../lib/categoryStore.js'
 
 export default function Categories({ data, overrides, onResetAll, onClearOne }) {
@@ -10,6 +12,14 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
   const overrideEntries = Object.entries(overrides)
 
   const [list, setList] = useState(getCategories)
+
+  // Was die Kategorien tatsächlich kosten – sonst ist die Seite eine reine
+  // Stammdatenliste, ohne Bezug zum Geld.
+  const byCategory = useMemo(() => monthlyByCategory(data, overrides), [data, overrides])
+  const ranking = Object.entries(byCategory).sort((a, b) => b[1] - a[1])
+  const totalMonthly = ranking.reduce((s, [, v]) => s + v, 0)
+  const top = ranking[0]
+  const customCount = list.filter((c) => isCustomCategory(c.id)).length
 
   function editLabel(id, label) {
     updateCategory(id, { label })
@@ -37,6 +47,38 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
         </p>
       </div>
 
+      <div className="bento">
+        <section className="bento-hero" aria-label="Größte Kategorie">
+          <div className="bento-hero-label">Größte Kategorie</div>
+          <div className="bento-hero-value">{top ? categoryLabel(top[0]) : '–'}</div>
+          <p className="bento-hero-sub">
+            {top
+              ? <>{formatEUR(top[1])} im Monat – von {formatEUR(totalMonthly)} über {ranking.length} Kategorien.</>
+              : <>Noch keine Posten mit Kategorie.</>}
+          </p>
+          <div className="bento-hero-split">
+            {ranking.slice(1, 4).map(([id, amount]) => (
+              <div className="bento-person" key={id}>
+                <span className="bento-person-name">{categoryLabel(id)}</span>
+                <span className="bento-person-value">{formatEUR(amount)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="bento-tile">
+          <div className="bento-label">Kategorien</div>
+          <div className="bento-value">{list.length}</div>
+          <div className="bento-hint">davon {customCount} eigene</div>
+        </div>
+
+        <div className="bento-tile">
+          <div className="bento-label">Manuell zugeordnet</div>
+          <div className="bento-value">{overrideEntries.length}</div>
+          <div className="bento-hint">Posten mit eigener Kategorie</div>
+        </div>
+      </div>
+
       {/* Kategorien verwalten */}
       <div className="card">
         <div className="editor-head" style={{ marginBottom: 14 }}>
@@ -44,20 +86,20 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
           <button className="btn" onClick={addNew}>+ Kategorie</button>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="resp-table">
             <thead>
               <tr><th>Farbe</th><th>Name</th><th></th><th></th></tr>
             </thead>
             <tbody>
               {list.map((c) => (
                 <tr key={c.id}>
-                  <td><input type="color" className="color-input" value={c.color} onChange={(e) => editColor(c.id, e.target.value)} /></td>
-                  <td><input value={c.label} onChange={(e) => editLabel(c.id, e.target.value)} /></td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
+                  <td data-label="Farbe"><input type="color" className="color-input" value={c.color} onChange={(e) => editColor(c.id, e.target.value)} /></td>
+                  <td data-label="Name"><input value={c.label} onChange={(e) => editLabel(c.id, e.target.value)} /></td>
+                  <td data-label="" style={{ whiteSpace: 'nowrap' }}>
                     {!isCustomCategory(c.id) && <span className="pill fix">Standard</span>}
                     {c.id === SAVINGS_CATEGORY && <span className="pill sav" style={{ marginLeft: 6 }}>steuert Sparen</span>}
                   </td>
-                  <td className="num">
+                  <td className="num" data-label="">
                     {isCustomCategory(c.id) ? (
                       <button className="btn-del" onClick={() => remove(c.id)} title="Löschen">✕</button>
                     ) : (
@@ -109,16 +151,16 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
           <p className="muted">Noch keine manuellen Kategorie-Zuweisungen.</p>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table className="resp-table">
               <thead>
                 <tr><th>Empfänger</th><th>Manuelle Kategorie</th><th></th></tr>
               </thead>
               <tbody>
                 {overrideEntries.map(([id, cat]) => (
                   <tr key={id}>
-                    <td>{itemsById[id]?.recipient || id}</td>
-                    <td>{categoryLabel(cat)}</td>
-                    <td className="num">
+                    <td data-label="Empfänger">{itemsById[id]?.recipient || id}</td>
+                    <td data-label="Manuelle Kategorie">{categoryLabel(cat)}</td>
+                    <td className="num" data-label="">
                       <button className="btn" onClick={() => onClearOne(id)}>zurücksetzen</button>
                     </td>
                   </tr>

@@ -103,3 +103,15 @@ model Category {
   @@id([id, groupId])
   @@index([groupId])
 }
+
+// Persönliche Ansichtseinstellungen (bisher im Browser-localStorage): die
+// Reihenfolge der Dashboard-Abschnitte. Bewusst pro Benutzer statt pro Gruppe —
+// die Anordnung ist Geschmack, und Elisa soll meine nicht überschrieben
+// bekommen. Dafür folgt sie einem über alle Geräte, was localStorage nie tat.
+model Preference {
+  userId String
+  key    String
+  value  Json
+
+  @@id([userId, key])
+}

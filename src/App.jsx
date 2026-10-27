@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
+import BottomNav from './components/BottomNav.jsx'
 import Overview from './pages/Overview.jsx'
 import StandingOrders from './pages/StandingOrders.jsx'
 import Analytics from './pages/Analytics.jsx'
@@ -12,8 +13,11 @@ import { loadData } from './data/dataSource.js'
 import { mergeData } from './lib/merge.js'
 import { downloadClaudeExport } from './lib/claudeExport.js'
 import { ChartJS } from './components/charts/setup.js'
-import { loadManualData, saveManual, saveCategoryOverrides } from './lib/storage.js'
+import {
+  loadManualData, saveManual, saveCategoryOverrides, loadPreferences, savePreference,
+} from './lib/storage.js'
 import { hydrateCategories } from './lib/categoryStore.js'
+import { EMPTY_FILTER } from './lib/viewFilter.js'
 
 // Design (hell/dunkel): gespeicherte Wahl > Systemeinstellung.
 const THEME_KEY = 'pf_theme'
@@ -33,7 +37,13 @@ export default function App() {
   const [manual, setManual] = useState({})
   const [manualLoaded, setManualLoaded] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
-  const [pageParams, setPageParams] = useState(null)
+  // Ein Filter für Übersicht, Kosten & Abos, Schulden und Analyse. Er liegt
+  // hier oben, damit er beim Seitenwechsel stehen bleibt: ein Klick auf ein
+  // Konto in der Übersicht setzt ihn, und „Kosten & Abos" zeigt dieselbe
+  // Auswahl weiter.
+  const [filter, setFilter] = useState(EMPTY_FILTER)
+  // Persönliche Ansichtseinstellungen (Reihenfolge der Abschnitte) aus der DB.
+  const [prefs, setPrefs] = useState({})
   const [theme, setTheme] = useState(initialTheme)
 
   useEffect(() => {
@@ -51,6 +61,7 @@ export default function App() {
       setOverrides(categoryOverrides)
       setManualLoaded(true)
     })
+    loadPreferences().then(setPrefs)
     loadData().then(({ data, source }) => {
       setBaseData(data)
       setSource(source)
@@ -77,6 +88,10 @@ export default function App() {
     setOverrides({})
     saveCategoryOverrides({})
   }
+  function handleSavePreference(key, value) {
+    setPrefs((prev) => ({ ...prev, [key]: value }))
+    savePreference(key, value)
+  }
   function handleExport() {
     if (data) downloadClaudeExport(data, overrides)
   }
@@ -98,11 +113,12 @@ export default function App() {
     // wenn es im Payload komplett fehlt statt als leeres Array vorzuliegen).
     return handleSaveManual({ accounts: [], incomes: [], standingOrders: [], transfers: [], debts: [] })
   }
-  // Navigation, optional mit Parametern (z. B. Vorfilter für „Kosten & Abos":
-  // { accountId, category, person, kind, search }).
+  // Navigation, optional mit Filterparametern ({ accountId, category, person,
+  // kind, search }). Diese ersetzen den Filter vollständig, statt sich mit dem
+  // alten zu vermischen — sonst käme man aus einer Auswahl nicht mehr heraus.
   function navigate(p, params = null) {
+    if (params) setFilter({ ...EMPTY_FILTER, ...params })
     setPage(p)
-    setPageParams(params)
     setNavOpen(false)
   }
 
@@ -136,13 +152,25 @@ export default function App() {
       />
 
       <main className="content" key={theme}>
-        {page === 'overview' && <Overview data={data} onNavigate={navigate} />}
-        {page === 'recurring' && (
-          <StandingOrders data={data} onSaveOrders={handleSaveOrders} initial={pageParams} />
+        {page === 'overview' && (
+          <Overview data={data} overrides={overrides} onNavigate={navigate}
+            filter={filter} onFilterChange={setFilter}
+            prefs={prefs} onSavePreference={handleSavePreference} />
         )}
-        {page === 'analytics' && <Analytics data={data} overrides={overrides} onNavigate={navigate} />}
+        {page === 'recurring' && (
+          <StandingOrders data={data} overrides={overrides} onSaveOrders={handleSaveOrders}
+            filter={filter} onFilterChange={setFilter} onNavigate={navigate} />
+        )}
+        {page === 'analytics' && (
+          <Analytics data={data} overrides={overrides} onNavigate={navigate}
+            filter={filter} onFilterChange={setFilter}
+            prefs={prefs} onSavePreference={handleSavePreference} />
+        )}
         {page === 'accounts' && <Accounts data={data} onSaveAccounts={handleSaveAccounts} />}
-        {page === 'debts' && <Debts data={data} onSaveDebts={handleSaveDebts} />}
+        {page === 'debts' && (
+          <Debts data={data} onSaveDebts={handleSaveDebts}
+            filter={filter} onFilterChange={setFilter} onNavigate={navigate} />
+        )}
         {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}
         {page === 'categories' && (
           <Categories
@@ -163,6 +191,8 @@ export default function App() {
           />
         )}
       </main>
+
+      <BottomNav page={page} onNavigate={navigate} onMore={() => setNavOpen(true)} />
     </div>
   )
 }
