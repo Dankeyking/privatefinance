@@ -1049,6 +1049,7 @@ tr.clickable td { transition: background 0.12s; }
 @media (prefers-reduced-motion: reduce) {
   .filter-sheet { animation: sheetFade 150ms ease both; }
   .filter-sheet.out { animation: sheetFadeOut 150ms ease both; }
+}
 
 /* --- Bento-Raster --------------------------------------------------------- */
 .bento {
@@ -1241,4 +1242,3 @@ body { transition: background-color 180ms ease, color 180ms ease; }
   .filterbar-compact { display: flex; }
 }
 
-}
