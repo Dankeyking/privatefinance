@@ -60,7 +60,11 @@ export default function Analytics({
   const personBars = {
     labels: persons.map((p) => p.person),
     income: persons.map((p) => Number(p.income.toFixed(2))),
-    expenses: persons.map((p) => Number((p.costs + p.savings).toFixed(2))),
+    // Sparen stand vorher im Ausgaben-Balken. Geld, das aufs Sparkonto
+    // geht, ist aber keine Ausgabe - so sah es aus, als bliebe nichts
+    // uebrig. Jetzt ein eigener Balken.
+    expenses: persons.map((p) => Number(p.costs.toFixed(2))),
+    savings: persons.map((p) => Number(p.savings.toFixed(2))),
   }
 
   const byAccount = useMemo(
@@ -158,8 +162,13 @@ export default function Analytics({
     ),
     personBar: (
       <div className="card">
-        <h2>Einkommen vs. Ausgaben je Person</h2>
-        <IncomeExpenseBar labels={personBars.labels} income={personBars.income} expenses={personBars.expenses} />
+        <h2>Einkommen, Ausgaben und Sparen je Person</h2>
+        <IncomeExpenseBar
+          labels={personBars.labels}
+          income={personBars.income}
+          expenses={personBars.expenses}
+          savings={personBars.savings}
+        />
       </div>
     ),
     treemap: (
