@@ -28,9 +28,14 @@
 //  zur Laufzeit nichts mehr nachgerechnet.
 //
 //  Grenzen, die keine Palette verschieben darf:
-//    --pos  = Einnahmen, immer grün
-//    --neg  = Ausgaben, immer rot
-//    --savings und die Kategorie „Sparen“ = eigene, bewusst NICHT rote Farbe
+//    --neg = Ausgaben, immer rot
+//    --pos = positive Beträge, immer grün — und damit auch die Kategorie
+//            „Sparen“, die ihr Grün über categoryColor() bekommt
+//    --info = der dritte Datenton, bewusst weder grün noch rot. Er trägt im
+//            Balkendiagramm die Einnahmen (siehe IncomeExpenseBar: Sparen hat
+//            dort das Grün bekommen, Einnahmen sind auf diesen Ton gewechselt)
+//            und die Hinweisflächen.
+//  Sparen ist in keiner Palette rot.
 //
 //  Die Palette „standard“ ist der Stand von vorher. Ihre Flächen-, Rahmen- und
 //  Textwerte stehen weiterhin in `index.css` und werden hier NICHT überschrieben
@@ -53,7 +58,7 @@ const DATA = {
     ui: null,
     light: {
       card: '#ffffff',
-      pos: '#16a34a', neg: '#dc2626', warn: '#d97706', savings: '#2563eb',
+      pos: '#16a34a', neg: '#dc2626', warn: '#d97706', info: '#2563eb',
       series: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444', '#64748b'],
       cat: {
         Wohnen: '#2563eb', 'Mobilität': '#0891b2', Gesundheit: '#0d9488', Versicherung: '#7c3aed',
@@ -68,7 +73,7 @@ const DATA = {
     },
     dark: {
       card: '#121c32',
-      pos: '#34d399', neg: '#f87171', warn: '#fbbf24', savings: '#2563eb',
+      pos: '#34d399', neg: '#f87171', warn: '#fbbf24', info: '#2563eb',
       series: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444', '#64748b'],
       cat: {
         Wohnen: '#2563eb', 'Mobilität': '#0891b2', Gesundheit: '#0d9488', Versicherung: '#7c3aed',
@@ -109,7 +114,7 @@ const DATA = {
       },
     },
     light: {
-      pos: '#616f01', neg: '#d10c08', warn: '#886200', savings: '#2b6f94',
+      pos: '#616f01', neg: '#d10c08', warn: '#886200', info: '#2b6f94',
       series: ['#388ebd', '#da52af', '#7d8f01', '#b07e00', '#b662de', '#309770', '#f7423f', '#7c8a79'],
       cat: {
         Wohnen: '#388ebd', 'Mobilität': '#2e939d', Gesundheit: '#309770', Versicherung: '#b662de',
@@ -121,7 +126,7 @@ const DATA = {
       },
     },
     dark: {
-      pos: '#A7C080', neg: '#eda2a4', warn: '#DBBC7F', savings: '#88c0b8',
+      pos: '#A7C080', neg: '#eda2a4', warn: '#DBBC7F', info: '#88c0b8',
       series: ['#7FBBB3', '#D699B6', '#A7C080', '#DBBC7F', '#cb99d6', '#83C092', '#E67E80', '#88958c'],
       cat: {
         Wohnen: '#7FBBB3', 'Mobilität': '#7fb3bb', Gesundheit: '#83C092', Versicherung: '#cb99d6',
@@ -160,7 +165,7 @@ const DATA = {
       },
     },
     light: {
-      pos: '#66620c', neg: '#9D0006', warn: '#84560f', savings: '#076678',
+      pos: '#66620c', neg: '#9D0006', warn: '#84560f', info: '#076678',
       series: ['#076678', '#B16286', '#79740E', '#ac7013', '#8F3F71', '#427B58', '#9D0006', '#7C6F64'],
       cat: {
         Wohnen: '#076678', 'Mobilität': '#458588', Gesundheit: '#427B58', Versicherung: '#8F3F71',
@@ -172,7 +177,7 @@ const DATA = {
       },
     },
     dark: {
-      pos: '#B8BB26', neg: '#fc7e6f', warn: '#FABD2F', savings: '#8bab9f',
+      pos: '#B8BB26', neg: '#fc7e6f', warn: '#FABD2F', info: '#8bab9f',
       series: ['#83A598', '#D3869B', '#B8BB26', '#FABD2F', '#d086d3', '#8EC07C', '#FB4934', '#A89984'],
       cat: {
         Wohnen: '#83A598', 'Mobilität': '#83a5a4', Gesundheit: '#8EC07C', Versicherung: '#d086d3',
@@ -211,7 +216,7 @@ const DATA = {
       },
     },
     light: {
-      pos: '#526c3d', neg: '#a6434d', warn: '#9e4d34', savings: '#48668c',
+      pos: '#526c3d', neg: '#a6434d', warn: '#9e4d34', info: '#48668c',
       series: ['#5E81AC', '#a3758a', '#6a8b4f', '#a7791d', '#a27399', '#538b8a', '#BF616A', '#4C566A'],
       cat: {
         Wohnen: '#5E81AC', 'Mobilität': '#3f8ba0', Gesundheit: '#538b8a', Versicherung: '#a27399',
@@ -223,7 +228,7 @@ const DATA = {
       },
     },
     dark: {
-      pos: '#adc598', neg: '#e0b2b6', warn: '#EBCB8B', savings: '#aac0d5',
+      pos: '#adc598', neg: '#e0b2b6', warn: '#EBCB8B', info: '#aac0d5',
       series: ['#81A1C1', '#b48e9f', '#A3BE8C', '#EBCB8B', '#B48EAD', '#8FBCBB', '#cd858c', '#AEB9CC'],
       cat: {
         Wohnen: '#81A1C1', 'Mobilität': '#88C0D0', Gesundheit: '#8FBCBB', Versicherung: '#B48EAD',
@@ -262,7 +267,7 @@ const DATA = {
       },
     },
     light: {
-      pos: '#2d701e', neg: '#c30e35', warn: '#895712', savings: '#0a54e8',
+      pos: '#2d701e', neg: '#c30e35', warn: '#895712', info: '#0a54e8',
       series: ['#1E66F5', '#e033b2', '#3a9127', '#b17117', '#8839EF', '#168d94', '#D20F39', '#6C6F85'],
       cat: {
         Wohnen: '#1E66F5', 'Mobilität': '#0388bd', Gesundheit: '#168d94', Versicherung: '#8839EF',
@@ -274,7 +279,7 @@ const DATA = {
       },
     },
     dark: {
-      pos: '#A6E3A1', neg: '#F38BA8', warn: '#F9E2AF', savings: '#89B4FA',
+      pos: '#A6E3A1', neg: '#F38BA8', warn: '#F9E2AF', info: '#89B4FA',
       series: ['#89B4FA', '#F5C2E7', '#A6E3A1', '#F9E2AF', '#CBA6F7', '#94E2D5', '#F38BA8', '#A6ADC8'],
       cat: {
         Wohnen: '#89B4FA', 'Mobilität': '#89DCEB', Gesundheit: '#94E2D5', Versicherung: '#CBA6F7',
@@ -308,6 +313,13 @@ function mix(a, b, t) {
 // Anteil `a` der Farbe auf der Fläche `bg`.
 const tint = (color, bg, a) => mix(bg, color, a)
 
+// Dasselbe für Aufrufer außerhalb: eine Tönung als deckender Wert. Deckend und
+// nicht rgba(), weil auf einer Canvas-Fläche sonst nicht feststeht, was
+// dahinterliegt — und damit auch nicht, ob die Schrift darauf lesbar ist.
+export function tintOn(color, bg, amount) {
+  return tint(color, bg, amount)
+}
+
 // Schrift auf einer Datenfarbe (Treemap-Kachel): hell oder dunkel, je nachdem
 // welches von beiden auf dieser Farbe tatsächlich besser lesbar ist. Ein
 // fester Wert ginge hier nicht: im dunklen Design sind die Kategoriefarben die
@@ -336,6 +348,20 @@ export function readableOn(hex) {
   return ratio('#ffffff', hex) >= ratio(INK, hex) ? '#ffffff' : INK
 }
 
+// Eine Farbe so weit aufhellen oder abdunkeln, bis sie auf `bg` lesbar ist —
+// in die Richtung, die auf dieser Fläche ohnehin lesbar wäre. Für Schrift, die
+// auf einer eingefärbten Fläche steht und trotzdem ihre Bedeutung behalten
+// soll (die Überschrift „Sparen" auf der grün getönten Blockkachel).
+export function legibleOn(color, bg, target = 4.5) {
+  if (ratio(color, bg) >= target) return color
+  const ziel = readableOn(bg)
+  for (let i = 1; i <= 20; i++) {
+    const c = mix(color, ziel, i / 20)
+    if (ratio(c, bg) >= target) return c
+  }
+  return ziel
+}
+
 // Eine Bedeutungsfarbe auf eine dunkle Fläche heben: so weit Richtung `light`
 // mischen, bis sie dort 4,5:1 erreicht. Nötig, weil die Sidebar und die
 // Hero-Kachel in jeder Palette dunkel sind, der Akzent einer hellen Palette
@@ -349,6 +375,7 @@ function liftOnto(color, bg, light, target = 4.5) {
   }
   return light
 }
+
 
 // --- Auswahl für die Einstellungen ----------------------------------------
 export const PALETTES = Object.entries(DATA).map(([id, p]) => ({
@@ -425,7 +452,7 @@ const MANAGED = [
   '--pill-ended-bg', '--warn-soft', '--warn-soft-strong',
   '--ok-soft', '--ok-border', '--warnbox-soft', '--warnbox-border',
   '--risk-soft', '--risk-border', '--info-soft', '--info-border', '--info-text',
-  '--savings', '--savings-fg', '--pos-fg', '--neg-fg', '--warn-fg',
+  '--info', '--neg-fg',
   '--on-dark', '--sidebar-accent', '--on-dark-neg',
   '--hero-warn-bg', '--hero-warn-text', '--hero-warn-value',
   '--series-1', '--series-2', '--series-3', '--series-4',
@@ -455,13 +482,10 @@ export function applyPalette(id, mode) {
   s.setProperty('--pos', t.pos)
   s.setProperty('--neg', t.neg)
   s.setProperty('--warn', t.warn)
-  s.setProperty('--savings', t.savings)
-  // Schrift auf einer Bedeutungsfarbe als Fläche (roter Tag im Zeitstrahl,
-  // Sparkachel): hell oder dunkel, je nachdem was lesbar ist.
-  s.setProperty('--pos-fg', readableOn(t.pos))
+  s.setProperty('--info', t.info)
+  // Schrift auf einer Bedeutungsfarbe als Fläche (der rote Tag im
+  // Zeitstrahl): hell oder dunkel, je nachdem was darauf lesbar ist.
   s.setProperty('--neg-fg', readableOn(t.neg))
-  s.setProperty('--warn-fg', readableOn(t.warn))
-  s.setProperty('--savings-fg', readableOn(t.savings))
   t.series.forEach((c, i) => s.setProperty('--series-' + (i + 1), c))
   s.setProperty('--cat-sparen', t.cat.Sparen)
   s.setProperty('--cat-freizeit', t.cat.Freizeit)
@@ -493,9 +517,9 @@ export function applyPalette(id, mode) {
   s.setProperty('--warnbox-border', tint(t.warn, card, 0.3))
   s.setProperty('--risk-soft', tint(t.neg, card, 0.08))
   s.setProperty('--risk-border', tint(t.neg, card, 0.3))
-  s.setProperty('--info-soft', tint(t.savings, card, 0.08))
-  s.setProperty('--info-border', tint(t.savings, card, 0.3))
-  s.setProperty('--info-text', t.savings)
+  s.setProperty('--info-soft', tint(t.info, card, 0.08))
+  s.setProperty('--info-border', tint(t.info, card, 0.3))
+  s.setProperty('--info-text', t.info)
 
   // Sidebar und Hero-Kachel sind in jeder Palette dunkel. Der Akzent einer
   // hellen Palette ist dafür zu dunkel (olives #616f01 auf #2D353B wäre nicht

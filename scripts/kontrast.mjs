@@ -19,7 +19,7 @@
 //  sie eines Tages nachziehen will, findet die Liste unten im Bericht.
 // =============================================================================
 
-import { PALETTES, applyPalette, tokens, readableOn } from '../src/lib/palettes.js'
+import { PALETTES, applyPalette, tokens, readableOn, tintOn, legibleOn } from '../src/lib/palettes.js'
 
 // --- Minimaler DOM-Ersatz: applyPalette schreibt in document.documentElement.
 const gesetzt = {}
@@ -101,7 +101,7 @@ for (const p of PALETTES) {
     aufAllen('--pos', t.pos)
     aufAllen('--neg', t.neg)
     aufAllen('--warn', t.warn)
-    aufAllen('--savings', t.savings)
+    aufAllen('--info', t.info)
     aufAllen('--accent', v('--accent'))
     aufAllen('--accent-2', v('--accent-2'))
     for (const n of ['pos', 'neg']) {
@@ -114,6 +114,13 @@ for (const p of PALETTES) {
     paare.push(['--on-dark auf Seitenleiste', v('--on-dark'), v('--sidebar-bg')])
     paare.push(['--sidebar-accent auf Seitenleiste', v('--sidebar-accent'), v('--sidebar-bg')])
     paare.push(['--chart-tick auf Karte', t.chart.tick, v('--card-bg')])
+    // Die Blockkacheln der Treemap („Kosten" / „Sparen"): getönte Flächen mit
+    // einer Überschrift darauf. Beides wird gerechnet, nicht gesetzt — also
+    // auch hier nachprüfen.
+    const bgSav = tintOn(t.cat.Sparen, v('--card-bg'), 0.2)
+    const bgCost = tintOn(t.chart.tick, v('--card-bg'), 0.16)
+    paare.push(['Treemap-Block „Sparen" Überschrift', legibleOn(t.cat.Sparen, bgSav), bgSav])
+    paare.push(['Treemap-Block „Kosten" Überschrift', legibleOn(t.chart.tick, bgCost), bgCost])
 
     const melde = (text) => {
       if (p.id === STAND_VON_VORHER) altlasten.push(`${p.id}/${modus}  ${text}`)
@@ -138,6 +145,12 @@ for (const p of PALETTES) {
     // derselbe Wert, ist sie schlicht nicht zu sehen.
     const heroKante = kontrast(v('--sidebar-bg'), v('--content-bg'))
     if (heroKante < 1.01) melde(`Hero-Kachel hat dieselbe Farbe wie die Seite (${z2(heroKante)}:1)`)
+    // Die Blockkacheln müssen sich von der Karte abheben, sonst ist die
+    // Gruppierung nicht zu sehen.
+    for (const [wie, bg] of [['Sparen', bgSav], ['Kosten', bgCost]]) {
+      const k = kontrast(bg, v('--card-bg'))
+      if (k < 1.06) melde(`Treemap-Block „${wie}" hebt sich kaum von der Karte ab (${z2(k)}:1)`)
+    }
 
     tabelle.push({
       Palette: p.label,
