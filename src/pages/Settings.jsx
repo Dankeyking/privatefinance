@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import RecurringEditor from '../components/RecurringEditor.jsx'
+import { useMedia } from '../lib/useMedia.js'
 import SortTh from '../components/SortTh.jsx'
 import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
 import { ACCOUNT_PALETTE } from '../lib/accountColors.js'
@@ -19,6 +20,9 @@ const newId = () => `s${Date.now()}${idc++}`
 const AUTOSAVE_DELAY = 800
 
 export default function Settings({ data, manual, categoryOverrides, onSave, onReset, onNavigate }) {
+  // Am Handy bearbeitet man die Posten in der Liste auf „Kosten & Abos“.
+  // Hier stuende dieselbe Tabelle ein zweites Mal - 30 Posten als Karten.
+  const handyLayout = useMedia('(max-width: 860px)')
   const seed = () => ({
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a, i) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
@@ -323,12 +327,21 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
       {/* Fixkosten & Abos */}
       <div className="card mt">
         <h2>Fixkosten & Abos</h2>
+        {handyLayout ? (
+          <p className="muted" style={{ margin: 0 }}>
+            {form.orders.length} Posten. Am Handy bearbeitest du sie in der Liste auf{' '}
+            <button className="link-btn" onClick={() => onNavigate?.('recurring')}>
+              Kosten &amp; Abos
+            </button>.
+          </p>
+        ) : (
         <RecurringEditor
           accounts={form.accounts}
           persons={persons}
           orders={form.orders}
           onChange={(next) => up({ orders: next })}
         />
+        )}
       </div>
 
       {/* Umbuchungen */}

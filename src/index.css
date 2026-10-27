@@ -1258,3 +1258,67 @@ body { transition: background-color 180ms ease, color 180ms ease; }
 /* Der Knopf, der das Flussdiagramm am Handy hereinholt. Volle Breite, damit
    er als Schalter für den Abschnitt lesbar ist und nicht wie eine Fußnote. */
 .chart-toggle { width: 100%; justify-content: center; margin-bottom: 14px; }
+
+/* --- Kosten & Abos am Handy (CostsMobile) ---------------------------------- */
+/* Eine Zeile je Posten statt einer Karte mit acht beschrifteten Feldern. Die
+   Zeilenhöhe von 58 px ist bewusst über der 44-px-Marke für Trefferflächen:
+   die ganze Zeile ist der Knopf, nicht nur der Name. */
+.cm { margin-top: 4px; }
+
+.cm-group { margin-bottom: 10px; }
+.cm-group-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 10px 2px; background: none; border: none; cursor: pointer;
+  font-family: inherit; color: var(--text); text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.cm-caret { font-size: 11px; color: var(--text-muted); transition: transform .15s ease-out; }
+.cm-caret.zu { transform: rotate(-90deg); }
+.cm-group-name { font-weight: 650; font-size: 14px; }
+.cm-group-count {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  background: var(--surface-hover); border-radius: 999px; padding: 1px 7px;
+}
+.cm-group-sum { margin-left: auto; font-weight: 650; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.cm-list { list-style: none; margin: 0; padding: 0; }
+.cm-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: 58px; padding: 9px 2px; background: none; border: none;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  font-family: inherit; color: var(--text); text-align: left;
+}
+.cm-row:active { background: var(--surface-hover); }
+.cm-row.beendet { opacity: .5; }
+.cm-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 999px; }
+.cm-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cm-name {
+  font-size: 14.5px; font-weight: 550;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cm-sub {
+  font-size: 12px; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cm-amount {
+  flex: 0 0 auto; font-size: 15px; font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-add { width: 100%; justify-content: center; margin-top: 14px; }
+
+/* Schublade zum Bearbeiten: nutzt .filter-sheet, ergänzt nur die Felder. */
+.cm-form { padding-bottom: 8px; }
+.cm-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.cm-field > span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.cm-field input, .cm-field select {
+  font-family: inherit; font-size: 16px;  /* unter 16px zoomt iOS beim Tippen hinein */
+  min-height: 44px; padding: 9px 11px; width: 100%; box-sizing: border-box;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--input-bg); color: var(--text);
+}
+.cm-pair { display: flex; gap: 10px; }
+.cm-pair > * { flex: 1 1 0; min-width: 0; }
+.cm-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.cm-note { margin: -4px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.cm-delete { color: var(--neg); border-color: var(--neg); justify-content: center; margin-top: 4px; }

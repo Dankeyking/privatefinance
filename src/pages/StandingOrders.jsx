@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import CostsTable from '../components/CostsTable.jsx'
+import CostsMobile from '../components/CostsMobile.jsx'
+import { useMedia } from '../lib/useMedia.js'
 import FilterBar from '../components/FilterBar.jsx'
 import { SAVINGS_CATEGORY } from '../lib/categories.js'
 import { toMonthly, formatEUR } from '../lib/normalize.js'
@@ -16,6 +18,8 @@ const isSav = (o) => o.category === SAVINGS_CATEGORY
 export default function StandingOrders({
   data, overrides, onSaveOrders, filter, onFilterChange, onNavigate,
 }) {
+  // Am Handy ersetzt eine eigene Liste die Tabelle - siehe CostsMobile.
+  const handyLayout = useMedia('(max-width: 860px)')
   const persons = useMemo(() => personsFromAccounts(data.accounts), [data.accounts])
   const [orders, setOrders] = useState(() => (data.standingOrders || []).map(orderToForm))
 
@@ -61,7 +65,7 @@ export default function StandingOrders({
       <div className="card">
         <div className="editor-head" style={{ marginBottom: 14 }}>
           <div>
-            <h2 style={{ margin: 0 }}>Alle Posten</h2>
+            {!handyLayout && <h2 style={{ margin: 0 }}>Alle Posten</h2>}
             <span className="muted" style={{ fontSize: 13 }}>
               {sums.count} Posten · Fixkosten {formatEUR(sums.fixed)} · Abos {formatEUR(sums.sub)} · Sparen {formatEUR(sums.savings)}
               {filtered && ` · ${visibleCount} sichtbar`}
@@ -80,6 +84,15 @@ export default function StandingOrders({
             </button>
           </p>
         ) : (
+          handyLayout ? (
+            <CostsMobile
+              accounts={data.accounts}
+              persons={persons}
+              orders={orders}
+              onChange={handleChange}
+              filter={predicate}
+            />
+          ) : (
           <CostsTable
             accounts={data.accounts}
             persons={persons}
@@ -87,11 +100,15 @@ export default function StandingOrders({
             onChange={handleChange}
             filter={predicate}
           />
+          )
         )}
         <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
-          Tipp: <strong>Auf eine Zelle klicken</strong>, um sie zu bearbeiten. Alles mit der
-          <strong> Kategorie „Sparen"</strong> zählt als Rücklage (nicht als Kosten) und erscheint
-          in der Sparen-Auswertung.
+          Tipp:{' '}
+          {handyLayout
+            ? <><strong>Auf eine Zeile tippen</strong>, um den Posten zu öffnen.</>
+            : <><strong>Auf eine Zelle klicken</strong>, um sie zu bearbeiten.</>}
+          {' '}Alles mit der <strong>Kategorie „Sparen"</strong> zählt als Rücklage
+          (nicht als Kosten) und erscheint in der Sparen-Auswertung.
         </p>
       </div>
     </div>

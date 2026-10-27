@@ -79,6 +79,7 @@ export default function Overview({
   const schmal = useMedia('(max-width: 640px)')
   const handyLayout = useMedia('(max-width: 860px)')
   const [zeigeDiagramm, setZeigeDiagramm] = useState(false)
+  const [alleAnstehend, setAlleAnstehend] = useState(false)
 
   const [selFlow, setSelFlow] = useState(null) // { from, to } | null
   const flowMatches = (f) => selFlow && f.from === selFlow.from && f.to === selFlow.to
@@ -159,6 +160,31 @@ export default function Overview({
       <>
         <h2 className="section-title">Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>
           ({onePerson ? `Anteil ${onePerson}, monatlich` : 'monatlich aufs Konto buchen'})</span></h2>
+        {handyLayout ? (
+          /* Am Handy eine Liste statt 13 Karten: die Karte braucht 204 px,
+             die Zeile 60. Dieselben Zahlen, nur ohne Balken und Jahreswert. */
+          <ul className="cm-list">
+            {byAccount.map(({ account, fixed, subscription, savings, total }) => (
+              <li key={account.id}>
+                <button type="button" className="cm-row"
+                  onClick={() => onNavigate?.('recurring', { accountId: account.id })}>
+                  <span className="cm-dot" style={{ background: accountColor(account, data.accounts) }} />
+                  <span className="cm-text">
+                    <span className="cm-name">{account.name}</span>
+                    <span className="cm-sub">
+                      {[
+                        fixed > 0 && `Fixkosten ${formatEUR(fixed)}`,
+                        subscription > 0 && `Abos ${formatEUR(subscription)}`,
+                        savings > 0 && `Sparen ${formatEUR(savings)}`,
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  <span className="cm-amount">{formatEUR(total)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
         <div className="grid accounts">
           {byAccount.map(({ account, fixed, subscription, savings, reserve, total }) => (
             <div className={`card acct clickable ${account.type}`} key={account.id}
@@ -195,6 +221,7 @@ export default function Overview({
             </div>
           ))}
         </div>
+        )}
       </>
     ),
     byPerson: (
@@ -244,7 +271,7 @@ export default function Overview({
           <p className="muted">Keine Posten mit Ausführungstag in den nächsten 30 Tagen.</p>
         ) : (
           <ul className="upcoming">
-            {upcoming.map((u) => (
+            {(handyLayout && !alleAnstehend ? upcoming.slice(0, 8) : upcoming).map((u) => (
               <li key={u.id} className="clickable" title="Klicken: Posten in Kosten & Abos öffnen"
                 onClick={() => onNavigate?.('recurring', { search: u.recipient })}>
                 <div className="up-main">
@@ -260,6 +287,14 @@ export default function Overview({
               </li>
             ))}
           </ul>
+        )}
+        {/* 30 Posten sind am Handy 2.485 px. Die ersten acht decken
+            die naechsten Tage ab; der Rest auf Wunsch. */}
+        {handyLayout && upcoming.length > 8 && (
+          <button type="button" className="btn cm-add"
+            onClick={() => setAlleAnstehend((v) => !v)}>
+            {alleAnstehend ? 'Weniger anzeigen' : `Alle ${upcoming.length} anzeigen`}
+          </button>
         )}
       </div>
     ),
