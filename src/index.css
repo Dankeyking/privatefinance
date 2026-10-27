@@ -860,10 +860,28 @@ tr:hover .ct-del { opacity: 1; }
 
 /* Charts nie breiter als der Bildschirm */
 .chart-box { max-width: 100%; }
+.chart-box.treemap { height: 360px; }
 @media (max-width: 480px) {
   .chart-box { height: 260px; }
   .chart-box.sankey { height: 320px; }
+  /* Treemap: am Handy höher, sonst werden die Kacheln unlesbar klein –
+     erst recht, seit Sparen einen eigenen Block belegt. */
+  .chart-box.treemap { height: 430px; }
 }
+
+/* --- Treemap (Kosten & Sparen) -------------------------------------------- */
+/* Summenzeile unter der Treemap: Kosten und Sparen getrennt, damit die
+   Streifen im Diagramm auch als Zahl auftauchen. */
+.treemap-sum {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
+  margin: 14px 0 0; font-size: 13px;
+}
+.treemap-sum > span { display: inline-flex; align-items: center; gap: 6px; }
+.treemap-sum strong { font-variant-numeric: tabular-nums; }
+.tm-swatch {
+  display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none;
+}
+.treemap-note { font-size: 12px; margin: 6px 0 0; line-height: 1.4; }
 
 /* =============================================================================
    Inline-Betrag (Konten), Sortierung, Drag & Drop, Sparziel-Button
