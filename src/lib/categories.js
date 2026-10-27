@@ -3,7 +3,14 @@
 // =============================================================================
 //  Erweitern: einfach neue Schlüsselwörter in KEYWORD_RULES ergänzen oder eine
 //  neue Kategorie in CATEGORIES + KEYWORD_RULES aufnehmen.
+//
+//  Zu den Farben: die `color` unten ist nur der Rückfall. Welche Farbe eine
+//  Kategorie wirklich bekommt, entscheidet die gewählte Palette
+//  (palettes.js) — und davor eine eigene Farbe der Benutzer
+//  (categoryStore.js). Die Werte hier sind die der Standard-Palette.
 // =============================================================================
+
+import { categoryPaletteColor } from './palettes.js'
 
 // Vordefinierte Kategorien (Reihenfolge = Anzeige-Reihenfolge).
 export const CATEGORIES = [
@@ -23,9 +30,13 @@ export const FALLBACK_CATEGORY = 'Sonstiges'
 // Alles mit dieser Kategorie wird als Sparen/Rücklage behandelt (nicht als Kosten).
 export const SAVINGS_CATEGORY = 'Sparen'
 
+// Nur für Aufrufer ohne eigene Kategorien; die Oberfläche nimmt die Fassung
+// aus categoryStore.js, die zusätzlich eigene Kategorien kennt.
 export function categoryColor(id) {
+  const fromPalette = categoryPaletteColor(id)
+  if (fromPalette) return fromPalette
   const c = CATEGORIES.find((x) => x.id === id)
-  return c ? c.color : '#64748b'
+  return c ? c.color : categoryPaletteColor(FALLBACK_CATEGORY) || '#64748b'
 }
 
 // Schlüsselwort-Regeln: pro Kategorie eine Liste von Substrings (lowercase).

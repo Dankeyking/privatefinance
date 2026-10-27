@@ -4,7 +4,7 @@ import { timingSafeEqual } from 'node:crypto'
 import express from 'express'
 import { PrismaClient } from '@prisma/client'
 
-import { ACCOUNT_PALETTE } from '../src/lib/accountColors.js'
+import { autoColorSlot } from '../src/lib/accountColors.js'
 import { autoCategorize } from '../src/lib/categories.js'
 import { nextDueDate } from '../src/lib/selectors.js'
 import { parseAmountDE } from '../src/lib/orderForm.js'
@@ -268,7 +268,9 @@ const COLLECTIONS = {
         owner: String(input.owner ?? (type === 'personal' ? name : 'Gemeinsam')).trim(),
         type,
         balance: parseAmountDE(input.balance ?? 0),
-        color: input.color || ACCOUNT_PALETTE[accounts.length % ACCOUNT_PALETTE.length],
+        // Platz in der Palette ('series-3'), nicht ein fester Hex-Wert: nur so
+        // folgt die Farbe später der gewählten Palette.
+        color: input.color || autoColorSlot(accounts.length),
         goal: input.goal == null || input.goal === '' ? null : parseAmountDE(input.goal),
         currency: input.currency || 'EUR',
       }

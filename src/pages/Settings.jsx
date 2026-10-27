@@ -3,7 +3,8 @@ import RecurringEditor from '../components/RecurringEditor.jsx'
 import { useMedia } from '../lib/useMedia.js'
 import SortTh from '../components/SortTh.jsx'
 import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
-import { ACCOUNT_PALETTE } from '../lib/accountColors.js'
+import { accountColor, autoColorSlot } from '../lib/accountColors.js'
+import { PALETTES } from '../lib/palettes.js'
 import { sortRows, nextSortState } from '../lib/sorting.js'
 import { downloadBackup, parseBackup, restoreBackup } from '../lib/backup.js'
 
@@ -19,14 +20,16 @@ const newId = () => `s${Date.now()}${idc++}`
 
 const AUTOSAVE_DELAY = 800
 
-export default function Settings({ data, manual, categoryOverrides, onSave, onReset, onNavigate }) {
+export default function Settings({
+  data, manual, categoryOverrides, onSave, onReset, onNavigate, palette, onPaletteChange,
+}) {
   // Am Handy bearbeitet man die Posten in der Liste auf „Kosten & Abos“.
   // Hier stuende dieselbe Tabelle ein zweites Mal - 30 Posten als Karten.
   const handyLayout = useMedia('(max-width: 860px)')
   const seed = () => ({
     accounts: (manual.accounts?.length ? manual.accounts : data.accounts).map((a, i) => ({
       id: a.id, name: a.name || '', owner: a.owner || '', type: a.type || 'personal', balance: a.balance ?? 0,
-      color: a.color || ACCOUNT_PALETTE[i % ACCOUNT_PALETTE.length], goal: a.goal ?? '',
+      color: a.color || autoColorSlot(i), goal: a.goal ?? '',
     })),
     incomes: (manual.incomes ?? data.incomes ?? []).map((i) => ({
       id: i.id || newId(), name: i.name || '', amount: i.amount ?? 0, rhythm: i.rhythm || 'monthly',
@@ -87,7 +90,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
   const addTransfer = () =>
     up({ transfers: [...form.transfers, { id: newId(), label: 'Umbuchung', amount: 0, fromAccountId: accounts[0]?.id || '', toAccountId: accounts.find((a) => a.type === 'joint')?.id || accounts[1]?.id || '', rhythm: 'monthly' }] })
   const addAccount = (type) =>
-    up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0, color: ACCOUNT_PALETTE[form.accounts.length % ACCOUNT_PALETTE.length] }] })
+    up({ accounts: [...form.accounts, { id: newId(), name: type === 'joint' ? 'Neues gemeinsames Konto' : 'Neues Privatkonto', owner: type === 'joint' ? 'Gemeinsam' : '', type, balance: 0, color: autoColorSlot(form.accounts.length) }] })
 
   function buildPayload(f) {
     return {
@@ -204,6 +207,46 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
         </div>
       </div>
 
+      {/* Farbpalette */}
+      <div className="card mt">
+        <h2>Farben</h2>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+          Gilt für die ganze Seite <strong>und</strong> die Diagramme. Jede Palette hat eine helle
+          und eine dunkle Fassung – zwischen hell und dunkel schaltest du wie bisher unten in der
+          Navigation um. Die Wahl liegt bei deinem Benutzer, nicht im Browser: sie gilt auch am
+          Handy. Grün bleibt in jeder Palette Einnahmen, Rot Ausgaben.
+        </p>
+        <div className="palette-grid">
+          {PALETTES.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`palette-option${palette === p.id ? ' on' : ''}`}
+              aria-pressed={palette === p.id}
+              onClick={() => onPaletteChange?.(p.id)}
+            >
+              <span className="palette-swatches" aria-hidden="true">
+                {['light', 'dark'].map((mode) => (
+                  <span className="palette-row" key={mode}>
+                    {p.swatch[mode].map((c, i) => (
+                      <span className="palette-dot" key={i} style={{ background: c }} />
+                    ))}
+                  </span>
+                ))}
+              </span>
+              <span className="palette-text">
+                <span className="palette-name">{p.label}</span>
+                <span className="palette-note">{p.note}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="muted" style={{ fontSize: 12.5, marginTop: 12, marginBottom: 0 }}>
+          Kontofarben und Kategorien folgen der Palette, solange du sie nicht selbst gesetzt hast –
+          eine eigene Farbe (unten bei den Konten oder unter „Kategorien“) bleibt erhalten.
+        </p>
+      </div>
+
       {/* Datensicherung */}
       <div className="card mt">
         <h2>Datensicherung</h2>
@@ -259,7 +302,7 @@ export default function Settings({ data, manual, categoryOverrides, onSave, onRe
             <tbody>
               {sortedAccounts.map((a) => (
                 <tr key={a.id}>
-                  <td data-label="Farbe"><input type="color" className="color-input" value={a.color || '#3b82f6'} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
+                  <td data-label="Farbe"><input type="color" className="color-input" value={accountColor(a, accounts)} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
                   <td data-label="Name"><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
                   <td data-label="Inhaber"><input value={a.owner} placeholder={a.type === 'personal' ? 'z. B. Elisa' : 'Gemeinsam'} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
                   <td data-label="Typ">

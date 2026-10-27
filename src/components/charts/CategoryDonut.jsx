@@ -3,14 +3,17 @@ import { useRef } from 'react'
 import { Doughnut } from 'react-chartjs-2'
 import { getElementAtEvent } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
+import { tokens } from '../../lib/palettes.js'
 
 // Animiertes Donut: Ausgaben je Kategorie. Klick auf Segment -> onSelect(index).
 export default function CategoryDonut({ labels, values, colors, onSelect }) {
   const ref = useRef(null)
 
-  // Segment-Rand in Kartenfarbe (folgt dem Theme; Charts werden je Theme neu aufgebaut).
-  const ringBorder =
-    getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim() || '#fff'
+  // Segment-Rand in Kartenfarbe. Früher per getComputedStyle gelesen — das
+  // geht nur, solange der Wert ein fertiger Farbwert ist, und nicht mehr,
+  // sobald eine Palette ihn mischt. Jetzt direkt aus der Palette.
+  const t = tokens()
+  const ringBorder = t.card
   const data = {
     labels,
     datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: ringBorder }],
@@ -22,7 +25,12 @@ export default function CategoryDonut({ labels, values, colors, onSelect }) {
     animation: { animateRotate: true, animateScale: true, duration: 800, easing: 'easeOutQuart' },
     plugins: {
       legend: { position: 'right' },
-      tooltip: { callbacks: { label: (c) => `${c.label}: ${formatEUR(c.parsed)}` } },
+      tooltip: {
+        backgroundColor: t.chart.tooltipBg,
+        titleColor: t.chart.tooltipFg,
+        bodyColor: t.chart.tooltipFg,
+        callbacks: { label: (c) => `${c.label}: ${formatEUR(c.parsed)}` },
+      },
     },
   }
 

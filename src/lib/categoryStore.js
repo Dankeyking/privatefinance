@@ -15,6 +15,7 @@
 // =============================================================================
 
 import { CATEGORIES as DEFAULT_CATEGORIES, FALLBACK_CATEGORY } from './categories.js'
+import { categoryPaletteColor } from './palettes.js'
 import { saveCategories } from './storage.js'
 
 let custom = [] // [{id, label, color}]
@@ -45,9 +46,18 @@ function getOverrides() {
 }
 
 // Alle Kategorien (vordefiniert + eigene), mit Label-/Farb-Änderungen angewandt.
+//
+// Reihenfolge der Farbquellen, von schwach nach stark:
+//   1. `color` aus categories.js bzw. der eigenen Kategorie (Rückfall)
+//   2. die Farbe der gewählten Palette — nur für vordefinierte Kategorien
+//   3. eine selbst gesetzte Farbe (Override) — die gewinnt immer
+// Eigene Kategorien kennt keine Palette, sie behalten also ihre Farbe.
 export function getCategories() {
   const ov = getOverrides()
-  return [...DEFAULT_CATEGORIES, ...getCustom()].map((c) => ({ ...c, ...(ov[c.id] || {}) }))
+  return [...DEFAULT_CATEGORIES, ...getCustom()].map((c) => {
+    const fromPalette = categoryPaletteColor(c.id)
+    return { ...c, ...(fromPalette ? { color: fromPalette } : null), ...(ov[c.id] || {}) }
+  })
 }
 
 export function isCustomCategory(id) {
@@ -56,7 +66,8 @@ export function isCustomCategory(id) {
 
 export function categoryColor(id) {
   const c = getCategories().find((x) => x.id === id)
-  return c ? c.color : '#64748b'
+  if (c) return c.color
+  return categoryPaletteColor(FALLBACK_CATEGORY) || '#64748b'
 }
 
 export function categoryLabel(id) {
@@ -67,7 +78,8 @@ export function categoryLabel(id) {
 let idc = 0
 export function addCategory(label, color) {
   const id = `cat_${Date.now()}${idc++}`
-  custom.push({ id, label: (label || '').trim() || 'Neue Kategorie', color: color || '#64748b' })
+  const fallback = categoryPaletteColor(FALLBACK_CATEGORY) || '#64748b'
+  custom.push({ id, label: (label || '').trim() || 'Neue Kategorie', color: color || fallback })
   persist()
   return id
 }

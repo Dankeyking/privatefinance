@@ -1,11 +1,13 @@
 import './setup.js'
 import { Chart } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
+import { tokens, readableOn } from '../../lib/palettes.js'
 
 // Treemap: jede Kachel = ein Posten, Größe = Monatsbetrag, Farbe = Kategorie.
 // items: [{ label, value, category, color }]
 export default function CostTreemap({ items }) {
   if (!items || items.length === 0) return <p className="muted">Noch keine Kosten erfasst.</p>
+  const t = tokens()
 
   const data = {
     datasets: [
@@ -20,7 +22,10 @@ export default function CostTreemap({ items }) {
         labels: {
           display: true,
           overflow: 'hidden',
-          color: '#fff',
+          // Schrift je Kachel, nicht pauschal weiß: im dunklen Design sind die
+          // Kategoriefarben die helleren Varianten, auf denen weiße Schrift
+          // untergeht.
+          color: (ctx) => readableOn(ctx.type === 'data' ? ctx.raw._data.color : t.card),
           font: { size: 11, weight: '600', family: "-apple-system, 'Segoe UI', Roboto, sans-serif" },
           formatter: (ctx) => {
             const d = ctx.raw._data
@@ -38,7 +43,9 @@ export default function CostTreemap({ items }) {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#0f172a',
+        backgroundColor: t.chart.tooltipBg,
+        titleColor: t.chart.tooltipFg,
+        bodyColor: t.chart.tooltipFg,
         padding: 10,
         cornerRadius: 8,
         displayColors: false,
