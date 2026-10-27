@@ -74,13 +74,21 @@ export default function Analytics({
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
 
-  // Treemap: alle aktiven Kosten (ohne Sparen), Kachelgröße = Monatsbetrag.
+  // Treemap: alle aktiven Posten, Kachelgröße = Monatsbetrag. Sparen ist mit
+  // drin (vorher fehlten dadurch über 1.000 €/Monat im Bild), wird aber als
+  // Sparen markiert – die Treemap setzt es sichtbar von Kosten ab.
   const treemapItems = useMemo(() => {
     return (view.standingOrders || [])
-      .filter((o) => isOrderActive(o) && !isSavings(o, overrides))
+      .filter((o) => isOrderActive(o))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
-        return { label: o.recipient || '—', value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)), category: categoryLabel(cat), color: categoryColor(cat) }
+        return {
+          label: o.recipient || '—',
+          value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)),
+          category: categoryLabel(cat),
+          color: categoryColor(cat),
+          savings: isSavings(o, overrides),
+        }
       })
       .filter((x) => x.value > 0)
   }, [view.standingOrders, overrides])
@@ -173,7 +181,7 @@ export default function Analytics({
     ),
     treemap: (
       <div className="card">
-        <h2>Kosten-Treemap <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Kachelgröße = Monatsbetrag, Farbe = Kategorie)</span></h2>
+        <h2>Kosten-Treemap <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Kachelgröße = Monatsbetrag, Farbe = Kategorie, Sparen gestreift)</span></h2>
         <CostTreemap items={treemapItems} />
       </div>
     ),
