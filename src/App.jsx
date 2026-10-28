@@ -178,7 +178,6 @@ export default function App() {
         onNavigate={navigate}
         source={source}
         hasManual={hasManual}
-        onExport={handleExport}
         open={navOpen}
         onClose={() => setNavOpen(false)}
         theme={theme}
@@ -222,6 +221,7 @@ export default function App() {
             onSave={handleSaveManual}
             onReset={handleResetManual}
             onNavigate={navigate}
+            onExport={handleExport}
             palette={palette}
             onPaletteChange={(id) => handleSavePreference(PALETTE_PREF_KEY, id)}
           />
