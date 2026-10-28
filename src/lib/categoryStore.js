@@ -92,6 +92,25 @@ export function updateCategory(id, patch) {
   persist()
 }
 
+// Hat eine vordefinierte Kategorie eine selbst gesetzte Farbe? Nur dann gibt es
+// etwas zurueckzunehmen - eigene Kategorien haben keine Palettenfarbe, die
+// wieder greifen koennte.
+export function hatEigeneFarbe(id) {
+  return !isCustomCategory(id) && overrides[id]?.color != null
+}
+
+// Die selbst gesetzte Farbe wieder entfernen, damit die Kategorie der Palette
+// folgt. `updateCategory(id, { color: undefined })` taugt dafuer nicht: der
+// Schluessel bliebe stehen und wuerde die Palettenfarbe mit undefined
+// ueberschreiben.
+export function farbeZuruecksetzen(id) {
+  if (!overrides[id]) return
+  const { color, ...rest } = overrides[id]
+  if (Object.keys(rest).length) overrides[id] = rest
+  else delete overrides[id]
+  persist()
+}
+
 // Nur eigene Kategorien können vollständig entfernt werden (Standard-Kategorien
 // bleiben erhalten, da Schlüsselwort-Regeln und die Sparen-Erkennung sie referenzieren).
 export function removeCategory(id) {

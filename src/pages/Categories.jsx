@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CATEGORIES, KEYWORD_RULES, SAVINGS_CATEGORY, FALLBACK_CATEGORY } from '../lib/categories.js'
 import { monthlyByCategory } from '../lib/recurring.js'
 import { formatEUR } from '../lib/normalize.js'
-import { getCategories, categoryLabel, categoryColor, addCategory, updateCategory, removeCategory, isCustomCategory } from '../lib/categoryStore.js'
+import { getCategories, categoryLabel, categoryColor, addCategory, updateCategory, removeCategory, isCustomCategory, hatEigeneFarbe, farbeZuruecksetzen } from '../lib/categoryStore.js'
 
 export default function Categories({ data, overrides, onResetAll, onClearOne }) {
   const itemsById = {}
@@ -28,6 +28,13 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
   function editColor(id, color) {
     updateCategory(id, { color })
     setList((l) => l.map((c) => (c.id === id ? { ...c, color } : c)))
+  }
+  // Zurueck zur Palettenfarbe. Noetig, weil das Farbfeld die aufgeloeste
+  // Palettenfarbe anzeigt: ein Druck darauf legt sie als eigene Farbe fest,
+  // und die Kategorie folgt der Palette danach nicht mehr.
+  function farbeZurueck(id) {
+    farbeZuruecksetzen(id)
+    setList(getCategories())
   }
   function addNew() {
     addCategory('Neue Kategorie', categoryColor(FALLBACK_CATEGORY))
@@ -93,7 +100,14 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
             <tbody>
               {list.map((c) => (
                 <tr key={c.id}>
-                  <td data-label="Farbe"><input type="color" className="color-input" value={c.color} onChange={(e) => editColor(c.id, e.target.value)} /></td>
+                  <td data-label="Farbe">
+                    <div className="farbwahl">
+                      <input type="color" className="color-input" value={c.color} onChange={(e) => editColor(c.id, e.target.value)} />
+                      {hatEigeneFarbe(c.id) && (
+                        <button type="button" className="farb-zurueck" title="Wieder der Palette folgen" onClick={() => farbeZurueck(c.id)}>↺</button>
+                      )}
+                    </div>
+                  </td>
                   <td data-label="Name"><input value={c.label} onChange={(e) => editLabel(c.id, e.target.value)} /></td>
                   <td data-label="" style={{ whiteSpace: 'nowrap' }}>
                     {!isCustomCategory(c.id) && <span className="pill fix">Standard</span>}
