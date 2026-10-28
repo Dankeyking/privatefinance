@@ -13,12 +13,13 @@
 //    Flächen        3:1    (Kontofarben und Kategorien sind Balken und
 //                          Kacheln, kein Text — sie müssen sich nur abheben)
 //
-//  Die Palette „standard“ ist der Stand von vor der Paletten-Auswahl und wird
-//  bewusst nicht verändert. Sie erreicht an einigen Stellen keine 4,5:1; das
-//  war vorher schon so. Darum wird sie nur berichtet und nicht gewertet — wer
-//  sie eines Tages nachziehen will, findet die Liste unten im Bericht.
+//  Es gibt keine Ausnahme: auch „standard“ muss bestehen. Die Palette lag
+//  früher an 22 Stellen darunter (`--pos` 3,30:1 auf Weiß); das ist mit
+//  derselben Methode nachgezogen worden wie bei den anderen — Helligkeit
+//  verschoben, Farbton und Sättigung behalten.
 // =============================================================================
 
+import { readFile } from 'node:fs/promises'
 import { PALETTES, applyPalette, tokens, readableOn, tintOn, legibleOn } from '../src/lib/palettes.js'
 
 // --- Minimaler DOM-Ersatz: applyPalette schreibt in document.documentElement.
@@ -32,41 +33,48 @@ globalThis.document = {
   },
 }
 
-// Die Werte, die index.css für die Standard-Palette mitbringt (applyPalette
-// überschreibt sie dort nicht). Dunkle Chip-Flächen sind dort rgba-Tönungen;
-// hier stehen sie als deckende Mischung auf --card-bg, sonst ließe sich nicht
-// rechnen.
-const AUS_CSS = {
-  light: {
-    '--card-bg': '#ffffff', '--content-bg': '#f2f4fa', '--surface-2': '#eef1f8',
-    '--text': '#0f172a', '--text-muted': '#64748b', '--accent': '#4c6ef5', '--accent-2': '#7c5cf0',
-    '--sidebar-bg': '#0b1120', '--sidebar-text': '#aab8ce', '--sidebar-text-active': '#ffffff',
-    '--chip-pos-fg': '#15803d', '--chip-neg-fg': '#b91c1c', '--pill-fix-fg': '#1d4ed8',
-    '--pill-sub-fg': '#be185d', '--pill-umb-fg': '#4338ca', '--pill-ended-fg': '#64748b',
-    '--chip-pos-bg': '#dcfce7', '--chip-neg-bg': '#fee2e2', '--pill-fix-bg': '#e0edff',
-    '--pill-sub-bg': '#fce7f3', '--pill-umb-bg': '#e0e7ff', '--pill-ended-bg': '#f1f5f9',
-    '--on-dark': '#ffffff', '--sidebar-accent': '#8da4ff',
-  },
-  dark: {
-    '--card-bg': '#121c32', '--content-bg': '#0b1220', '--surface-2': '#1d2b48',
-    '--text': '#e2e8f0', '--text-muted': '#90a4c0', '--accent': '#6d8bff', '--accent-2': '#9a7bff',
-    '--sidebar-bg': '#090e1c', '--sidebar-text': '#9fb0c8', '--sidebar-text-active': '#ffffff',
-    '--chip-pos-fg': '#6ee7b7', '--chip-neg-fg': '#fca5a5', '--pill-fix-fg': '#93c5fd',
-    '--pill-sub-fg': '#f9a8d4', '--pill-umb-fg': '#a5b4fc', '--pill-ended-fg': '#94a3b8',
-    '--chip-pos-bg': '#1b3443', '--chip-neg-bg': '#2a2437', '--pill-fix-bg': '#1a2742',
-    '--pill-sub-bg': '#2c2342', '--pill-umb-bg': '#232a4b', '--pill-ended-bg': '#1e2639',
-    '--on-dark': '#ffffff', '--sidebar-accent': '#8da4ff',
-  },
+// Die Standard-Palette bringt keine eigenen Flächen- und Textwerte mit
+// (`ui: null`), die stehen in index.css. Die werden hier GELESEN, nicht
+// abgeschrieben: eine zweite Liste derselben Werte wäre schon beim ersten
+// Nachziehen veraltet — und das Skript hätte dann das Falsche geprüft.
+const CSS = await readFile(new URL('../src/index.css', import.meta.url), 'utf8')
+
+function varsAus(selektor) {
+  const start = CSS.indexOf(selektor)
+  if (start < 0) throw new Error(`${selektor} nicht in index.css gefunden`)
+  const block = CSS.slice(start, CSS.indexOf('\n}', start))
+  const map = {}
+  for (const m of block.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) map[m[1]] = m[2].trim()
+  return map
+}
+
+const AUS_CSS = { light: varsAus(':root {'), dark: varsAus("[data-theme='dark'] {") }
+
+// Eine halbdurchsichtige Tönung auf ihrer Unterlage zusammenrechnen — so wie
+// der Browser es tut. Ohne das ließe sich auf den Chips im dunklen Design
+// nichts rechnen, da stehen die Flächen als rgba().
+function deckend(wert, unterlage) {
+  const m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,/\s]+([\d.]+))?\s*\)$/.exec(wert || '')
+  if (!m) return wert
+  const a = m[4] === undefined ? 1 : Number(m[4])
+  const u = hexToRgb(unterlage)
+  const misch = [1, 2, 3].map((i) => Math.round(Number(m[i]) * a + u[i - 1] * (1 - a)))
+  return '#' + misch.map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+function hexToRgb(hex) {
+  const roh = String(hex).trim().replace('#', '')
+  const h = roh.length === 3 ? roh.split('').map((c) => c + c).join('') : roh
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16))
 }
 
 function leuchtdichte(hex) {
-  const roh = String(hex).trim().replace('#', '')
-  const h = roh.length === 3 ? roh.split('').map((c) => c + c).join('') : roh
-  const kanal = (paar) => {
-    const v = parseInt(paar, 16) / 255
+  const kanal = (v255) => {
+    const v = v255 / 255
     return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
   }
-  return 0.2126 * kanal(h.slice(0, 2)) + 0.7152 * kanal(h.slice(2, 4)) + 0.0722 * kanal(h.slice(4, 6))
+  const [r, g, b] = hexToRgb(hex)
+  return 0.2126 * kanal(r) + 0.7152 * kanal(g) + 0.0722 * kanal(b)
 }
 
 function kontrast(a, b) {
@@ -78,10 +86,8 @@ function kontrast(a, b) {
 const z2 = (n) => n.toFixed(2)
 const ZIEL_TEXT = 4.5
 const ZIEL_FLAECHE = 3
-const STAND_VON_VORHER = 'standard'
 
 let durchgefallen = 0
-const altlasten = []
 const tabelle = []
 
 for (const p of PALETTES) {
@@ -89,7 +95,9 @@ for (const p of PALETTES) {
     for (const k of Object.keys(gesetzt)) delete gesetzt[k]
     applyPalette(p.id, modus)
     const t = tokens()
-    const v = (name) => gesetzt[name] || AUS_CSS[modus][name]
+    const roh = (name) => gesetzt[name] || AUS_CSS[modus][name]
+    const karte = roh('--card-bg')
+    const v = (name) => deckend(roh(name), karte)
     const flaechen = [['Karte', v('--card-bg')], ['Seite', v('--content-bg')], ['Fläche', v('--surface-2')]]
 
     const paare = []
@@ -123,8 +131,8 @@ for (const p of PALETTES) {
     paare.push(['Treemap-Block „Kosten" Überschrift', legibleOn(t.chart.tick, bgCost), bgCost])
 
     const melde = (text) => {
-      if (p.id === STAND_VON_VORHER) altlasten.push(`${p.id}/${modus}  ${text}`)
-      else { durchgefallen++; console.log(`DURCHGEFALLEN  ${p.id}/${modus}  ${text}`) }
+      durchgefallen++
+      console.log(`DURCHGEFALLEN  ${p.id}/${modus}  ${text}`)
     }
 
     let schwaechster = Infinity
@@ -165,15 +173,9 @@ for (const p of PALETTES) {
 
 console.table(tabelle)
 
-if (altlasten.length) {
-  console.log('')
-  console.log(`Standard-Palette — unverändert übernommen, ${altlasten.length} Stellen unter ${ZIEL_TEXT}:1:`)
-  altlasten.forEach((z) => console.log(`  ${z}`))
-}
-
 console.log('')
 if (durchgefallen === 0) {
-  console.log(`Alle Paletten außer „standard“ erreichen überall ${ZIEL_TEXT}:1 für Text und ${ZIEL_FLAECHE}:1 für Flächen.`)
+  console.log(`Alle Paletten erreichen ${ZIEL_TEXT}:1 für Text und ${ZIEL_FLAECHE}:1 für Flächen.`)
 } else {
   console.log(`${durchgefallen} Prüfungen durchgefallen.`)
 }
