@@ -37,9 +37,11 @@
 //            und die Hinweisflächen.
 //  Sparen ist in keiner Palette rot.
 //
-//  Die Palette „standard“ ist der Stand von vorher. Ihre Flächen-, Rahmen- und
+//  Die Palette „standard“ ist die gewohnte Ansicht. Ihre Flächen-, Rahmen- und
 //  Textwerte stehen weiterhin in `index.css` und werden hier NICHT überschrieben
-//  (`ui: null`) — ohne gespeicherte Wahl sieht die App also unverändert aus.
+//  (`ui: null`); nur die Datenwerte kommen von hier. Ihre Töne sind dieselben
+//  wie vorher, einige davon so weit nachgedunkelt bzw. aufgehellt, dass sie die
+//  4,5:1 erreichen — Farbton und Sättigung sind geblieben.
 //  Die Datenwerte (Kontofarben, Kategorien, Diagramm-Grundfarben) kommen für
 //  jede Palette aus dieser Datei, damit sie nur an einer Stelle stehen.
 // =============================================================================
@@ -58,27 +60,27 @@ const DATA = {
     ui: null,
     light: {
       card: '#ffffff',
-      pos: '#16a34a', neg: '#dc2626', warn: '#d97706', info: '#2563eb',
-      series: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444', '#64748b'],
+      pos: '#117d39', neg: '#d32222', warn: '#a35a05', info: '#2462eb',
+      series: ['#3b82f6', '#ec4899', '#0e9d6e', '#c07b08', '#8b5cf6', '#119b8b', '#ef4444', '#64748b'],
       cat: {
         Wohnen: '#2563eb', 'Mobilität': '#0891b2', Gesundheit: '#0d9488', Versicherung: '#7c3aed',
-        Freizeit: '#db2777', Technik: '#6366f1', Sparen: '#16a34a', Bargeld: '#ca8a04',
+        Freizeit: '#db2777', Technik: '#6366f1', Sparen: '#169f48', Bargeld: '#b97e04',
         Sonstiges: '#64748b',
       },
       chart: {
-        grid: 'rgba(148, 163, 184, 0.25)', tick: '#64748b', tooltipBg: '#0f172a',
+        grid: 'rgba(148, 163, 184, 0.25)', tick: '#5e6d83', tooltipBg: '#0f172a',
         tooltipFg: '#ffffff', muted: 'rgba(148, 163, 184, 0.3)',
         defaultBorder: 'rgba(15, 23, 42, 0.08)',
       },
     },
     dark: {
       card: '#121c32',
-      pos: '#34d399', neg: '#f87171', warn: '#fbbf24', info: '#2563eb',
-      series: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444', '#64748b'],
+      pos: '#34d399', neg: '#f87171', warn: '#fbbf24', info: '#6591f1',
+      series: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444', '#66778e'],
       cat: {
-        Wohnen: '#2563eb', 'Mobilität': '#0891b2', Gesundheit: '#0d9488', Versicherung: '#7c3aed',
+        Wohnen: '#346eec', 'Mobilität': '#0891b2', Gesundheit: '#0d9488', Versicherung: '#8c52ef',
         Freizeit: '#db2777', Technik: '#6366f1', Sparen: '#16a34a', Bargeld: '#ca8a04',
-        Sonstiges: '#64748b',
+        Sonstiges: '#66778e',
       },
       chart: {
         grid: 'rgba(148, 163, 184, 0.25)', tick: '#94a3b8', tooltipBg: '#0f172a',

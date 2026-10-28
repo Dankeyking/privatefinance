@@ -6,8 +6,8 @@
   --sidebar-bg-2: #131c33;
   --sidebar-text: #aab8ce;
   --sidebar-text-active: #ffffff;
-  --accent: #4c6ef5;
-  --accent-2: #7c5cf0;
+  --accent: #375df4;
+  --accent-2: #704eef;
   --accent-soft: #e3e8fd;
 
   --content-bg: #f2f4fa;
@@ -18,11 +18,11 @@
   --border-strong: #c9d1e0;
 
   --text: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #5e6d83;
 
-  --pos: #16a34a;
-  --neg: #dc2626;
-  --warn: #d97706;
+  --pos: #117d39;
+  --neg: #d32222;
+  --warn: #a35a05;
   --warn-soft: #fef3c7;
   --warn-soft-strong: #fde9b8;
 
@@ -36,7 +36,7 @@
   --pill-fix-bg: #e0edff;  --pill-fix-fg: #1d4ed8;
   --pill-sub-bg: #fce7f3;  --pill-sub-fg: #be185d;
   --pill-umb-bg: #e0e7ff;  --pill-umb-fg: #4338ca;
-  --pill-ended-bg: #f1f5f9; --pill-ended-fg: #64748b;
+  --pill-ended-bg: #f1f5f9; --pill-ended-fg: #5e6d83;
 
   /* Hinweisflächen (Verdict/Info) */
   --ok-soft: #f0fdf4;   --ok-border: #bbf7d0;
@@ -74,8 +74,8 @@
   --sidebar-bg: #090e1c;
   --sidebar-bg-2: #0d1528;
   --sidebar-text: #9fb0c8;
-  --accent: #6d8bff;
-  --accent-2: #9a7bff;
+  --accent: #6f8cff;
+  --accent-2: #9d7eff;
   --accent-soft: rgba(109, 139, 255, 0.16);
 
   --content-bg: #0b1220;
