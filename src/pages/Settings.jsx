@@ -21,7 +21,7 @@ const newId = () => `s${Date.now()}${idc++}`
 const AUTOSAVE_DELAY = 800
 
 export default function Settings({
-  data, manual, categoryOverrides, onSave, onReset, onNavigate, palette, onPaletteChange,
+  data, manual, categoryOverrides, onSave, onReset, onNavigate, onExport, palette, onPaletteChange,
 }) {
   // Am Handy bearbeitet man die Posten in der Liste auf „Kosten & Abos“.
   // Hier stuende dieselbe Tabelle ein zweites Mal - 30 Posten als Karten.
@@ -266,6 +266,7 @@ export default function Settings({
               style={{ display: 'none' }}
             />
           </label>
+          <button className="btn" onClick={onExport}>⬇ Export</button>
         </div>
         {backupError && (
           <p style={{ color: 'var(--neg)', fontSize: 13, marginTop: 6 }}>{backupError}</p>

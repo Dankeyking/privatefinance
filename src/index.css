@@ -210,32 +210,6 @@ body {
 }
 .nav .ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; opacity: 0.9; }
 
-.sidebar .export-btn {
-  margin-top: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--accent-fg);
-  border: none;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 13.5px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: filter 0.15s, box-shadow 0.15s;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
-}
-.sidebar .export-btn:hover { filter: brightness(1.08); }
-.sidebar .export-hint {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  padding: 10px 4px 0;
-  line-height: 1.4;
-}
-
 .source-badge {
   font-size: 11px;
   padding: 4px 9px;
@@ -877,7 +851,11 @@ tr:hover .ct-del { opacity: 1; }
   .card { padding: 16px; }
   .page-header h1 { font-size: 21px; }
   .kpi .kpi-value { font-size: 23px; }
-  .settings-actions .btn, .settings-actions .btn-primary { flex: 1; }
+  /* Drei Knoepfe mit flex:1 auf einer Zeile ergeben am Handy drei Spalten
+     von je rund 105 px - „Backup herunterladen" bricht darin dreifach um.
+     Zwei Spalten geben jedem Knopf die doppelte Breite. */
+  .settings-actions { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+  .settings-actions .btn, .settings-actions .btn-primary { flex: none; text-align: center; justify-content: center; }
 }
 
 /* Charts nie breiter als der Bildschirm */

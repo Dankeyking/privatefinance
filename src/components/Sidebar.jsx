@@ -28,7 +28,7 @@ const NAV_GROUPS = [
   },
 ]
 
-export default function Sidebar({ page, onNavigate, source, hasManual, onExport, open, onClose, theme, onToggleTheme }) {
+export default function Sidebar({ page, onNavigate, source, hasManual, open, onClose, theme, onToggleTheme }) {
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
@@ -62,14 +62,6 @@ export default function Sidebar({ page, onNavigate, source, hasManual, onExport,
       <span className={`source-badge ${hasManual ? 'live' : source}`}>
         {hasManual ? '● Eigene Daten' : '● Demo-/Mock-Daten'}
       </span>
-
-      <button className="export-btn" onClick={onExport}>
-        <Icon name="export" size={16} /> Export für Claude
-      </button>
-      <div className="export-hint">
-        Lädt eine JSON mit Konten, Einnahmen, Fixkosten/Abos und Kosten je Konto/Person.
-        Gib sie Claude für eine Auswertung deines Haushalts.
-      </div>
     </aside>
   )
 }
