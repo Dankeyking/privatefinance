@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import BottomNav from './components/BottomNav.jsx'
 import Overview from './pages/Overview.jsx'
@@ -57,6 +57,10 @@ export default function App() {
   // Konto in der Übersicht setzt ihn, und „Kosten & Abos" zeigt dieselbe
   // Auswahl weiter.
   const [filter, setFilter] = useState(EMPTY_FILTER)
+  // Steht auf true, solange die aktuelle Filterstellung schon behandelt ist -
+  // damit der Effekt unten nur auf eine echte Aenderung reagiert und nicht
+  // beim ersten Bild.
+  const filterGescrollt = useRef(true)
   // Persönliche Ansichtseinstellungen (Reihenfolge der Abschnitte) aus der DB.
   const [prefs, setPrefs] = useState({})
   const [theme, setTheme] = useState(initialTheme)
@@ -150,6 +154,35 @@ export default function App() {
   // Navigation, optional mit Filterparametern ({ accountId, category, person,
   // kind, search }). Diese ersetzen den Filter vollständig, statt sich mit dem
   // alten zu vermischen — sonst käme man aus einer Auswahl nicht mehr heraus.
+  // Eine Filteraenderung macht die Seite kuerzer - teils um mehrere hundert
+  // Pixel (gemessen auf „Analyse": 2090 px hoch, nach „Fixkosten" noch
+  // 1675 px). Der Browser klemmt die Scrollposition dann ans neue Ende, und
+  // unter dem Blick steht ploetzlich eine andere Karte. Deshalb die
+  // Filterleiste wieder an den oberen Rand holen, wenn man sie vorher nach
+  // oben hinausgescrollt hatte. War sie noch zu sehen, bleibt alles stehen:
+  // ein Sprung, den niemand ausgeloest hat, ist genauso irritierend.
+  function changeFilter(next) {
+    setFilter(next)
+    filterGescrollt.current = false
+  }
+
+  // Bewusst in einem Effekt und nicht im Klick-Handler: dort liefe es, bevor
+  // React die neue Hoehe ueberhaupt gesetzt hat, und der Browser wuerde die
+  // Position gleich danach wieder festklemmen. Zwei Bilder spaeter steht die
+  // Seite. „auto" statt „smooth", weil ein weiches Scrollen von der
+  // Hoehenaenderung abgebrochen wird.
+  useEffect(() => {
+    if (filterGescrollt.current) return
+    filterGescrollt.current = true
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const leiste = document.querySelector('.filterbar')
+      if (!leiste) return
+      const oben = leiste.getBoundingClientRect().top
+      if (oben >= 0) return
+      window.scrollBy({ top: oben - 12, behavior: 'auto' })
+    }))
+  }, [filter])
+
   function navigate(p, params = null) {
     if (params) setFilter({ ...EMPTY_FILTER, ...params })
     setPage(p)
@@ -187,22 +220,22 @@ export default function App() {
       <main className="content" key={`${theme}|${palette}`}>
         {page === 'overview' && (
           <Overview data={data} overrides={overrides} onNavigate={navigate}
-            filter={filter} onFilterChange={setFilter}
+            filter={filter} onFilterChange={changeFilter}
             prefs={prefs} onSavePreference={handleSavePreference} />
         )}
         {page === 'recurring' && (
           <StandingOrders data={data} overrides={overrides} onSaveOrders={handleSaveOrders}
-            filter={filter} onFilterChange={setFilter} onNavigate={navigate} />
+            filter={filter} onFilterChange={changeFilter} onNavigate={navigate} />
         )}
         {page === 'analytics' && (
           <Analytics data={data} overrides={overrides} onNavigate={navigate}
-            filter={filter} onFilterChange={setFilter}
+            filter={filter} onFilterChange={changeFilter}
             prefs={prefs} onSavePreference={handleSavePreference} />
         )}
         {page === 'accounts' && <Accounts data={data} onSaveAccounts={handleSaveAccounts} />}
         {page === 'debts' && (
           <Debts data={data} onSaveDebts={handleSaveDebts}
-            filter={filter} onFilterChange={setFilter} onNavigate={navigate} />
+            filter={filter} onFilterChange={changeFilter} onNavigate={navigate} />
         )}
         {page === 'import' && <Import data={data} onSaveOrders={handleSaveOrders} onNavigate={navigate} />}
         {page === 'categories' && (
