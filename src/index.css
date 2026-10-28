@@ -993,6 +993,14 @@ tr.clickable td { transition: background 0.12s; }
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin: 0 0 18px;
 }
+/* Schalter, der fuer eine ganze Seite gilt - steht direkt unter der
+   Filterleiste, damit nicht wieder der Eindruck entsteht, er gehoere zu der
+   einen Karte, in deren Kopfzeile er frueher stand. */
+.seiten-schalter {
+  display: flex; align-items: center; gap: 8px;
+  margin: -8px 0 18px; font-size: 13px; color: var(--text); cursor: pointer;
+}
+.seiten-schalter .muted { font-size: 12px; }
 .filterbar-group { display: flex; align-items: center; gap: 6px; }
 .filterbar-label {
   font-size: 11px; color: var(--text-muted); font-weight: 600;

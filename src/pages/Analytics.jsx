@@ -23,6 +23,11 @@ const splitPersonLabel = (o) => {
 export default function Analytics({
   data, overrides, onNavigate, filter, onFilterChange, prefs, onSavePreference,
 }) {
+  // Ein Schalter fuer die ganze Seite, nicht fuer ein Diagramm. Er stand
+  // frueher in der Kopfzeile des Donuts und wirkte auch nur dort - Treemap,
+  // Personenbalken und „Kosten je Konto" zeigten Sparen unabhaengig davon
+  // weiter an. Jetzt entscheidet er ueberall dasselbe: zaehlt Sparen mit oder
+  // nicht.
   const [includeSavings, setIncludeSavings] = useState(false)
   const [selCat, setSelCat] = useState(null) // Kategorie-Drilldown unterm Donut
 
@@ -56,6 +61,12 @@ export default function Analytics({
     return { rows, total: rows.reduce((s, r) => s + r.monthly, 0) }
   }, [selCat, view.standingOrders, overrides])
 
+  // Art und Kategorie beschreiben Kosten, keine Einnahmen - incomeMatches()
+  // laesst sie darum unangetastet. Im Balkendiagramm stand dadurch bei
+  // „Abos" das volle Monatseinkommen neben ein paar Euro Abokosten, als
+  // waere der Filter nur halb angekommen. Bei so einem Filter bleibt der
+  // Einnahmen-Balken deshalb weg.
+  const kostenFilter = filter?.kind && filter.kind !== 'all' ? true : filter?.category && filter.category !== 'all'
   const persons = useMemo(() => personSummary(view), [view])
   const personBars = {
     labels: persons.map((p) => p.person),
@@ -64,12 +75,18 @@ export default function Analytics({
     // geht, ist aber keine Ausgabe - so sah es aus, als bliebe nichts
     // uebrig. Jetzt ein eigener Balken.
     expenses: persons.map((p) => Number(p.costs.toFixed(2))),
-    savings: persons.map((p) => Number(p.savings.toFixed(2))),
+    savings: includeSavings ? persons.map((p) => Number(p.savings.toFixed(2))) : [],
   }
 
   const byAccount = useMemo(
-    () => monthlyByAccount(view).filter((a) => a.total > 0).sort((a, b) => b.total - a.total),
-    [view],
+    () => monthlyByAccount(view)
+      // `total` schliesst Sparen ein. Ist der Schalter aus, muss es auch aus
+      // der Balkenlaenge und aus der Zahl rechts verschwinden - sonst stimmte
+      // die Summe nicht mehr mit dem ueberein, was der Balken zeigt.
+      .map((a) => (includeSavings ? a : { ...a, savings: 0, total: a.total - a.savings }))
+      .filter((a) => a.total > 0)
+      .sort((a, b) => b.total - a.total),
+    [view, includeSavings],
   )
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
@@ -91,7 +108,8 @@ export default function Analytics({
         }
       })
       .filter((x) => x.value > 0)
-  }, [view.standingOrders, overrides])
+      .filter((x) => includeSavings || !x.savings)
+  }, [view.standingOrders, overrides, includeSavings])
 
   // Abo-Radar: aktive Abos nach Jahresbetrag.
   const abos = useMemo(() => {
@@ -129,15 +147,9 @@ export default function Analytics({
   const sections = {
     donut: (
       <div className="card">
-        <div className="editor-head">
-          <h2 style={{ margin: 0 }}>
-            Kosten nach Kategorie <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat)</span>
-          </h2>
-          <label className="muted" style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input type="checkbox" checked={includeSavings} onChange={(e) => setIncludeSavings(e.target.checked)} />
-            Sparen einbeziehen
-          </label>
-        </div>
+        <h2>
+          Kosten nach Kategorie <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat)</span>
+        </h2>
         <CategoryDonut
           labels={donut.labels}
           values={donut.values}
@@ -170,18 +182,28 @@ export default function Analytics({
     ),
     personBar: (
       <div className="card">
-        <h2>Einkommen, Ausgaben und Sparen je Person</h2>
+        <h2>
+          {kostenFilter ? 'Ausgaben je Person' : 'Einkommen, Ausgaben und Sparen je Person'}
+        </h2>
         <IncomeExpenseBar
           labels={personBars.labels}
           income={personBars.income}
           expenses={personBars.expenses}
           savings={personBars.savings}
+          showIncome={!kostenFilter}
         />
+        {kostenFilter && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Einnahmen bleiben hier weg: „Art" und „Kategorie" beschreiben Kosten, nicht Einnahmen –
+            der volle Monatslohn neben gefilterten Kosten wäre ein schiefer Vergleich.
+          </p>
+        )}
       </div>
     ),
     treemap: (
       <div className="card">
-        <h2>Kosten-Treemap <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(Kachelgröße = Monatsbetrag, Farbe = Kategorie, Sparen gestreift)</span></h2>
+        <h2>Kosten-Treemap <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>
+          (Kachelgröße = Monatsbetrag, Farbe = Kategorie{includeSavings ? ', Sparen gestreift' : ''})</span></h2>
         <CostTreemap items={treemapItems} />
       </div>
     ),
@@ -265,7 +287,8 @@ export default function Analytics({
     ),
     byAccount: (
       <div className="card">
-        <h2>Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>(pro Monat, inkl. Sparen)</span></h2>
+        <h2>Kosten je Konto <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>
+          (pro Monat{includeSavings ? ', inkl. Sparen' : ', ohne Sparen'})</span></h2>
         <div className="hbars">
           {byAccount.map(({ account, fixed, subscription, savings, total }) => (
             <div className="hbar-row clickable" key={account.id} title="Klicken: Posten dieses Kontos anzeigen"
@@ -303,6 +326,13 @@ export default function Analytics({
       </div>
 
       <FilterBar data={data} value={filter} onChange={onFilterChange} />
+
+      {/* Steht bewusst hier und nicht in einer Karte: er gilt fuer jedes
+          Diagramm auf dieser Seite, genau wie die Filterleiste darueber. */}
+      <label className="seiten-schalter">
+        <input type="checkbox" checked={includeSavings} onChange={(e) => setIncludeSavings(e.target.checked)} />
+        Sparen einbeziehen <span className="muted">– gilt für alle Diagramme dieser Seite</span>
+      </label>
 
       <div className="drag-grid">
         {order.map((id) => (

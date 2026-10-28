@@ -22,12 +22,15 @@ import { SAVINGS_CATEGORY } from '../../lib/categories.js'
 // categoryColor(), damit eine selbst gesetzte Farbe für „Sparen" auch hier
 // gilt. Jede Palette verschiebt die Töne, keine die Bedeutung — rot bleibt
 // Ausgaben, und Sparen bleibt nicht rot.
-export default function IncomeExpenseBar({ labels, income, expenses, savings }) {
+// `showIncome` falsch, sobald nach Art oder Kategorie gefiltert wird: solche
+// Filter beschreiben Kosten, nicht Einnahmen (siehe incomeMatches), und der
+// volle Monatslohn neben ein paar Euro Abokosten sah aus, als waere der Filter
+// nur halb angekommen.
+export default function IncomeExpenseBar({ labels, income, expenses, savings, showIncome = true }) {
   const t = tokens()
-  const datasets = [
-    { label: 'Einnahmen', data: income, backgroundColor: t.info, borderRadius: 6 },
-    { label: 'Ausgaben', data: expenses, backgroundColor: t.neg, borderRadius: 6 },
-  ]
+  const datasets = []
+  if (showIncome) datasets.push({ label: 'Einnahmen', data: income, backgroundColor: t.info, borderRadius: 6 })
+  datasets.push({ label: 'Ausgaben', data: expenses, backgroundColor: t.neg, borderRadius: 6 })
   // Ohne Sparposten keinen leeren dritten Balken zeichnen.
   if (savings && savings.some((v) => v > 0)) {
     datasets.push({
