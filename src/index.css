@@ -782,6 +782,15 @@ tbody td:first-child { color: var(--text); }
 .acct-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; flex-shrink: 0; vertical-align: middle; }
 td .acct-dot { vertical-align: baseline; }
 .color-input { width: 46px; min-width: 46px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 7px; background: var(--input-bg); cursor: pointer; }
+/* Zuruecksetzen auf die Palettenfarbe. Steht nur da, wenn es etwas
+   zurueckzunehmen gibt - sonst waere jede Zeile voller Knoepfe. */
+.farbwahl { display: flex; align-items: center; gap: 6px; }
+.farb-zurueck {
+  width: 26px; min-width: 26px; height: 26px; padding: 0; line-height: 1;
+  border: 1px solid var(--border); border-radius: 7px; background: var(--input-bg);
+  color: var(--text-muted); font-size: 15px; cursor: pointer;
+}
+.farb-zurueck:hover { background: var(--surface-2); color: var(--text); }
 .ct-edit {
   cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
   padding: 4px 8px; margin: -4px -8px; border-radius: 7px; min-height: 28px;

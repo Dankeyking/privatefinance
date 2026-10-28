@@ -3,7 +3,7 @@ import RecurringEditor from '../components/RecurringEditor.jsx'
 import { useMedia } from '../lib/useMedia.js'
 import SortTh from '../components/SortTh.jsx'
 import { orderToForm, formToOrder, newOrderId, parseAmountDE } from '../lib/orderForm.js'
-import { accountColor, autoColorSlot } from '../lib/accountColors.js'
+import { accountColor, autoColorSlot, autoSlotOf } from '../lib/accountColors.js'
 import { PALETTES } from '../lib/palettes.js'
 import { sortRows, nextSortState } from '../lib/sorting.js'
 import { downloadBackup, parseBackup, restoreBackup } from '../lib/backup.js'
@@ -303,7 +303,24 @@ export default function Settings({
             <tbody>
               {sortedAccounts.map((a) => (
                 <tr key={a.id}>
-                  <td data-label="Farbe"><input type="color" className="color-input" value={accountColor(a, accounts)} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} /></td>
+                  <td data-label="Farbe">
+                    <div className="farbwahl">
+                      <input type="color" className="color-input" value={accountColor(a, accounts)} onChange={(e) => setRow('accounts', a.id, 'color', e.target.value)} />
+                      {/* Das Feld oben zeigt die aufgeloeste Palettenfarbe. Ein Druck darauf
+                          schreibt einen festen Hex-Wert - ab da folgt das Konto der Palette
+                          nicht mehr. Ohne diesen Knopf gaebe es keinen Weg zurueck. */}
+                      {autoSlotOf(a.color) === null && (
+                        <button
+                          type="button"
+                          className="farb-zurueck"
+                          title="Wieder der Palette folgen"
+                          onClick={() => setRow('accounts', a.id, 'color', autoColorSlot(accounts.findIndex((x) => x.id === a.id)))}
+                        >
+                          ↺
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td data-label="Name"><input value={a.name} onChange={(e) => setRow('accounts', a.id, 'name', e.target.value)} /></td>
                   <td data-label="Inhaber"><input value={a.owner} placeholder={a.type === 'personal' ? 'z. B. Elisa' : 'Gemeinsam'} onChange={(e) => setRow('accounts', a.id, 'owner', e.target.value)} /></td>
                   <td data-label="Typ">

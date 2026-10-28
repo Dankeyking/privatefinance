@@ -47,6 +47,23 @@
 //            und die Hinweisflächen.
 //  Sparen ist in keiner Palette rot.
 //
+//  Welcher Farbton auf welchen Platz kommt, entscheidet jede Palette fuer sich.
+//  Vorher bildeten alle die Zuordnung des Standards ab: Wohnen blau, Freizeit
+//  magenta, Bargeld orange — ueber alle Paletten hinweg blieb jede Kategorie in
+//  einem Band von rund 30 Grad, nur die Saettigung sank (Wohnen 83 % im
+//  Standard, 40 % in Melange). Gleiches Farbrad, weniger Saettigung: das wirkt
+//  wie ein Filter ueber demselben Entwurf, nicht wie ein anderer Entwurf. In
+//  den warmen Paletten (Everforest, Gruvbox, Melange, Flexoki) traegt deshalb
+//  die groesste Flaeche — Wohnen, und der erste Kontoplatz — den Leitton der
+//  Palette selbst; das freigewordene Blau geht an Technik, Bargeld weicht auf
+//  Gold aus. Nord und Catppuccin bleiben, wie sie waren: ihr eigener Charakter
+//  IST kuehl beziehungsweise pastellig, dort passt die Zuordnung schon.
+//
+//  Die Grenze dabei ist die Unterscheidbarkeit. Gemessen wird sie als
+//  kleinster CIE76-Abstand zwischen zwei Datenfarben einer Palette; die vier
+//  warmen liegen danach bei mindestens 13,1 (Kategorien) und 15,9 (Konten) —
+//  der Standard selbst kommt auf 9,3 und 18,4.
+//
 //  Die Palette „standard“ ist die gewohnte Ansicht. Ihre Flächen-, Rahmen- und
 //  Textwerte stehen weiterhin in `index.css` und werden hier NICHT überschrieben
 //  (`ui: null`); nur die Datenwerte kommen von hier. Ihre Töne sind dieselben
@@ -127,10 +144,10 @@ const DATA = {
     },
     light: {
       pos: '#616f01', neg: '#d10c08', warn: '#886200', info: '#2b6f94',
-      series: ['#388ebd', '#da52af', '#7d8f01', '#b07e00', '#b662de', '#309770', '#f7423f', '#7c8a79'],
+      series: ['#a85d12', '#388ebd', '#7d8f01', '#b07e00', '#b662de', '#309770', '#f7423f', '#7c8a79'],
       cat: {
-        Wohnen: '#388ebd', 'Mobilität': '#2e939d', Gesundheit: '#309770', Versicherung: '#b662de',
-        Freizeit: '#da52af', Technik: '#8a69df', Sparen: '#7d8f01', Bargeld: '#dc630a',
+        Wohnen: '#a85d12', 'Mobilität': '#2e939d', Gesundheit: '#309770', Versicherung: '#b662de',
+        Freizeit: '#da52af', Technik: '#388ebd', Sparen: '#7d8f01', Bargeld: '#b07e00',
         Sonstiges: '#7c8a79',
       },
       chart: {
@@ -139,10 +156,10 @@ const DATA = {
     },
     dark: {
       pos: '#A7C080', neg: '#eda2a4', warn: '#DBBC7F', info: '#88c0b8',
-      series: ['#7FBBB3', '#D699B6', '#A7C080', '#DBBC7F', '#cb99d6', '#83C092', '#E67E80', '#88958c'],
+      series: ['#E69875', '#7FBBB3', '#A7C080', '#DBBC7F', '#cb99d6', '#83C092', '#E67E80', '#88958c'],
       cat: {
-        Wohnen: '#7FBBB3', 'Mobilität': '#7fb3bb', Gesundheit: '#83C092', Versicherung: '#cb99d6',
-        Freizeit: '#D699B6', Technik: '#af99d6', Sparen: '#A7C080', Bargeld: '#E69875',
+        Wohnen: '#E69875', 'Mobilität': '#B9DCD9', Gesundheit: '#83C092', Versicherung: '#cb99d6',
+        Freizeit: '#D699B6', Technik: '#7FBBB3', Sparen: '#A7C080', Bargeld: '#DBBC7F',
         Sonstiges: '#88958c',
       },
       chart: {
@@ -178,10 +195,10 @@ const DATA = {
     },
     light: {
       pos: '#66620c', neg: '#9D0006', warn: '#84560f', info: '#076678',
-      series: ['#076678', '#B16286', '#79740E', '#ac7013', '#8F3F71', '#427B58', '#9D0006', '#7C6F64'],
+      series: ['#AF3A03', '#076678', '#79740E', '#B57614', '#8F3F71', '#427B58', '#9D0006', '#7C6F64'],
       cat: {
-        Wohnen: '#076678', 'Mobilität': '#458588', Gesundheit: '#427B58', Versicherung: '#8F3F71',
-        Freizeit: '#B16286', Technik: '#683f8f', Sparen: '#79740E', Bargeld: '#AF3A03',
+        Wohnen: '#AF3A03', 'Mobilität': '#458588', Gesundheit: '#427B58', Versicherung: '#8F3F71',
+        Freizeit: '#B16286', Technik: '#076678', Sparen: '#79740E', Bargeld: '#B57614',
         Sonstiges: '#7C6F64',
       },
       chart: {
@@ -190,10 +207,10 @@ const DATA = {
     },
     dark: {
       pos: '#B8BB26', neg: '#fc7e6f', warn: '#FABD2F', info: '#8bab9f',
-      series: ['#83A598', '#D3869B', '#B8BB26', '#FABD2F', '#d086d3', '#8EC07C', '#FB4934', '#A89984'],
+      series: ['#FE8019', '#83A598', '#B8BB26', '#FABD2F', '#d086d3', '#8EC07C', '#FB4934', '#A89984'],
       cat: {
-        Wohnen: '#83A598', 'Mobilität': '#83a5a4', Gesundheit: '#8EC07C', Versicherung: '#d086d3',
-        Freizeit: '#D3869B', Technik: '#ac86d3', Sparen: '#B8BB26', Bargeld: '#FE8019',
+        Wohnen: '#FE8019', 'Mobilität': '#AFC9C2', Gesundheit: '#8EC07C', Versicherung: '#d086d3',
+        Freizeit: '#D3869B', Technik: '#83A598', Sparen: '#B8BB26', Bargeld: '#FABD2F',
         Sonstiges: '#A89984',
       },
       chart: {
@@ -331,10 +348,10 @@ const DATA = {
     },
     light: {
       pos: '#3A684A', neg: '#BF0021', warn: '#7C5800', info: '#3D6568',
-      series: ['#465AA4', '#904180', '#3A684A', '#8B6300', '#6A4D92', '#3D6568', '#BF0021', '#7D6658'],
+      series: ['#8A4A18', '#465AA4', '#3A684A', '#A06D00', '#7A4A8E', '#3D6568', '#BF0021', '#7D6658'],
       cat: {
-        Wohnen: '#465AA4', 'Mobilität': '#3F6286', Gesundheit: '#3A684A', Versicherung: '#7A4A8E',
-        Freizeit: '#904180', Technik: '#5A58A0', Sparen: '#5C6B22', Bargeld: '#9A4B00',
+        Wohnen: '#8A4A18', 'Mobilität': '#3F6286', Gesundheit: '#3A684A', Versicherung: '#7A4A8E',
+        Freizeit: '#904180', Technik: '#465AA4', Sparen: '#5C6B22', Bargeld: '#A06D00',
         Sonstiges: '#7D6658',
       },
       chart: {
@@ -343,10 +360,10 @@ const DATA = {
     },
     dark: {
       pos: '#85B695', neg: '#DD9386', warn: '#EBC06D', info: '#89B3B6',
-      series: ['#A3A9CE', '#CF9BC2', '#85B695', '#EBC06D', '#B9A2C8', '#89B3B6', '#D47766', '#A9937C'],
+      series: ['#E49B5D', '#A3A9CE', '#85B695', '#EBC06D', '#CBA0D2', '#89B3B6', '#D47766', '#A9937C'],
       cat: {
-        Wohnen: '#8FB0C2', 'Mobilität': '#89B3B6', Gesundheit: '#85B695', Versicherung: '#C49BCB',
-        Freizeit: '#CF9BC2', Technik: '#AAA2CF', Sparen: '#B3BB83', Bargeld: '#E49B5D',
+        Wohnen: '#E49B5D', 'Mobilität': '#89B3B6', Gesundheit: '#85B695', Versicherung: '#B188CB',
+        Freizeit: '#CF9BC2', Technik: '#A3A9CE', Sparen: '#B3BB83', Bargeld: '#EBC06D',
         Sonstiges: '#A9937C',
       },
       chart: {
@@ -382,10 +399,10 @@ const DATA = {
     },
     light: {
       pos: '#536907', neg: '#AF3029', warn: '#664D01', info: '#205EA6',
-      series: ['#205EA6', '#A02F6F', '#536907', '#8E6B01', '#5E409D', '#24837B', '#AF3029', '#6F6E69'],
+      series: ['#9D4310', '#205EA6', '#536907', '#AD8301', '#5E409D', '#24837B', '#AF3029', '#6F6E69'],
       cat: {
-        Wohnen: '#205EA6', 'Mobilität': '#2F968D', Gesundheit: '#1C6C66', Versicherung: '#5E409D',
-        Freizeit: '#A02F6F', Technik: '#735EB5', Sparen: '#66800B', Bargeld: '#BC5215',
+        Wohnen: '#9D4310', 'Mobilität': '#2F968D', Gesundheit: '#1C6C66', Versicherung: '#5E409D',
+        Freizeit: '#A02F6F', Technik: '#205EA6', Sparen: '#66800B', Bargeld: '#AD8301',
         Sonstiges: '#6F6E69',
       },
       chart: {
@@ -394,10 +411,10 @@ const DATA = {
     },
     dark: {
       pos: '#A0AF54', neg: '#F89A8A', warn: '#D0A215', info: '#5ABDAC',
-      series: ['#4385BE', '#CE5D97', '#879A39', '#D0A215', '#8B7EC8', '#3AA99F', '#D14D41', '#9F9D96'],
+      series: ['#DA702C', '#4385BE', '#879A39', '#D0A215', '#8B7EC8', '#3AA99F', '#D14D41', '#9F9D96'],
       cat: {
-        Wohnen: '#4385BE', 'Mobilität': '#5ABDAC', Gesundheit: '#3AA99F', Versicherung: '#8B7EC8',
-        Freizeit: '#CE5D97', Technik: '#A699D0', Sparen: '#879A39', Bargeld: '#DA702C',
+        Wohnen: '#DA702C', 'Mobilität': '#87D3C3', Gesundheit: '#3AA99F', Versicherung: '#8B7EC8',
+        Freizeit: '#CE5D97', Technik: '#4385BE', Sparen: '#879A39', Bargeld: '#D0A215',
         Sonstiges: '#9F9D96',
       },
       chart: {
