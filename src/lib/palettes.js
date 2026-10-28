@@ -17,9 +17,19 @@
 //    Gruvbox     https://github.com/morhetz/gruvbox (colors/gruvbox.vim)
 //    Nord        https://www.nordtheme.com/docs/colors-and-palettes
 //    Catppuccin  https://github.com/catppuccin/palette (palette.json)
+//    Melange     https://github.com/savq/melange-nvim (lua/melange/palettes/)
+//    Flexoki     https://stephango.com/flexoki
 //  Diese Vorlagen bringen sieben bis acht Farbtöne mit, die Oberfläche braucht
 //  siebzehn Plätze (acht Kontofarben, neun Kategorien). Fehlende Zwischentöne
 //  sind aus zwei Nachbartönen der jeweiligen Vorlage gemischt.
+//
+//  Flexoki ist die Ausnahme: sie bringt statt einzelner Töne eine
+//  durchgehende Reihe von 100 bis 950 je Farbton mit. Dort ist nichts
+//  gemischt — wo ein Wert die 4,5:1 verfehlte, steht die nächste Stufe
+//  derselben Reihe (Ocker 600 → 800 im Hellen, Rot 400 → 200 im Dunklen).
+//  Melange hat nur vier Stufen und keine hellere Rotvariante, deshalb ist
+//  sein Rot im dunklen Design in der Helligkeit nachgezogen — dasselbe, was
+//  bei Everforest und Gruvbox schon nötig war.
 //
 //  Jeder Wert, der als Text auf einer Fläche steht, ist auf mindestens 4,5:1
 //  gegen Karte, Seitenhintergrund und Chipfläche gerechnet (WCGA 2.1, geprüft,
@@ -290,6 +300,108 @@ const DATA = {
       },
       chart: {
         grid: '#3f4153', tick: '#A6ADC8', tooltipBg: '#11111B', tooltipFg: '#CDD6F4', muted: '#5b5e73',
+      },
+    },
+  },
+  // ---------- Melange — Dunkelbraun, Creme, Ocker
+  melange: {
+    label: 'Melange',
+    note: 'Dunkelbraun, Creme, Ocker',
+    ui: {
+      light: {
+        content: '#E4DCD6', card: '#F2ECE7', surface2: '#EAE3DD', surfaceHover: '#EDE6E1',
+        border: '#DCD4CE', borderStrong: '#C6BBB2', inputBg: '#F2ECE7', menuBg: '#F2ECE7',
+        sidebarBg: '#292522', sidebarBg2: '#34302C', sidebarText: '#B9A593',
+        sidebarTextActive: '#F2ECE7', text: '#54433A', muted: '#715C50', accent: '#815800',
+        accent2: '#9A4B00', accentSoft: '#e2d7c7', accentFg: '#ffffff', chipPosFg: '#386548',
+        chipNegFg: '#B0001E', pillFix: '#3D6568', pillFixFg: '#3B6265', pillSub: '#904180',
+        pillSubFg: '#8C3F7D', pillUmb: '#465AA4', pillUmbFg: '#4458A0', pillEnded: '#7D6658',
+        pillEndedFg: '#6E5A4D',
+      },
+      dark: {
+        content: '#292522', card: '#34302C', surface2: '#403A36', surfaceHover: '#2F2B28',
+        border: '#403A36', borderStrong: '#4D4641', inputBg: '#2B2724', menuBg: '#34302C',
+        sidebarBg: '#201D1B', sidebarBg2: '#292522', sidebarText: '#C1A78E',
+        sidebarTextActive: '#ECE1D7', text: '#ECE1D7', muted: '#C1A78E', accent: '#EBC06D',
+        accent2: '#C1A78E', accentSoft: '#554a38', accentFg: '#292522', chipPosFg: '#8FBC9D',
+        chipNegFg: '#E1A196', pillFix: '#89B3B6', pillFixFg: '#92B9BC', pillSub: '#CF9BC2',
+        pillSubFg: '#D2A2C6', pillUmb: '#A3A9CE', pillUmbFg: '#AAAFD2', pillEnded: '#A9937C',
+        pillEndedFg: '#BBAA98',
+      },
+    },
+    light: {
+      pos: '#3A684A', neg: '#BF0021', warn: '#7C5800', info: '#3D6568',
+      series: ['#465AA4', '#904180', '#3A684A', '#8B6300', '#6A4D92', '#3D6568', '#BF0021', '#7D6658'],
+      cat: {
+        Wohnen: '#465AA4', 'Mobilität': '#3F6286', Gesundheit: '#3A684A', Versicherung: '#7A4A8E',
+        Freizeit: '#904180', Technik: '#5A58A0', Sparen: '#5C6B22', Bargeld: '#9A4B00',
+        Sonstiges: '#7D6658',
+      },
+      chart: {
+        grid: '#DCD4CE', tick: '#7D6658', tooltipBg: '#292522', tooltipFg: '#ECE1D7', muted: '#B8ABA1',
+      },
+    },
+    dark: {
+      pos: '#85B695', neg: '#DD9386', warn: '#EBC06D', info: '#89B3B6',
+      series: ['#A3A9CE', '#CF9BC2', '#85B695', '#EBC06D', '#B9A2C8', '#89B3B6', '#D47766', '#A9937C'],
+      cat: {
+        Wohnen: '#8FB0C2', 'Mobilität': '#89B3B6', Gesundheit: '#85B695', Versicherung: '#C49BCB',
+        Freizeit: '#CF9BC2', Technik: '#AAA2CF', Sparen: '#B3BB83', Bargeld: '#E49B5D',
+        Sonstiges: '#A9937C',
+      },
+      chart: {
+        grid: '#3A352F', tick: '#C1A78E', tooltipBg: '#201D1B', tooltipFg: '#ECE1D7', muted: '#6E635A',
+      },
+    },
+  },
+  // ---------- Flexoki — Papier und Tinte, warme Graustufen
+  flexoki: {
+    label: 'Flexoki',
+    note: 'Papier und Tinte, warme Graustufen',
+    ui: {
+      light: {
+        content: '#F2F0E5', card: '#FFFCF0', surface2: '#E6E4D9', surfaceHover: '#F7F4E9',
+        border: '#DAD8CE', borderStrong: '#CECDC3', inputBg: '#FFFCF0', menuBg: '#FFFCF0',
+        sidebarBg: '#1C1B1A', sidebarBg2: '#282726', sidebarText: '#B7B5AC',
+        sidebarTextActive: '#FFFCF0', text: '#100F0F', muted: '#575653', accent: '#AF3029',
+        accent2: '#9D4310', accentSoft: '#f4dfd4', accentFg: '#FFFCF0', chipPosFg: '#536907',
+        chipNegFg: '#AF3029', pillFix: '#205EA6', pillFixFg: '#205EA6', pillSub: '#A02F6F',
+        pillSubFg: '#A02F6F', pillUmb: '#5E409D', pillUmbFg: '#5E409D', pillEnded: '#6F6E69',
+        pillEndedFg: '#575653',
+      },
+      dark: {
+        content: '#1C1B1A', card: '#282726', surface2: '#343331', surfaceHover: '#211F1F',
+        border: '#403E3C', borderStrong: '#575653', inputBg: '#1F1E1D', menuBg: '#2B2A29',
+        sidebarBg: '#100F0F', sidebarBg2: '#1C1B1A', sidebarText: '#9F9D96',
+        sidebarTextActive: '#CECDC3', text: '#CECDC3', muted: '#9F9D96', accent: '#EC8B49',
+        accent2: '#D0A215', accentSoft: '#4b392c', accentFg: '#100F0F', chipPosFg: '#A0AF54',
+        chipNegFg: '#FFCABB', pillFix: '#4385BE', pillFixFg: '#92BFDB', pillSub: '#CE5D97',
+        pillSubFg: '#E47DA8', pillUmb: '#8B7EC8', pillUmbFg: '#A699D0', pillEnded: '#9F9D96',
+        pillEndedFg: '#B7B5AC',
+      },
+    },
+    light: {
+      pos: '#536907', neg: '#AF3029', warn: '#664D01', info: '#205EA6',
+      series: ['#205EA6', '#A02F6F', '#536907', '#8E6B01', '#5E409D', '#24837B', '#AF3029', '#6F6E69'],
+      cat: {
+        Wohnen: '#205EA6', 'Mobilität': '#2F968D', Gesundheit: '#1C6C66', Versicherung: '#5E409D',
+        Freizeit: '#A02F6F', Technik: '#735EB5', Sparen: '#66800B', Bargeld: '#BC5215',
+        Sonstiges: '#6F6E69',
+      },
+      chart: {
+        grid: '#E6E4D9', tick: '#6F6E69', tooltipBg: '#1C1B1A', tooltipFg: '#FFFCF0', muted: '#B7B5AC',
+      },
+    },
+    dark: {
+      pos: '#A0AF54', neg: '#F89A8A', warn: '#D0A215', info: '#5ABDAC',
+      series: ['#4385BE', '#CE5D97', '#879A39', '#D0A215', '#8B7EC8', '#3AA99F', '#D14D41', '#9F9D96'],
+      cat: {
+        Wohnen: '#4385BE', 'Mobilität': '#5ABDAC', Gesundheit: '#3AA99F', Versicherung: '#8B7EC8',
+        Freizeit: '#CE5D97', Technik: '#A699D0', Sparen: '#879A39', Bargeld: '#DA702C',
+        Sonstiges: '#9F9D96',
+      },
+      chart: {
+        grid: '#343331', tick: '#9F9D96', tooltipBg: '#100F0F', tooltipFg: '#CECDC3', muted: '#575653',
       },
     },
   },
