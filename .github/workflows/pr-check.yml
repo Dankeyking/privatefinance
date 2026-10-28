@@ -1,0 +1,45 @@
+name: Check pull request
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Wie im Dockerfile: ohne generierten Client laesst sich der Server nicht laden.
+      - name: Prisma client
+        run: npx prisma generate
+
+      # Faengt eine @media-Regel ohne schliessende Klammer - der Vite-Build tut das nicht.
+      - name: CSS structure
+        run: npm run css-pruefen
+
+      - name: Build
+        run: npm run build
+
+      # Der Build fasst nur das Frontend an; Server und MCP wuerden erst zur Laufzeit knallen.
+      - name: Syntax of server and MCP
+        run: |
+          for f in server/*.js mcp/*.js; do
+            node --check "$f" && echo "ok  $f"
+          done
+
+      # Erst ab dem Paletten-Branch vorhanden, deshalb --if-present.
+      - name: Contrast check
+        run: npm run kontrast --if-present
