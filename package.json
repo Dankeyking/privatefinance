@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "kontrast": "node scripts/kontrast.mjs",
     "mcp": "node mcp/finance-server.js",
     "server": "node server/index.js",
     "css-pruefen": "node scripts/css-pruefen.mjs"

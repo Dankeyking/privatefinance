@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCategories, categoryColor, categoryLabel } from '../lib/categoryStore.js'
+import { readableOn } from '../lib/palettes.js'
 
 // Inline editierbares Kategorie-Tag. Klick öffnet die Auswahl.
 // `isOverride` markiert manuell gesetzte Kategorien.
@@ -22,7 +23,7 @@ export default function CategoryTag({ value, isOverride, onChange }) {
       <button
         type="button"
         className="chip"
-        style={{ background: categoryColor(value) }}
+        style={{ background: categoryColor(value), color: readableOn(categoryColor(value)) }}
         onClick={() => setOpen((o) => !o)}
         title="Kategorie ändern"
       >

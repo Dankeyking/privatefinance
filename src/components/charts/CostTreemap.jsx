@@ -2,6 +2,7 @@ import './setup.js'
 import { useMemo } from 'react'
 import { Chart } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
+import { tokens, readableOn, tintOn, legibleOn } from '../../lib/palettes.js'
 import { categoryColor } from '../../lib/categoryStore.js'
 import { SAVINGS_CATEGORY } from '../../lib/categories.js'
 
@@ -33,6 +34,11 @@ function withAlpha(hex, alpha) {
 const stripeCache = new Map()
 function stripes(color) {
   if (stripeCache.has(color)) return stripeCache.get(color)
+  // Streifenfarbe je Kachelfarbe: fest weiße Streifen verschwanden auf einer
+  // hellen Sparfarbe. readableOn liefert hell oder dunkel, je nachdem.
+  const strich = readableOn(color) === '#ffffff'
+    ? 'rgba(255, 255, 255, 0.34)'
+    : 'rgba(0, 0, 0, 0.26)'
   let pattern = color
   try {
     const size = 9
@@ -42,7 +48,7 @@ function stripes(color) {
     const g = canvas.getContext('2d')
     g.fillStyle = color
     g.fillRect(0, 0, size, size)
-    g.strokeStyle = 'rgba(255, 255, 255, 0.34)'
+    g.strokeStyle = strich
     g.lineWidth = 2.5
     g.beginPath()
     // Drei Linien, damit das Muster über die Kachelkanten hinweg durchläuft.
@@ -65,8 +71,13 @@ const isBucket = (raw) => raw?.l === 0
 const itemOf = (raw) => (raw?._data?.children ? raw._data.children[0] : raw?._data)
 
 export default function CostTreemap({ items }) {
+  const t = tokens()
   const savColor = categoryColor(SAVINGS_CATEGORY)
-  const dark = typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark'
+  // Blockkacheln als deckende Tönung auf der Kartenfläche statt als rgba():
+  // so steht fest, worauf die Überschrift darin steht, und sie lässt sich
+  // darauf lesbar rechnen.
+  const bgSav = tintOn(savColor, t.card, 0.2)
+  const bgCost = tintOn(t.chart.tick, t.card, 0.16)
 
   const prepared = useMemo(() => {
     const list = (items || []).filter((i) => i.value > 0)
@@ -99,7 +110,7 @@ export default function CostTreemap({ items }) {
     backgroundColor: (ctx) => {
       if (ctx.type !== 'data') return 'transparent'
       if (isBucket(ctx.raw)) {
-        return ctx.raw.g === BUCKET_SAV ? withAlpha(savColor, 0.2) : 'rgba(148, 163, 184, 0.16)'
+        return ctx.raw.g === BUCKET_SAV ? bgSav : bgCost
       }
       const item = itemOf(ctx.raw)
       if (!item) return 'transparent'
@@ -108,13 +119,19 @@ export default function CostTreemap({ items }) {
     borderWidth: (ctx) => (ctx.type === 'data' && isBucket(ctx.raw) ? 1 : 0),
     borderColor: (ctx) => {
       if (ctx.type !== 'data' || !isBucket(ctx.raw)) return 'transparent'
-      return ctx.raw.g === BUCKET_SAV ? withAlpha(savColor, 0.6) : 'rgba(148, 163, 184, 0.4)'
+      return ctx.raw.g === BUCKET_SAV
+        ? tintOn(savColor, t.card, 0.6)
+        : tintOn(t.chart.tick, t.card, 0.4)
     },
     captions: {
       display: true,
       align: 'left',
       padding: 5,
-      color: (ctx) => (ctx.raw?.g === BUCKET_SAV ? (dark ? '#4ade80' : savColor) : (dark ? '#94a3b8' : '#475569')),
+      // Die Überschrift behält ihre Bedeutungsfarbe, wird aber so weit
+      // nachgezogen, dass sie auf der getönten Blockkachel lesbar bleibt.
+      color: (ctx) => (ctx.raw?.g === BUCKET_SAV
+        ? legibleOn(savColor, bgSav)
+        : legibleOn(t.chart.tick, bgCost)),
       font: { size: 12, weight: '700', family: FONT },
       formatter: (ctx) => {
         const sum = ctx.raw?.g === BUCKET_SAV ? savTotal : costTotal
@@ -124,7 +141,13 @@ export default function CostTreemap({ items }) {
     labels: {
       display: true,
       overflow: 'hidden',
-      color: '#fff',
+      // Nicht pauschal weiß: im dunklen Design sind die Kategoriefarben die
+      // helleren Varianten, auf denen weiße Schrift untergeht — und auch im
+      // hellen Design war Weiß auf Gelb (#ca8a04) mit 2,9:1 zu wenig.
+      color: (ctx) => {
+        const item = itemOf(ctx.raw)
+        return readableOn(item ? (item.savings ? savColor : item.color) : t.card)
+      },
       font: { size: 11, weight: '600', family: FONT },
       formatter: (ctx) => {
         const item = itemOf(ctx.raw)
@@ -145,7 +168,9 @@ export default function CostTreemap({ items }) {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#0f172a',
+        backgroundColor: t.chart.tooltipBg,
+        titleColor: t.chart.tooltipFg,
+        bodyColor: t.chart.tooltipFg,
         padding: 10,
         cornerRadius: 8,
         displayColors: false,
@@ -174,7 +199,15 @@ export default function CostTreemap({ items }) {
         {costTotal > 0 && <span>Kosten <strong>{formatEUR(costTotal)}</strong>/Monat</span>}
         {savTotal > 0 && (
           <span>
-            <span className="tm-swatch" style={{ background: withAlpha(savColor, 0.95), backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.34) 0 2px, transparent 2px 5px)' }} />
+            <span
+              className="tm-swatch"
+              style={{
+                background: withAlpha(savColor, 0.95),
+                backgroundImage: `repeating-linear-gradient(45deg, ${
+                  readableOn(savColor) === '#ffffff' ? 'rgba(255,255,255,0.34)' : 'rgba(0,0,0,0.26)'
+                } 0 2px, transparent 2px 5px)`,
+              }}
+            />
             Sparen <strong>{formatEUR(savTotal)}</strong>/Monat
           </span>
         )}

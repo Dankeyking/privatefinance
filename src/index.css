@@ -44,6 +44,22 @@
   --risk-soft: #fef2f2; --risk-border: #fecaca;
   --info-soft: #eff6ff; --info-border: #bfdbfe; --info-text: #1e40af;
 
+  /* Schrift auf farbigen Flächen. Früher stand überall fest #fff — das
+     stimmt nur, solange der Akzent dunkel genug ist. Eine Palette mit hellem
+     Akzent (Beige, Oliv) braucht hier dunkle Schrift, sonst verschwindet sie.
+     palettes.js setzt diese Werte je Palette; hier stehen die der Standard-
+     Palette. */
+  --accent-fg: #ffffff;
+  --neg-fg: #ffffff;
+  /* Sidebar und Hero-Kachel sind in jeder Palette dunkel — eigene Werte,
+     damit der Akzent dort hell genug bleibt. */
+  --on-dark: #ffffff;
+  --sidebar-accent: #8da4ff;
+  --on-dark-neg: #fca5a5;
+  --hero-warn-bg: #3b2a08;
+  --hero-warn-text: #e9c680;
+  --hero-warn-value: #fbbf24;
+
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 1px 2px rgba(20, 27, 52, 0.05), 0 4px 14px rgba(20, 27, 52, 0.05);
@@ -93,6 +109,9 @@
   --risk-soft: rgba(248, 113, 113, 0.09); --risk-border: rgba(248, 113, 113, 0.35);
   --info-soft: rgba(96, 165, 250, 0.1);  --info-border: rgba(96, 165, 250, 0.35); --info-text: #93c5fd;
 
+  --neg-fg: #17202a;
+  --hero-warn-bg: #2a1f0d;
+
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
@@ -133,11 +152,11 @@ body {
   gap: 10px;
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--on-dark);
   padding: 0 8px 22px;
   letter-spacing: -0.02em;
 }
-.sidebar .brand-name span { color: #8da4ff; }
+.sidebar .brand-name span { color: var(--sidebar-accent); }
 .brand-mark {
   display: inline-flex;
   align-items: center;
@@ -148,9 +167,9 @@ body {
   border-radius: 10px;
   font-size: 17px;
   font-weight: 800;
-  color: #fff;
+  color: var(--accent-fg);
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 4px 12px rgba(76, 110, 245, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
@@ -161,7 +180,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: rgba(170, 184, 206, 0.55);
+  color: color-mix(in srgb, var(--sidebar-text) 55%, transparent);
   padding: 0 12px 5px;
 }
 
@@ -182,12 +201,12 @@ body {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.nav button:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.nav button:hover { background: rgba(255, 255, 255, 0.06); color: var(--on-dark); }
 .nav button.active {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
+  color: var(--accent-fg);
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(76, 110, 245, 0.35);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .nav .ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; opacity: 0.9; }
 
@@ -198,7 +217,7 @@ body {
   justify-content: center;
   gap: 8px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
+  color: var(--accent-fg);
   border: none;
   padding: 12px;
   border-radius: 10px;
@@ -207,7 +226,7 @@ body {
   font-family: inherit;
   cursor: pointer;
   transition: filter 0.15s, box-shadow 0.15s;
-  box-shadow: 0 4px 14px rgba(76, 110, 245, 0.3);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .sidebar .export-btn:hover { filter: brightness(1.08); }
 .sidebar .export-hint {
@@ -245,7 +264,7 @@ body {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.theme-toggle:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.12); color: var(--on-dark); }
 
 /* --- Content -------------------------------------------------------------- */
 .content {
@@ -365,7 +384,9 @@ select, .btn {
   padding: 4px 11px;
   font-size: 12.5px;
   font-weight: 600;
-  color: #fff;
+  /* Schriftfarbe setzt CategoryTag.jsx: sie steht auf der Kategoriefarbe und
+     muss je Farbe hell oder dunkel sein (im dunklen Design sind die
+     Kategoriefarben die helleren Varianten). */
   cursor: pointer;
 }
 .cat-tag .chip .caret { opacity: 0.8; font-size: 10px; }
@@ -524,7 +545,7 @@ select, .btn {
 }
 .timeline-item.in .tl-day { background: var(--chip-pos-bg); color: var(--pos); }
 .timeline-item.out .tl-day { background: var(--chip-neg-bg); color: var(--neg); }
-.timeline-item.risk .tl-day { background: var(--neg); color: #fff; }
+.timeline-item.risk .tl-day { background: var(--neg); color: var(--neg-fg); }
 .tl-content {
   flex: 1;
   border: 1px solid var(--border);
@@ -551,7 +572,8 @@ select, .btn {
 .cash-remaining { font-size: 13px; font-weight: 600; color: var(--warn); white-space: nowrap; }
 .cash-remaining.done { color: var(--pos); }
 .cash-bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
-.cash-fill { height: 100%; background: #ca8a04; border-radius: 999px; transition: width 0.3s ease; }
+/* Bargeld: dieselbe Farbe wie die Kategorie, damit sie der Palette folgt. */
+.cash-fill { height: 100%; background: var(--cat-bargeld); border-radius: 999px; transition: width 0.3s ease; }
 
 /* --- Meine Daten / Editor -------------------------------------------------- */
 .privacy-note {
@@ -588,10 +610,10 @@ select, .btn {
 .btn.add:hover { border-color: var(--accent); background: var(--accent-soft); }
 .settings-actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-fg); border: none;
   padding: 11px 22px; border-radius: 9px; font-weight: 600; font-size: 14px;
   font-family: inherit; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(76, 110, 245, 0.25);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .btn-primary:hover { filter: brightness(1.08); }
 .saved-hint { color: var(--pos); font-weight: 600; font-size: 13.5px; }
@@ -611,10 +633,10 @@ select, .btn {
     z-index: 40;
     width: 100%;
     background: var(--sidebar-bg);
-    color: #fff;
+    color: var(--on-dark);
     padding: 12px 16px;
   }
-  .hamburger { background: transparent; border: none; color: #fff; font-size: 22px; cursor: pointer; padding: 0 4px; }
+  .hamburger { background: transparent; border: none; color: var(--on-dark); font-size: 22px; cursor: pointer; padding: 0 4px; }
   .topbar-brand { font-weight: 700; font-size: 17px; }
   .topbar-brand span { color: var(--accent); }
 
@@ -633,7 +655,7 @@ select, .btn {
   .sidebar-close {
     display: inline-block;
     margin-left: auto;
-    background: transparent; border: none; color: #94a3b8;
+    background: transparent; border: none; color: var(--text-muted);
     font-size: 18px; cursor: pointer;
   }
   .nav-overlay {
@@ -679,14 +701,14 @@ select, .btn {
 .hbar-track { display: flex; height: 18px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
 .hbar-fill { height: 100%; }
 .hbar-fill.fix { background: var(--accent); }
-.hbar-fill.sub { background: #db2777; }
-.hbar-fill.sav { background: #16a34a; }
+.hbar-fill.sub { background: var(--cat-freizeit); }
+.hbar-fill.sav { background: var(--cat-sparen); }
 .hbar-value { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
 .legend-dot.fix { background: var(--accent); }
-.legend-dot.sub { background: #db2777; }
-.legend-dot.sav { background: #16a34a; }
+.legend-dot.sub { background: var(--cat-freizeit); }
+.legend-dot.sav { background: var(--cat-sparen); }
 
 .joint-picker { font-size: 13px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
 
@@ -909,7 +931,7 @@ tr:hover .ct-del { opacity: 1; }
   background: var(--input-bg); color: var(--text-muted);
 }
 .sort-chip:hover { border-color: var(--border-strong); }
-.sort-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sort-chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 
 /* Sortierbare Tabellen-Header (Meine Daten, Fixkosten & Abos) */
 .sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -998,7 +1020,7 @@ tr.clickable td { transition: background 0.12s; }
               transform 0.14s cubic-bezier(0.23, 1, 0.32, 1);
 }
 .chip:hover { border-color: var(--border-strong); }
-.chip.on { background: var(--sidebar-bg); border-color: var(--sidebar-bg); color: #fff; }
+.chip.on { background: var(--sidebar-bg); border-color: var(--sidebar-bg); color: var(--on-dark); }
 .chip-select { padding-right: 10px; }
 .chip-reset { color: var(--text-muted); }
 
@@ -1008,7 +1030,7 @@ tr.clickable td { transition: background 0.12s; }
 .chip-badge {
   display: inline-grid; place-items: center; min-width: 18px; height: 18px;
   padding: 0 5px; border-radius: 999px; font-size: 11px; font-weight: 700;
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--accent-fg);
 }
 .chip-filter.on .chip-badge { background: rgba(255, 255, 255, 0.22); }
 .filterbar-summary {
@@ -1076,7 +1098,7 @@ tr.clickable td { transition: background 0.12s; }
 }
 .bento-hero {
   grid-column: span 2; grid-row: span 2;
-  background: var(--sidebar-bg); color: #fff;
+  background: var(--sidebar-bg); color: var(--on-dark);
   border-radius: 22px; padding: 26px;
   display: flex; flex-direction: column; justify-content: space-between;
   min-height: 252px;
@@ -1087,7 +1109,7 @@ tr.clickable td { transition: background 0.12s; }
   letter-spacing: -0.035em; line-height: 1.05; margin-top: 6px;
   font-variant-numeric: tabular-nums;
 }
-.bento-hero-value.neg { color: #fca5a5; }
+.bento-hero-value.neg { color: var(--on-dark-neg); }
 .bento-hero-sub { margin: 10px 0 0; color: var(--sidebar-text); font-size: 13px; max-width: 46ch; }
 .bento-hero-split { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .bento-person {
@@ -1104,7 +1126,7 @@ div.bento-person:hover { background: rgba(255, 255, 255, 0.09); }
   text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
 }
 .bento-person-value {
-  display: block; font-size: 19px; font-weight: 700; color: #fff; margin-top: 3px;
+  display: block; font-size: 19px; font-weight: 700; color: var(--on-dark); margin-top: 3px;
   font-variant-numeric: tabular-nums;
 }
 .bento-tile {
@@ -1226,11 +1248,10 @@ body { transition: background-color 180ms ease, color 180ms ease; }
 .chip-input::placeholder { color: var(--text-muted); }
 
 /* Warn-Variante der Hero-Kachel (Schulden). */
-.bento-hero.warn { background: #3b2a08; }
-[data-theme='dark'] .bento-hero.warn { background: #2a1f0d; }
+.bento-hero.warn { background: var(--hero-warn-bg); }
 .bento-hero.warn .bento-hero-label,
-.bento-hero.warn .bento-hero-sub { color: #e9c680; }
-.bento-hero.warn .bento-hero-value { color: #fbbf24; }
+.bento-hero.warn .bento-hero-sub { color: var(--hero-warn-text); }
+.bento-hero.warn .bento-hero-value { color: var(--hero-warn-value); }
 
 /* Beträge überall mit Tabellenziffern: Spalten fluchten, Zahlen springen beim
    Filtern nicht mehr in der Breite. */
@@ -1340,3 +1361,40 @@ body { transition: background-color 180ms ease, color 180ms ease; }
 .cm-seg { display: flex; flex-wrap: wrap; gap: 6px; }
 .cm-note { margin: -4px 0 0; font-size: 12.5px; color: var(--text-muted); }
 .cm-delete { color: var(--neg); border-color: var(--neg); justify-content: center; margin-top: 4px; }
+
+/* --- Farbpalette wählen (Meine Daten) ------------------------------------- */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 10px;
+}
+.palette-option {
+  display: flex; align-items: center; gap: 13px;
+  padding: 12px 14px;
+  font-family: inherit; text-align: left; cursor: pointer;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.14s ease, background 0.14s ease,
+              transform 0.14s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.palette-option:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.palette-option:active { transform: scale(0.985); }
+.palette-option.on { border-color: var(--accent); background: var(--accent-soft); }
+/* Die Auswahl darf nicht allein an der Farbe hängen — ein Haken daneben. */
+.palette-option.on .palette-name::after { content: ' ✓'; color: var(--accent); }
+
+/* Zwei Reihen Tupfer: oben die helle Fassung, unten die dunkle. */
+.palette-swatches { display: grid; gap: 3px; flex-shrink: 0; }
+.palette-row { display: flex; gap: 3px; }
+.palette-dot {
+  width: 15px; height: 15px; border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+}
+.palette-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.palette-name { font-size: 14px; font-weight: 600; }
+.palette-note { font-size: 12px; color: var(--text-muted); }
+
+@media (max-width: 860px) {
+  .palette-grid { grid-template-columns: 1fr; }
+}

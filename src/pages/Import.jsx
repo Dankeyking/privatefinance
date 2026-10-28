@@ -276,8 +276,9 @@ export default function Import({ data, onSaveOrders, onNavigate }) {
         </div>
       )}
 
+      {/* Fest helle Werte (#bbf7d0/#f0fdf4) leuchteten im dunklen Design. */}
       {done != null && (
-        <div className="card mt" style={{ borderColor: '#bbf7d0', background: '#f0fdf4' }}>
+        <div className="card mt" style={{ borderColor: 'var(--ok-border)', background: 'var(--ok-soft)' }}>
           <strong style={{ color: 'var(--pos)' }}>✓ {done} Posten übernommen.</strong>{' '}
           <button className="btn" style={{ marginLeft: 8 }} onClick={() => onNavigate?.('overview')}>
             Zur Übersicht

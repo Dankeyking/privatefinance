@@ -1,6 +1,7 @@
 import './setup.js'
 import { Bar } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
+import { tokens } from '../../lib/palettes.js'
 import { categoryColor } from '../../lib/categoryStore.js'
 import { SAVINGS_CATEGORY } from '../../lib/categories.js'
 
@@ -15,14 +16,26 @@ import { SAVINGS_CATEGORY } from '../../lib/categories.js'
 // dieses Grün und sind dafür auf das frei gewordene Blau gewechselt: zwei
 // Grüntöne im selben Diagramm wären schlechter lesbar als ein Tausch, und
 // Einnahmen kommen nur hier vor, Sparen überall.
+//
+// Alle drei Farben kommen aus der gewählten Palette. Das Blau ist `--info`:
+// der dritte Datenton, bewusst weder grün noch rot. Die Sparfarbe kommt über
+// categoryColor(), damit eine selbst gesetzte Farbe für „Sparen" auch hier
+// gilt. Jede Palette verschiebt die Töne, keine die Bedeutung — rot bleibt
+// Ausgaben, und Sparen bleibt nicht rot.
 export default function IncomeExpenseBar({ labels, income, expenses, savings }) {
+  const t = tokens()
   const datasets = [
-    { label: 'Einnahmen', data: income, backgroundColor: '#2563eb', borderRadius: 6 },
-    { label: 'Ausgaben', data: expenses, backgroundColor: '#dc2626', borderRadius: 6 },
+    { label: 'Einnahmen', data: income, backgroundColor: t.info, borderRadius: 6 },
+    { label: 'Ausgaben', data: expenses, backgroundColor: t.neg, borderRadius: 6 },
   ]
   // Ohne Sparposten keinen leeren dritten Balken zeichnen.
   if (savings && savings.some((v) => v > 0)) {
-    datasets.push({ label: 'Sparen', data: savings, backgroundColor: categoryColor(SAVINGS_CATEGORY), borderRadius: 6 })
+    datasets.push({
+      label: 'Sparen',
+      data: savings,
+      backgroundColor: categoryColor(SAVINGS_CATEGORY),
+      borderRadius: 6,
+    })
   }
 
   const data = { labels, datasets }
@@ -39,8 +52,8 @@ export default function IncomeExpenseBar({ labels, income, expenses, savings }) 
     },
     scales: {
       // Die Gitterfarbe war fest hell (#eef2f7) und leuchtete im dunklen
-      // Design weiss ueber dem Diagramm. Halbdurchsichtig passt zu beidem.
-      y: { ticks: { callback: (v) => `${v} €` }, grid: { color: 'rgba(148, 163, 184, 0.25)' } },
+      // Design weiss ueber dem Diagramm. Jetzt kommt sie aus der Palette.
+      y: { ticks: { callback: (v) => `${v} €` }, grid: { color: t.chart.grid } },
       x: { grid: { display: false } },
     },
   }

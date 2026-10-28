@@ -1,6 +1,7 @@
 import './setup.js'
 import { Chart } from 'react-chartjs-2'
 import { formatEUR } from '../../lib/normalize.js'
+import { tokens } from '../../lib/palettes.js'
 
 // Animiertes Sankey-Diagramm: Flussbreite ∝ monatlicher Betrag.
 // Optional interaktiv: `selected` ({from,to}|null) hebt einen Fluss hervor
@@ -11,8 +12,9 @@ export default function SankeyFlow({ flows, nodeColors, columns, labels, selecte
     return <p className="muted">Keine Flussdaten vorhanden.</p>
   }
 
-  const colorOf = (name) => nodeColors[name] || '#94a3b8'
-  const MUTED = 'rgba(148, 163, 184, 0.3)'
+  const t = tokens()
+  const colorOf = (name) => nodeColors[name] || t.chart.tick
+  const MUTED = t.chart.muted
   const isSel = (f) => selected && f && f.from === selected.from && f.to === selected.to
   const anySel = Boolean(selected)
 
@@ -62,7 +64,9 @@ export default function SankeyFlow({ flows, nodeColors, columns, labels, selecte
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#0f172a',
+        backgroundColor: t.chart.tooltipBg,
+        titleColor: t.chart.tooltipFg,
+        bodyColor: t.chart.tooltipFg,
         padding: 10,
         cornerRadius: 8,
         callbacks: {

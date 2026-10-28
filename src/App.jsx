@@ -18,9 +18,24 @@ import {
 } from './lib/storage.js'
 import { hydrateCategories } from './lib/categoryStore.js'
 import { EMPTY_FILTER } from './lib/viewFilter.js'
+import {
+  applyPalette, tokens, isPalette, DEFAULT_PALETTE, PALETTE_PREF_KEY,
+} from './lib/palettes.js'
 
 // Design (hell/dunkel): gespeicherte Wahl > Systemeinstellung.
 const THEME_KEY = 'pf_theme'
+// Letzte Palette zusätzlich im Browser, nur als Startwert gegen das Aufblitzen
+// der Standardfarben: die Einstellungen kommen erst nach dem ersten Bild aus
+// der Datenbank. Entschieden wird weiterhin in der Datenbank — auf einem
+// neuen Gerät ist dieser Wert leer und die gespeicherte Wahl greift.
+const PALETTE_CACHE_KEY = 'pf_palette'
+function initialPalette() {
+  try {
+    const saved = localStorage.getItem(PALETTE_CACHE_KEY)
+    if (isPalette(saved)) return saved
+  } catch { /* ignore */ }
+  return DEFAULT_PALETTE
+}
 function initialTheme() {
   try {
     const saved = localStorage.getItem(THEME_KEY)
@@ -46,13 +61,32 @@ export default function App() {
   const [prefs, setPrefs] = useState({})
   const [theme, setTheme] = useState(initialTheme)
 
+  // Gewählte Farbpalette. Sie liegt in der Datenbank (Preference
+  // `theme:palette`), nicht nur im localStorage — sonst würde die Wahl am
+  // Rechner das Handy nie erreichen.
+  const [paletteHint] = useState(initialPalette)
+  const savedPalette = prefs[PALETTE_PREF_KEY]
+  const palette = isPalette(savedPalette) ? savedPalette : paletteHint
+
+  // Absichtlich beim Rendern, nicht in einem Effekt: die Diagramme lesen die
+  // Farben während ihres eigenen Renderns (Chart.js kann keine CSS-Variablen
+  // lesen), und Effekte laufen erst danach. In einem Effekt gesetzt, würden
+  // sie beim Wechsel einen Takt lang die alten Farben zeichnen.
+  useMemo(() => {
+    applyPalette(palette, theme)
+    const t = tokens()
+    ChartJS.defaults.color = t.chart.tick
+    ChartJS.defaults.borderColor = t.chart.defaultBorder || t.chart.grid
+  }, [palette, theme])
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem(THEME_KEY, theme) } catch { /* ignore */ }
-    // Chart.js-Grundfarben ans Theme anpassen; Charts werden über key={theme} neu aufgebaut.
-    ChartJS.defaults.color = theme === 'dark' ? '#94a3b8' : '#64748b'
-    ChartJS.defaults.borderColor = theme === 'dark' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)'
   }, [theme])
+
+  useEffect(() => {
+    try { localStorage.setItem(PALETTE_CACHE_KEY, palette) } catch { /* ignore */ }
+  }, [palette])
 
   useEffect(() => {
     loadManualData().then(({ manual, categoryOverrides, categories }) => {
@@ -151,7 +185,7 @@ export default function App() {
         onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
       />
 
-      <main className="content" key={theme}>
+      <main className="content" key={`${theme}|${palette}`}>
         {page === 'overview' && (
           <Overview data={data} overrides={overrides} onNavigate={navigate}
             filter={filter} onFilterChange={setFilter}
@@ -188,6 +222,8 @@ export default function App() {
             onSave={handleSaveManual}
             onReset={handleResetManual}
             onNavigate={navigate}
+            palette={palette}
+            onPaletteChange={(id) => handleSavePreference(PALETTE_PREF_KEY, id)}
           />
         )}
       </main>

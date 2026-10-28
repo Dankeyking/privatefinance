@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CATEGORIES, KEYWORD_RULES, SAVINGS_CATEGORY } from '../lib/categories.js'
+import { CATEGORIES, KEYWORD_RULES, SAVINGS_CATEGORY, FALLBACK_CATEGORY } from '../lib/categories.js'
 import { monthlyByCategory } from '../lib/recurring.js'
 import { formatEUR } from '../lib/normalize.js'
-import { getCategories, categoryLabel, addCategory, updateCategory, removeCategory, isCustomCategory } from '../lib/categoryStore.js'
+import { getCategories, categoryLabel, categoryColor, addCategory, updateCategory, removeCategory, isCustomCategory } from '../lib/categoryStore.js'
 
 export default function Categories({ data, overrides, onResetAll, onClearOne }) {
   const itemsById = {}
@@ -30,7 +30,7 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
     setList((l) => l.map((c) => (c.id === id ? { ...c, color } : c)))
   }
   function addNew() {
-    addCategory('Neue Kategorie', '#64748b')
+    addCategory('Neue Kategorie', categoryColor(FALLBACK_CATEGORY))
     setList(getCategories())
   }
   function remove(id) {
@@ -123,7 +123,7 @@ export default function Categories({ data, overrides, onResetAll, onClearOne }) 
           {CATEGORIES.map((c) => (
             <div className="card rule-card" key={c.id} style={{ boxShadow: 'none' }}>
               <h3>
-                <span className="dot" style={{ width: 12, height: 12, borderRadius: '50%', background: c.color, display: 'inline-block' }} />
+                <span className="dot" style={{ width: 12, height: 12, borderRadius: '50%', background: categoryColor(c.id), display: 'inline-block' }} />
                 {categoryLabel(c.id)}
               </h3>
               {(KEYWORD_RULES[c.id] || []).length ? (
