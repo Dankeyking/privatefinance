@@ -59,6 +59,17 @@ export function personShareMonthly(cost, person, persons) {
   }
 }
 
+// Monatsbetrag eines Postens - voll, oder nur der Anteil einer Person.
+//
+// Es gibt ihn, weil „voller Betrag oder Anteil" vorher an jeder Auswertung
+// einzeln entschieden wurde: „Übersicht" rechnete in Anteilen, „Analyse" nicht.
+// Derselbe Personenfilter zeigte dadurch auf zwei Seiten zwei Zahlen. Wer eine
+// neue Auswertung schreibt, nimmt diese Funktion und muss es nicht mehr wissen.
+export function monthlyOf(order, data = {}, person = null) {
+  if (!person) return toMonthly(order.amount, order.rhythm)
+  return personShareMonthly(order, person, personsFromAccounts(data.accounts || []))
+}
+
 // Monatslast je Konto, aufgeteilt nach Fixkosten / Abos / Sparen.
 // `reserve` = monatlicher Anteil aus nicht-monatlichen Posten (jährlich/12,
 // vierteljährlich/3). `total` = Betrag, der monatlich aufs Konto soll.
@@ -87,13 +98,16 @@ export function monthlyByAccount(data, person = null) {
 }
 
 // Monatskosten je Kategorie (für Donut/Ranking). Optional Sparen ausschließen.
-export function monthlyByCategory(data, overrides = {}, { excludeSavings = false } = {}) {
+// Mit `person` zählt nur deren Anteil - wie in monthlyByAccount.
+export function monthlyByCategory(data, overrides = {}, { excludeSavings = false, person = null } = {}) {
   const { standingOrders = [] } = data
   const totals = {}
   activeOrders(standingOrders).forEach((o) => {
     if (excludeSavings && isSavings(o, overrides)) return
+    const m = monthlyOf(o, data, person)
+    if (m <= 0) return
     const cat = effectiveCategoryOf(o, overrides)
-    totals[cat] = (totals[cat] || 0) + toMonthly(o.amount, o.rhythm)
+    totals[cat] = (totals[cat] || 0) + m
   })
   return totals
 }

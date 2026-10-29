@@ -4,11 +4,11 @@ import CategoryDonut from '../components/charts/CategoryDonut.jsx'
 import CostTreemap from '../components/charts/CostTreemap.jsx'
 import DragCard from '../components/DragCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
-import { applyFilter } from '../lib/viewFilter.js'
+import { applyFilter, normalizeFilter } from '../lib/viewFilter.js'
 import { categoryColor, categoryLabel } from '../lib/categoryStore.js'
-import { formatEUR, formatDate, toMonthly, RHYTHM_LABELS } from '../lib/normalize.js'
+import { formatEUR, formatDate, RHYTHM_LABELS } from '../lib/normalize.js'
 import { effectiveCategoryOf, isOrderActive, monthsRemaining } from '../lib/selectors.js'
-import { monthlyByCategory, personSummary, monthlyByAccount, isSavings } from '../lib/recurring.js'
+import { monthlyByCategory, personSummary, monthlyByAccount, isSavings, monthlyOf } from '../lib/recurring.js'
 import { useDragOrder } from '../lib/layout.js'
 
 const DEFAULT_ORDER = ['donut', 'personBar', 'treemap', 'abo', 'ending', 'byAccount']
@@ -34,12 +34,19 @@ export default function Analytics({
   // Dieselbe Filterleiste wie auf der Übersicht: Alle Auswertungen zeigen
   // denselben Ausschnitt, statt dass jede Seite eigene Regeln hat.
   const view = useMemo(() => applyFilter(data, filter, overrides), [data, filter, overrides])
+  // Ist eine Person gewaehlt, rechnet die Seite in deren Anteilen - genau wie
+  // die Uebersicht. Vorher tat das hier nur das Balkendiagramm je Person,
+  // alles andere zeigte die vollen Betraege: ein Filter auf eine Person liess
+  // die Treemap-Summe unveraendert bei der vollen Haushaltssumme stehen, weil
+  // ein geteilter Posten fuer jede Person als „beteiligt" gilt. Derselbe
+  // Filter nannte damit auf zwei Seiten zwei Zahlen.
+  const onePerson = normalizeFilter(filter).person === 'all' ? null : normalizeFilter(filter).person
   const accById = useMemo(() => Object.fromEntries((view.accounts || []).map((a) => [a.id, a])), [view.accounts])
   const { order, api, reset, isCustom } = useDragOrder('analytics', DEFAULT_ORDER, prefs, onSavePreference)
 
   const catTotals = useMemo(
-    () => monthlyByCategory(view, overrides, { excludeSavings: !includeSavings }),
-    [view, overrides, includeSavings],
+    () => monthlyByCategory(view, overrides, { excludeSavings: !includeSavings, person: onePerson }),
+    [view, overrides, includeSavings, onePerson],
   )
   const donut = useMemo(() => {
     const entries = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
@@ -56,10 +63,11 @@ export default function Analytics({
     if (!selCat) return null
     const rows = (view.standingOrders || [])
       .filter((o) => isOrderActive(o) && effectiveCategoryOf(o, overrides) === selCat)
-      .map((o) => ({ id: o.id, recipient: o.recipient || '—', monthly: toMonthly(o.amount, o.rhythm) }))
+      .map((o) => ({ id: o.id, recipient: o.recipient || '—', monthly: monthlyOf(o, view, onePerson) }))
+      .filter((r) => r.monthly > 0)
       .sort((a, b) => b.monthly - a.monthly)
     return { rows, total: rows.reduce((s, r) => s + r.monthly, 0) }
-  }, [selCat, view.standingOrders, overrides])
+  }, [selCat, view, overrides, onePerson])
 
   // Art und Kategorie beschreiben Kosten, keine Einnahmen - incomeMatches()
   // laesst sie darum unangetastet. Im Balkendiagramm stand dadurch bei
@@ -79,14 +87,14 @@ export default function Analytics({
   }
 
   const byAccount = useMemo(
-    () => monthlyByAccount(view)
+    () => monthlyByAccount(view, onePerson)
       // `total` schliesst Sparen ein. Ist der Schalter aus, muss es auch aus
       // der Balkenlaenge und aus der Zahl rechts verschwinden - sonst stimmte
       // die Summe nicht mehr mit dem ueberein, was der Balken zeigt.
       .map((a) => (includeSavings ? a : { ...a, savings: 0, total: a.total - a.savings }))
       .filter((a) => a.total > 0)
       .sort((a, b) => b.total - a.total),
-    [view, includeSavings],
+    [view, includeSavings, onePerson],
   )
   const maxAcc = Math.max(1, ...byAccount.map((a) => a.total))
   const hasSavings = byAccount.some((a) => a.savings > 0)
@@ -101,7 +109,7 @@ export default function Analytics({
         const cat = effectiveCategoryOf(o, overrides)
         return {
           label: o.recipient || '—',
-          value: Number(toMonthly(o.amount, o.rhythm).toFixed(2)),
+          value: Number(monthlyOf(o, view, onePerson).toFixed(2)),
           category: categoryLabel(cat),
           color: categoryColor(cat),
           savings: isSavings(o, overrides),
@@ -109,7 +117,7 @@ export default function Analytics({
       })
       .filter((x) => x.value > 0)
       .filter((x) => includeSavings || !x.savings)
-  }, [view.standingOrders, overrides, includeSavings])
+  }, [view, overrides, includeSavings, onePerson])
 
   // Abo-Radar: aktive Abos nach Jahresbetrag.
   const abos = useMemo(() => {
@@ -117,7 +125,7 @@ export default function Analytics({
       .filter((o) => o.kind === 'subscription' && isOrderActive(o))
       .map((o) => {
         const cat = effectiveCategoryOf(o, overrides)
-        const monthly = toMonthly(o.amount, o.rhythm)
+        const monthly = monthlyOf(o, view, onePerson)
         return {
           id: o.id, recipient: o.recipient || '—', monthly, yearly: monthly * 12,
           categoryLabel: categoryLabel(cat), color: categoryColor(cat), rhythm: o.rhythm,
@@ -125,9 +133,10 @@ export default function Analytics({
           endDate: o.endDate || '',
         }
       })
+      .filter((r) => r.monthly > 0)
       .sort((a, b) => b.yearly - a.yearly)
     return { rows, totalYear: rows.reduce((s, r) => s + r.yearly, 0), max: Math.max(1, ...rows.map((r) => r.yearly)) }
-  }, [view.standingOrders, overrides, accById])
+  }, [view, overrides, accById, onePerson])
 
   // Auslaufende Posten: alles mit Enddatum – zeigt, wann Budget frei wird.
   const ending = useMemo(() => {
@@ -135,14 +144,14 @@ export default function Analytics({
       .filter((o) => o.endDate)
       .map((o) => ({
         id: o.id, recipient: o.recipient || '—',
-        monthly: toMonthly(o.amount, o.rhythm),
+        monthly: monthlyOf(o, view, onePerson),
         endDate: o.endDate, active: isOrderActive(o), left: monthsRemaining(o),
         account: accById[o.accountId]?.name || '',
       }))
       .sort((a, b) => (a.endDate < b.endDate ? -1 : 1))
     const freed = rows.filter((r) => r.active).reduce((s, r) => s + r.monthly, 0)
     return { rows, freed }
-  }, [view.standingOrders, accById])
+  }, [view, accById, onePerson])
 
   const sections = {
     donut: (
@@ -326,6 +335,13 @@ export default function Analytics({
       </div>
 
       <FilterBar data={data} value={filter} onChange={onFilterChange} />
+
+      {onePerson && (
+        <p className="muted" style={{ fontSize: 13, margin: '-8px 0 14px' }}>
+          Alle Zahlen sind <strong>{onePerson}s Anteil</strong> – ein geteilter Posten zählt anteilig,
+          nicht mit dem vollen Betrag.
+        </p>
+      )}
 
       {/* Steht bewusst hier und nicht in einer Karte: er gilt fuer jedes
           Diagramm auf dieser Seite, genau wie die Filterleiste darueber. */}
