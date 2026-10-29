@@ -776,7 +776,9 @@ tbody td:first-child { color: var(--text); }
 .costs-table td, .costs-table th { padding: 10px 8px; vertical-align: middle; }
 .costs-table th:first-child, .costs-table td:first-child { padding-left: 4px; }
 .costs-table th:last-child, .costs-table td:last-child { padding-right: 2px; }
-.ellip { display: inline-block; max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* 118 px reichten fuer „Gemeinschaftskonto" nicht - der Name wurde zu
+   „Gemeinschaf…" gekuerzt, obwohl die Spalte breit genug war. */
+.ellip { display: inline-block; max-width: 162px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
 /* Farbiger Konto-Punkt + Farb-Picker */
 .acct-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; flex-shrink: 0; vertical-align: middle; }
@@ -800,6 +802,20 @@ td .acct-dot { vertical-align: baseline; }
 .ct-edit.empty { color: var(--text-muted); font-style: italic; }
 td.num .ct-edit { justify-content: flex-end; }
 .split-summary { white-space: nowrap; }
+/* Der Name des Postens ist das, wonach man sucht - er hatte mit 106 px
+   weniger Platz als jede andere Spalte ausser dem Loeschkreuz, waehrend die
+   Aufteilung mit 214 px doppelt so breit war. */
+.costs-table th:first-child, .costs-table td:first-child { min-width: 168px; }
+.costs-table .split-summary {
+  display: inline-block; vertical-align: middle; max-width: 148px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+/* Der Kontoname wurde zu „Gemeinschaf…" gekuerzt. Die Breite, die die
+   Aufteilung oben abgibt, geht hierher. */
+.costs-table td:nth-child(6) { min-width: 192px; }
+/* „Zahlung": Rhythmus, Faelligkeitsmonat und Ende stehen in einer Zelle. */
+.ende-feld { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.ende-feld input { width: 136px; }
 .split-mode-tag {
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--text-muted); background: var(--surface-2); border-radius: 4px; padding: 1px 6px;
@@ -924,6 +940,10 @@ tr:hover .ct-del { opacity: 1; }
 .sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
 .sortable-th:hover { color: var(--text); }
 .sort-arrow { color: var(--accent); }
+/* Blasser Hinweis an jeder sortierbaren Spalte. Ohne ihn sah man den
+   Kopfzeilen nicht an, dass sie klickbar sind. */
+.sort-hint { opacity: 0.3; }
+.sortable-th:hover .sort-hint { opacity: 0.75; }
 
 /* Drag & Drop Dashboard-Layout */
 .drag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; align-items: start; }

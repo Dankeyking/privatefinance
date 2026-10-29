@@ -19,7 +19,11 @@ const kindClass = (k) => (k === 'savings' ? 'sav' : k === 'subscription' ? 'sub'
 export default function CostsTable({ accounts, persons, orders, onChange, filter = () => true }) {
   const visible = orders.filter(filter)
   const [edit, setEdit] = useState(null) // { id, field }
-  const [sort, setSort] = useState({ key: null, dir: 'asc' })
+  // Vorsortiert nach Monatsbetrag, absteigend. Ohne das kam die Liste in der
+  // Reihenfolge, in der die Posten angelegt wurden: die Miete mit 1.180 € stand
+  // zwischen einer Spende mit 25 € und sah genauso aus. Wer die Seite oeffnet,
+  // will zuerst wissen, was weh tut.
+  const [sort, setSort] = useState({ key: 'amount', dir: 'desc' })
   const cellRef = useRef(null)
 
   useEffect(() => {
@@ -44,20 +48,33 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
   const accName = (id) => accById(id)?.name || '—'
   const accColor = (id) => accountColor(accById(id), accounts)
   const monthly = (o) => toMonthly(parseAmountDE(o.amount), o.rhythm)
-  const splitText = (o) => {
+  const splitParts = (o) => {
     const cost = formToOrder(o, persons)
-    const parts = persons
+    return persons
       .map((p) => ({ p, m: personShareMonthly(cost, p, persons) }))
       .filter((x) => x.m > 0.005)
-      .map((x) => `${x.p} ${formatEUR(x.m)}`)
-    return parts.join(' · ') || '—'
+  }
+  const splitText = (o) => splitParts(o).map((x) => `${x.p} ${formatEUR(x.m)}`).join(' · ') || '—'
+  // Kurzfassung fuer die Zelle. „Mika 590,00 € · Noa 590,00 €" stand in jeder
+  // Zeile und sagte bei gleicher Teilung nichts, was „geteilt" nicht schon
+  // sagt - die Spalte war dadurch doppelt so breit wie die mit dem Namen des
+  // Postens. Der volle Wortlaut haengt als Tooltip daran.
+  const splitKurz = (o) => {
+    const parts = splitParts(o)
+    if (parts.length === 0) return '—'
+    if (parts.length === 1) return `nur ${parts[0].p}`
+    const gleich = parts.every((x) => Math.abs(x.m - parts[0].m) < 0.005)
+    if (gleich) return `je ${formatEUR(parts[0].m)}`
+    return splitText(o)
   }
 
   const sorted = useMemo(() => {
     if (!sort.key) return visible
     return sortRows(visible, sort.key, sort.dir, (o, key) => {
       switch (key) {
-        case 'amount': return parseAmountDE(o.amount)
+        // Monatsbetrag, nicht der eingetippte Wert: 486 € jaehrlich sind
+        // 40,50 € im Monat und gehoeren unter einen 300-€-Sparplan.
+        case 'amount': return monthly(o)
         case 'rhythm': return RHYTHM_RANK[o.rhythm] ?? 0
         case 'kind': return KIND_LABEL[o.kind] || 'Fixkosten'
         case 'split': return splitText(o)
@@ -85,10 +102,9 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
             <tr>
               <SortTh label="Empfänger" sortKey="recipient" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Betrag" sortKey="amount" sort={sort} onSort={(k) => onSort(k, true)} className="num" />
-              <SortTh label="Rhythmus" sortKey="rhythm" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Zahlung" sortKey="rhythm" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Art" sortKey="kind" sort={sort} onSort={(k) => onSort(k, false)} />
-              <SortTh label="Aufteilung / Monat" sortKey="split" sort={sort} onSort={(k) => onSort(k, false)} />
-              <SortTh label="Ende" sortKey="endDate" sort={sort} onSort={(k) => onSort(k, false)} />
+              <SortTh label="Aufteilung" sortKey="split" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Konto" sortKey="accountId" sort={sort} onSort={(k) => onSort(k, false)} />
               <SortTh label="Kategorie" sortKey="category" sort={sort} onSort={(k) => onSort(k, false)} />
               <th></th>
@@ -122,8 +138,10 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                   )}
                 </td>
 
-                {/* Rhythmus (+ Fälligkeitsmonat bei jährlich/vierteljährlich) */}
-                <td data-label="Rhythmus">
+                {/* Zahlung: Rhythmus, Fälligkeitsmonat und Ende in einer Zelle.
+                    Vorher zwei Spalten, von denen die eine in jeder Zeile
+                    „monatlich" und die andere in jeder Zeile „offen" sagte. */}
+                <td data-label="Zahlung">
                   {isEd(o.id, 'rhythm') ? (
                     <span ref={cellRef}>
                       <div className="due-cell">
@@ -138,6 +156,11 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                             {MONTH_NAMES_SHORT.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                           </select>
                         )}
+                        <label className="ende-feld">
+                          <span className="muted">läuft bis</span>
+                          <input type="date" value={o.endDate || ''}
+                            onChange={(e) => set(o.id, 'endDate', e.target.value)} />
+                        </label>
                       </div>
                     </span>
                   ) : (
@@ -147,6 +170,12 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                         o.dueMonth
                           ? <small className="muted" style={{ marginLeft: 5 }}>· {MONTH_NAMES_SHORT[o.dueMonth - 1]}</small>
                           : <small className="muted" style={{ marginLeft: 5 }} title="Fälligkeitsmonat fehlt – klicken zum Setzen">· Monat?</small>
+                      )}
+                      {o.endDate && (isOrderActive(o)
+                        ? <small className="muted" style={{ marginLeft: 6 }} title={`Noch ${monthsRemaining(o)} Monate`}>
+                            · bis {formatDate(o.endDate)}
+                          </small>
+                        : <span className="pill ended" style={{ marginLeft: 6 }}>beendet</span>
                       )}
                     </Disp>
                   )}
@@ -196,28 +225,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
                     </span>
                   ) : (
                     <Disp id={o.id} field="split">
-                      <span className="split-summary">{splitText(o)}</span>
-                    </Disp>
-                  )}
-                </td>
-
-                {/* Enddatum (optional, z. B. letzte Rate) */}
-                <td data-label="Ende">
-                  {isEd(o.id, 'endDate') ? (
-                    <span ref={cellRef}><input autoFocus type="date" value={o.endDate || ''}
-                      onChange={(e) => set(o.id, 'endDate', e.target.value)} /></span>
-                  ) : (
-                    <Disp id={o.id} field="endDate" empty={!o.endDate}>
-                      {o.endDate ? (
-                        isOrderActive(o) ? (
-                          <span>
-                            {formatDate(o.endDate)}
-                            <small className="muted" style={{ marginLeft: 6 }}>noch {monthsRemaining(o)} Mon.</small>
-                          </span>
-                        ) : (
-                          <span className="pill ended">beendet</span>
-                        )
-                      ) : 'offen'}
+                      <span className="split-summary" title={splitText(o)}>{splitKurz(o)}</span>
                     </Disp>
                   )}
                 </td>
@@ -250,7 +258,7 @@ export default function CostsTable({ accounts, persons, orders, onChange, filter
               </tr>
             ))}
             {visible.length === 0 && (
-              <tr><td colSpan={9} className="muted" style={{ textAlign: 'center', padding: 22 }}>
+              <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 22 }}>
                 {orders.length === 0 ? 'Noch keine Posten – füge unten welche hinzu.' : 'Keine Treffer für diese Filter.'}
               </td></tr>
             )}
